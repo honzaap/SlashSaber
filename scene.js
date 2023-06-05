@@ -16,6 +16,11 @@ let mouse = {
     x: undefined,
     y: undefined
 };
+let swordMouse = new THREE.Vector2();
+let intersectMouse = new THREE.Vector2();
+let sword = new THREE.Object3D();
+let swordBB = new THREE.Box3();
+const cubes = [];
 
 export function createScene() {
     // Create scene
@@ -38,6 +43,22 @@ export function createScene() {
         const delta = clock.getDelta();
 
         updateMixer(delta);
+
+        // Update sword bounding box
+        swordBB.setFromObject(sword);
+
+        // Update cubes bounding boxes
+        for(const {cube, cubeBB} of cubes) {
+            cubeBB.copy(cube.geometry.boundingBox).applyMatrix4(cube.matrixWorld);
+        }
+
+        // Check sword collisions with objects
+        for(const {cube, cubeBB} of cubes) {
+            if(swordBB.intersectsBox(cubeBB)) {
+                cube.material = new THREE.MeshLambertMaterial({color: 0xff0000});
+            }
+        }
+
         composer.render();
         setTimeout(() => {
             requestAnimationFrame(animate);
@@ -71,23 +92,26 @@ function createCamera() {
 
 // Create and configure camera and sword controls
 function createControls(camera, scene) {
-    let sword = new THREE.Object3D();
     loader.load("./assets/katana.glb", (obj) => {
         sword = obj.scene;
+        console.log(sword);
         sword.position.set(0, 1.3, -4.15);
         sword.up = new THREE.Vector3(0, 0, 1);
+        swordBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+        swordBB.setFromObject(sword);
+        const helper = new THREE.Box3Helper(swordBB);
+        scene.add(helper);
+        console.log(swordBB)
         scene.add(sword);
     });
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -3);
-    const planeGeometry = new THREE.PlaneGeometry(20, 20);
-    const testPlane = new THREE.Mesh(planeGeometry);
-    testPlane.position.set(0, 0, -3.9);
-    scene.add(testPlane);
 
-    const raycaster = new THREE.Raycaster();
-    const intersectPoint = new THREE.Vector3();
-    const swordMouse = new THREE.Vector2(0, 0);
-    let prevIntersect = null;
+    //const dot = document.createElement("div");
+    //dot.style.position = "absolute";
+    //dot.style.pointerEvents = "none";
+    //dot.style.width = "5px";
+    //dot.style.height = "5px";
+    //dot.style.backgroundColor = "red";
+    //document.body.appendChild(dot);
 
     document.onmousemove = (e) => {
         e.preventDefault();
@@ -107,27 +131,27 @@ function createControls(camera, scene) {
         camera.rotation.x -= delta.y / 5000;
 
         // Sword controls
-        //swordMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        //swordMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        swordMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        swordMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        const prevMouse = new THREE.Vector2();
+        prevMouse.copy(swordMouse);
+        swordMouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
+        swordMouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
+        const deltaI = new THREE.Vector2(swordMouse.x - prevMouse.x, swordMouse.y - prevMouse.y);
+        intersectMouse.x = Math.max(Math.min(intersectMouse.x + deltaI.x * 3.5, 1), -1);
+        intersectMouse.y = Math.max(Math.min(intersectMouse.y + deltaI.y * 3.5, 1), -1);
 
-        raycaster.setFromCamera(swordMouse, camera);
+        //dot.style.top = `${Math.min(window.innerHeight / 2 - intersectMouse.y * window.innerHeight / 2, window.innerHeight - 10)}px`;
+        //dot.style.left = `${Math.min(window.innerWidth / 2 + intersectMouse.x * window.innerWidth / 2, window.innerWidth - 10)}px`;
 
-        if(prevIntersect == null) {
-            prevIntersect = new THREE.Vector3(0, 0, 0);
-            raycaster.ray.intersectPlane(plane, prevIntersect); 
-        } 
-        else prevIntersect.copy(intersectPoint);
+        const p = intersectMouse.x / Math.sqrt(Math.pow(intersectMouse.x, 2) + Math.pow(intersectMouse.y, 2));
+        const beta = Math.asin(p);
+        let alpha = -THREE.MathUtils.radToDeg(beta);
+        if(intersectMouse.y >= 0) alpha = 180 + THREE.MathUtils.radToDeg(beta);
 
-        raycaster.ray.intersectPlane(plane, intersectPoint);
-        const deltaI = new THREE.Vector3(intersectPoint.x - prevIntersect.x, intersectPoint.y - prevIntersect.y, 0);
-
-        //sword.position.x += deltaI.x / 50;
-        //sword.position.y += deltaI.y / 50;
-        sword.position.x = intersectPoint.x / 50;
-        sword.position.y = 1.3 + intersectPoint.y / 50;
-        sword.lookAt(intersectPoint);
+        sword.position.x = 0;
+        sword.position.y = 1.3;
+        sword.rotation.x = THREE.MathUtils.degToRad(swordMouse.y * -70);
+        sword.rotation.y = THREE.MathUtils.degToRad(swordMouse.x * -90);
+        sword.rotation.z = THREE.MathUtils.degToRad(alpha); 
     }
 }
 
@@ -211,31 +235,28 @@ function setupEnvironment(scene) {
     setShadow(ground, false, true);
     scene.add(ground);
 
-    // Create walls
-    let pos = {x: -40, z: -20};
-    for(let i = 0; i < 4; i++) {
-        const wallGeometry = new THREE.PlaneGeometry(40, 20);
-        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-        wall.rotation.y = i * Math.PI / 2;
-        wall.position.set(i % 2 == 0 ? 0 : pos.x, 10, i % 2 == 1 ? 0 : pos.z)
-        pos.x += 20;
-        pos.z += 20;
-        setShadow(wall, false, true);
-        scene.add(wall)
-    }
- 
     // Cube
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const cube = new THREE.Mesh(geometry, wallMaterial);
-    cube.position.set(0, 1, 0);
-    setShadow(cube, true, false);
-    scene.add(cube);
-    
+    const spawnCubes = () => {
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const cube = new THREE.Mesh(geometry, wallMaterial);
+        const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+        cube.position.set(0, 1, 0);
+        setShadow(cube, true, false);
+        scene.add(cube);
+        cubeBB.setFromObject(cube);
+        cubes.push({cube, cubeBB});
+        setTimeout(spawnCubes, 5000);
+    }
+
+    spawnCubes();
 
     // Render and animate animated environment
     let mixer;
     const updateMixer = (delta) => {
         if (mixer) mixer.update(delta);
+        for(const cube of cubes) {
+            cube.cube.position.z -= 0.8 * delta;
+        }
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
