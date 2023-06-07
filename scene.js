@@ -4,9 +4,10 @@
 
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { OBB } from 'three/examples/jsm/math/OBB.js';
+import { OBB } from "three/examples/jsm/math/OBB.js";
+import { CSG } from 'three-csg-ts';
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -22,6 +23,7 @@ let sword = new THREE.Object3D();
 let swordBB = new OBB();
 let swordHelper = new THREE.Mesh();
 const cubes = [];
+const slicedCubes = [];
 
 export function createScene() {
     // Create scene
@@ -47,67 +49,13 @@ export function createScene() {
 
         updateMixer(delta);
 
-        // Update sword bounding box
-        const matrix = new THREE.Matrix4();
-        const rotation = new THREE.Euler();
-        rotation.copy(sword.rotation);
-        
-        matrix.makeRotationFromEuler(rotation);
-        const position = new THREE.Vector3();
-        position.copy(sword.position);
-        if(sword.userData.size) {
-            swordBB.set(position, sword.userData.size, matrix);
-        }
+        handleCollisions(scene);
 
-        // Update sword bounding box helper
-        swordHelper.position.copy(position);
-        swordHelper.setRotationFromMatrix(matrix);
-
-        // Update cubes bounding boxes
-        for(const {cube, cubeBB} of cubes) {
-            cubeBB.copy(cube.geometry.boundingBox).applyMatrix4(cube.matrixWorld);
-        }
-
-        // Check sword collisions with objects
-        for(const {cube, cubeBB} of cubes) {
-            if(swordBB.intersectsBox3(cubeBB) && cube.userData.collided !== true) { // Collision occured
-                cube.material = new THREE.MeshLambertMaterial({color: 0xff0000});
-                for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
-                    let worldPos = new THREE.Vector3();
-                    point.getWorldPosition(worldPos);
-                    if(cubeBB.containsPoint(worldPos)) { // Check if objects collides with given point
-                        console.log("contains")
-                        const cphGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-                        const cpH = new THREE.Mesh(cphGeo);
-                        cpH.position.copy(worldPos);
-                        scene.add(cpH);    
-                        cube.userData.collided = true;
-                        cube.userData.collisionPoint = point;
-                        break;
-                    }
-                }
-            }
-            else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
-                cube.material = new THREE.MeshLambertMaterial({color:  0x98f055});
-                cube.userData.collided = false;
-                const cphGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-                const cpH = new THREE.Mesh(cphGeo);
-                cube.userData.collisionPoint.getWorldPosition(cpH.position);
-                scene.add(cpH);    
-
-                // Generate a plane, which cuts through the object
-                const plane = new THREE.Plane( new THREE.Vector3(0.75, 0.3, 0.1 ), 0);
-                //const helper = new THREE.PlaneHelper(plane, 8, 0xffff00);
-                const phGeo = new THREE.PlaneGeometry(10, 10);
-                const phMat = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
-                const pH = new THREE.Mesh(phGeo, phMat);
-                pH.position.copy(cube.position);
-                //pH.position.copy(plane.normal);
-                //pH.position.multiplyScalar(-plane.constant);
-                pH.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                scene.add(pH); 
-                //scene.add(helper);
-            }
+        // Move sliced pieces 
+        for(const cube of slicedCubes) {
+            cube.position.x += cube.userData.normal.x * delta * 2;
+            cube.position.y += cube.userData.normal.y * delta * 2;
+            cube.position.z += cube.userData.normal.z * delta * 2;
         }
 
         composer.render();
@@ -153,19 +101,20 @@ function createSword(scene) {
         const box3 = new THREE.Box3().setFromObject(sword);
         let size = new THREE.Vector3();
         box3.getSize(size);
-        size.x /= 2;
-        size.y /= 2;
+        size.x /= 2.5;
+        size.y /= 2.5;
 
         sword.userData.size = size;
         swordBB = new OBB(new THREE.Vector3(), sword.userData.size);
 
         // Setup contact points
         sword.userData.contactPoints = [];
-        for(let i = 1; i < 11; i++) {
-            const phMesh = new THREE.BoxGeometry(0.03, 0.03, 0.03);
+        for(let i = 0; i < 2; i++) {
+            const phMesh = new THREE.BoxGeometry(0, 0, 0);
             const pH = new THREE.Mesh(phMesh);
             sword.add(pH);
-            pH.position.z = size.z / 10 * i;
+            pH.position.z = size.z * i;
+            pH.position.y = size.y / 2;
             sword.userData.contactPoints.push(pH);
         }
 
@@ -178,7 +127,7 @@ function createSword(scene) {
         swordHelper.up = new THREE.Vector3(0, 0, 1);
         swordHelper.add(shMesh);
 
-        scene.add(swordHelper);
+        //scene.add(swordHelper);
         scene.add(sword);
     });
 }
@@ -241,6 +190,8 @@ function createRenderer(scene, camera) {
         depth: true,
         canvas: document.querySelector("#canvas"),
     });
+
+    renderer.localClippingEnabled = true;
 
     resizeRenderer(renderer);
 
@@ -315,15 +266,23 @@ function setupEnvironment(scene) {
 
     // Cube
     const spawnCubes = () => {
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        let geometry
+        if(Math.random() > 0.5) {
+            const rnd = Math.random() * (1 - 0.75) + 0.75;
+            geometry = new THREE.BoxGeometry(0.35 * rnd, 2 * rnd, 0.35 * rnd);
+        }
+        else {
+            const rnd = Math.random() * (1 - 0.75) + 0.75;
+            geometry = new THREE.BoxGeometry(2 * rnd, 0.35 * rnd, 0.35 * rnd);
+        }
         const cube = new THREE.Mesh(geometry, wallMaterial);
         const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-        cube.position.set(2, 1, -1);
+        cube.position.set(0, 1, 3);
         setShadow(cube, true, false);
         scene.add(cube);
         cubeBB.setFromObject(cube);
         cubes.push({cube, cubeBB});
-        setTimeout(spawnCubes, 5000);
+        setTimeout(spawnCubes, 1500);
     }
 
     spawnCubes();
@@ -332,11 +291,104 @@ function setupEnvironment(scene) {
     let mixer;
     const updateMixer = (delta) => {
         if (mixer) mixer.update(delta);
-        for(const cube of cubes) {
-            //cube.cube.position.z -= 0.8 * delta;
+        for(const {cube} of cubes) {
+            cube.position.z -= 2.8 * delta;
         }
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
     return updateMixer;
+}
+
+// Update bounding boxes, handle collisions with sword and other objects
+function handleCollisions(scene) {
+    // Update sword bounding box
+    const matrix = new THREE.Matrix4();
+    const rotation = new THREE.Euler();
+    rotation.copy(sword.rotation);
+    
+    matrix.makeRotationFromEuler(rotation);
+    const position = new THREE.Vector3();
+    position.copy(sword.position);
+    if(sword.userData.size) {
+        swordBB.set(position, sword.userData.size, matrix);
+    }
+
+    // Update sword bounding box helper
+    swordHelper.position.copy(position);
+    swordHelper.setRotationFromMatrix(matrix);
+
+    // Update cubes bounding boxes
+    for(const {cube, cubeBB} of cubes) {
+        cubeBB.copy(cube.geometry.boundingBox).applyMatrix4(cube.matrixWorld);
+    }
+
+    // Check sword collisions with objects
+    for(const {cube, cubeBB} of cubes) {
+        if(swordBB.intersectsBox3(cubeBB) && cube.userData.collided !== true) { // Collision occured
+            //cube.material = new THREE.MeshLambertMaterial({color: 0xff0000});
+            for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
+                let worldPos = new THREE.Vector3();
+                point.getWorldPosition(worldPos);
+                cube.userData.collisionPoints = cube.userData.collisionPoints == null ? [worldPos] : [...cube.userData.collisionPoints, worldPos];
+            }
+            cube.userData.collided = true;
+        }
+        else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
+            //cube.material = new THREE.MeshLambertMaterial({color:  0x98f055});
+            cube.userData.collided = false;
+            let worldPos = new THREE.Vector3();
+            sword.userData.contactPoints[1].getWorldPosition(worldPos);
+
+            const points = [...cube.userData.collisionPoints, worldPos];
+            cube.userData.collisionPoints = null;
+
+            // Generate a plane, which cuts through the object
+            const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
+            plane.setFromCoplanarPoints(...points);
+
+            // Generate plane helper
+            const planeHelper = new THREE.PlaneHelper(plane, 5);
+            //scene.add(planeHelper);
+
+            // Create 2 planes, one with flipped normal to correctly clip both sides
+            const geometry = new THREE.PlaneGeometry(10, 10);
+            const planeMesh = new THREE.Mesh(geometry);
+            planeMesh.position.copy(plane.normal);
+            planeMesh.position.multiplyScalar(-plane.constant);
+            planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+            planeMesh.userData.normal = new THREE.Vector3();
+            planeMesh.userData.normal.copy(plane.normal);
+
+            plane.negate();
+
+            const planeMesh2 = new THREE.Mesh(geometry);
+            planeMesh2.position.copy(plane.normal);
+            planeMesh2.position.multiplyScalar(-plane.constant);
+            planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+            planeMesh2.userData.normal = new THREE.Vector3();
+            planeMesh2.userData.normal.copy(plane.normal);
+
+            // Update cube and plane matrices
+            cube.updateMatrix();
+            planeMesh.updateMatrix();
+            planeMesh2.updateMatrix();
+
+            // Cut through object (CSG)
+            const res = CSG.subtract(cube, planeMesh);
+            res.material = new THREE.MeshLambertMaterial({color:  0x98f055});
+            res.userData.normal = planeMesh.userData.normal;
+            scene.add(res);
+            slicedCubes.push(res);
+
+            const res2 = CSG.subtract(cube, planeMesh2);
+            res2.material = new THREE.MeshLambertMaterial({color:  0x98f055});
+            res2.userData.normal = planeMesh2.userData.normal;
+            scene.add(res2);
+            slicedCubes.push(res2);
+
+            scene.remove(cube);
+            cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
+        }
+    }
 }
