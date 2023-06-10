@@ -8,6 +8,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from 'three-csg-ts';
+import { FENCE_ASSET, GROUND_ASSET, SIDE_BAMBOOS_ASSET, SIDE_BAMBOOS_FAR_ASSET, SIDE_BAMBOOS_MID_ASSET, SIDE_GROUND_ASSET } from "./constants";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -83,8 +84,8 @@ function createCamera() {
         0.1,
         400,
     );
-    camera.position.set(0, 1.8, -5);
-    camera.lookAt(0, 1.8, 0);
+    camera.position.set(0, 1.2, 0);
+    camera.lookAt(0, 0.5, 5);
 
     return camera;
 }
@@ -93,8 +94,7 @@ function createCamera() {
 function createSword(scene) {
     loader.load("./assets/katana.glb", (obj) => {
         sword = obj.scene;
-        console.log(sword);
-        sword.position.set(0, 1.3, -4.15);
+        sword.position.set(0, 0.7, 0.85);
         sword.up = new THREE.Vector3(0, 0, 1);
 
         // Get model size
@@ -176,7 +176,7 @@ function controlSword(e) {
     if(intersectMouse.y >= 0) alpha = 180 + THREE.MathUtils.radToDeg(beta);
 
     sword.position.x = 0;
-    sword.position.y = 1.3;
+    sword.position.y = 0.7;
     sword.rotation.x = THREE.MathUtils.degToRad(swordMouse.y * -70);
     sword.rotation.y = THREE.MathUtils.degToRad(swordMouse.x * -90);
     sword.rotation.z = THREE.MathUtils.degToRad(alpha); 
@@ -249,23 +249,54 @@ function setupLighting(scene) {
     scene.add(directionLight);
 }
 
-// Create and setup anything environment-related
+// Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    const sceneBackground = new THREE.Color(0x101218);
+    const sceneBackground = new THREE.Color(0x488CA6); //0x101218
     scene.background = sceneBackground;
+    scene.fog = new THREE.Fog(0x488CA6, 10, 15);
 
-    const groundMaterial = new THREE.MeshLambertMaterial({color: 0xffffff}); 
-    const wallMaterial = new THREE.MeshLambertMaterial({color: 0x98f055}); 
-  
-    // Create ground
-    const groundGeometry = new THREE.PlaneGeometry(40, 40);
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x -= Math.PI / 2;
-    setShadow(ground, false, true);
-    //scene.add(ground);
+    setInterval(() => {
+        //const col = Math.random() * 0xffffff;
+        //scene.fog = new THREE.Fog(col, 5, 15);
+        //scene.background = new THREE.Color(col);
+        //console.log(col);
+    }, 3000);
+
+    const movingSpeed = 3;
+
+    // Setup moving environment
+    const updateGrounds = generateMovingAsset(GROUND_ASSET, 30, 0.08, movingSpeed, false, true);
+    const updateFences = generateMovingAsset(FENCE_ASSET, 20, 0.08, movingSpeed, true, false);
+    const updateSideGrounds = generateMovingAsset(SIDE_GROUND_ASSET, 10, 0, movingSpeed, false, true);
+    const updateSideBamboos = generateMovingAsset(SIDE_BAMBOOS_ASSET, 10, 0, movingSpeed, true, false);
+    const updateSideBamboosMid = generateMovingAsset(SIDE_BAMBOOS_MID_ASSET, 10, 0, movingSpeed, true, false);
+    const updateSideBamboosFar = generateMovingAsset(SIDE_BAMBOOS_FAR_ASSET, 10, 0, movingSpeed, true, false);
+
+    // Create static environment
+    const planeGeometry = new THREE.PlaneGeometry(50, 5);
+    const sideWall1 = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0x8C9F50}));
+    sideWall1.position.set(-3, 0.4, 10)
+    sideWall1.rotation.y = THREE.MathUtils.degToRad(90);
+    //scene.add(sideWall1);
+
+    const sideWall2 = sideWall1.clone();
+    sideWall2.position.x = 3;
+    sideWall2.rotation.y = THREE.MathUtils.degToRad(-90);
+    //scene.add(sideWall2);
+
+    const endWall = sideWall1.clone();
+    endWall.position.z = 25;
+    endWall.rotation.y = THREE.MathUtils.degToRad(180);
+    scene.add(endWall);
+
+    const groundPlane = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0x000000}));
+    groundPlane.rotation.set(THREE.MathUtils.degToRad(270), 0, THREE.MathUtils.degToRad(90));
+    groundPlane.position.y = -0.1;
+    scene.add(groundPlane);
+
 
     // Cube
-    const spawnCubes = () => {
+    /*const spawnCubes = () => {
         let geometry
         if(Math.random() > 0.5) {
             const rnd = Math.random() * (1 - 0.75) + 0.75;
@@ -275,9 +306,9 @@ function setupEnvironment(scene) {
             const rnd = Math.random() * (1 - 0.75) + 0.75;
             geometry = new THREE.BoxGeometry(2 * rnd, 0.35 * rnd, 0.35 * rnd);
         }
-        const cube = new THREE.Mesh(geometry, wallMaterial);
+        const cube = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x98f055}));
         const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-        cube.position.set(0, 1, 3);
+        cube.position.set(0, 1, 10);
         setShadow(cube, true, false);
         scene.add(cube);
         cubeBB.setFromObject(cube);
@@ -285,19 +316,68 @@ function setupEnvironment(scene) {
         setTimeout(spawnCubes, 1500);
     }
 
-    spawnCubes();
+    spawnCubes();*/
 
-    // Render and animate animated environment
+    // Render and animate animated environment, move with objects and make them despawn when out of range
     let mixer;
     const updateMixer = (delta) => {
         if (mixer) mixer.update(delta);
-        for(const {cube} of cubes) {
+        /*for(const {cube} of cubes) {
             cube.position.z -= 2.8 * delta;
-        }
+        }*/
+
+        updateGrounds(scene, delta);
+        updateFences(scene, delta);
+        updateSideGrounds(scene, delta);
+        updateSideBamboos(scene, delta);
+        updateSideBamboosMid(scene, delta);
+        updateSideBamboosFar(scene, delta);
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
     return updateMixer;
+}
+
+// Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
+// Returns update function
+function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
+    const instances = [];
+    let originalInstance = undefined;
+
+    // Create instance
+    loader.load(`./assets/${asset}`, function (gltf) {
+        const instance = gltf.scene;
+        instance.position.set(0, 0, 0);
+        setShadow(gltf.scene, castShadow, receiveShadow);
+        originalInstance = instance;
+    });
+
+    const updateLoop = (scene, delta) => {
+        // Generate asset
+        if(originalInstance != null) {
+            if(instances.length < maxNumber) {
+                const newInstance = originalInstance.clone(true);
+                const newPosition = instances[instances.length -1]?.position ?? new THREE.Vector3();
+                const box3 = new THREE.Box3().setFromObject(newInstance);
+                const size = new THREE.Vector3();
+                box3.getSize(size);
+                newInstance.position.z = newPosition.z + size.z + offset;
+                instances.push(newInstance);
+                scene.add(newInstance);
+            }
+        }
+
+        // Move asset and remove any that are out of camera sight
+        for(const instance of instances) {
+            instance.position.z -= speed * delta;
+            if(instance.position.z <= -3) {
+                scene.remove(instance);
+                instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
+            }
+        }
+    }
+
+    return updateLoop;
 }
 
 // Update bounding boxes, handle collisions with sword and other objects
