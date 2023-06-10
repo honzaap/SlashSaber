@@ -8,7 +8,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from 'three-csg-ts';
-import { FENCE_ASSET, GROUND_ASSET, SIDE_BAMBOOS_ASSET, SIDE_BAMBOOS_FAR_ASSET, SIDE_BAMBOOS_MID_ASSET, SIDE_GROUND_ASSET } from "./constants";
+import { FENCE_ASSET, GROUND_ASSET, SIDE_BAMBOOS_ASSET, SIDE_BAMBOOS_FAR_ASSET, SIDE_BAMBOOS_MID_ASSET, SIDE_GRASS_ASSET, SIDE_GROUND_ASSET } from "./constants";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -231,7 +231,7 @@ function setShadow(obj, cast = false, receive = false) {
 // Create and configure lighting in the scene
 function setupLighting(scene) {
     // Ambient lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+   /* const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
     scene.add(ambientLight);
 
     // Directional lighting and shadows
@@ -246,14 +246,42 @@ function setupLighting(scene) {
     directionLight.shadow.camera.left = -75;
     directionLight.shadow.camera.top = 75;
     directionLight.shadow.camera.bottom = -75;
-    scene.add(directionLight);
+    scene.add(directionLight);*/
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+    hemiLight.color.setHSL(.6, 1, 0.6);
+    hemiLight.groundColor.setHSL(0.095, 1, 0.75);
+    hemiLight.position.set(0, 50, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.color.setHSL(0.1, 1, 0.95);
+    dirLight.position.set(- 1, 1.75, 1);
+    dirLight.position.multiplyScalar(30);
+    scene.add(dirLight);
+
+    dirLight.castShadow = true;
+
+    dirLight.shadow.mapSize.width = 4096;
+    dirLight.shadow.mapSize.height = 4096;
+
+    const d = 50;
+
+    dirLight.shadow.camera.left = - d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = - d;
+
+    dirLight.shadow.camera.far = 3500;
+    dirLight.shadow.bias = - 0.0001;
 }
 
 // Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    const sceneBackground = new THREE.Color(0x488CA6); //0x101218
-    scene.background = sceneBackground;
-    scene.fog = new THREE.Fog(0x488CA6, 10, 15);
+    //const sceneBackground = new THREE.Color(0x002412); //0x101218
+    //scene.background = sceneBackground;
+    //scene.fog = new THREE.Fog(0x002412, 10, 15);
+    scene.background = new THREE.Color().setHSL(0.6, 1, 0.8);
+    scene.fog = new THREE.Fog(scene.background, 1, 28);
 
     setInterval(() => {
         //const col = Math.random() * 0xffffff;
@@ -271,6 +299,7 @@ function setupEnvironment(scene) {
     const updateSideBamboos = generateMovingAsset(SIDE_BAMBOOS_ASSET, 10, 0, movingSpeed, true, false);
     const updateSideBamboosMid = generateMovingAsset(SIDE_BAMBOOS_MID_ASSET, 10, 0, movingSpeed, true, false);
     const updateSideBamboosFar = generateMovingAsset(SIDE_BAMBOOS_FAR_ASSET, 10, 0, movingSpeed, true, false);
+    const updateSideGrass = generateMovingAsset(SIDE_GRASS_ASSET, 30, 0, movingSpeed, true, false);
 
     // Create static environment
     const planeGeometry = new THREE.PlaneGeometry(50, 5);
@@ -287,7 +316,7 @@ function setupEnvironment(scene) {
     const endWall = sideWall1.clone();
     endWall.position.z = 25;
     endWall.rotation.y = THREE.MathUtils.degToRad(180);
-    scene.add(endWall);
+    //scene.add(endWall);
 
     const groundPlane = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0x000000}));
     groundPlane.rotation.set(THREE.MathUtils.degToRad(270), 0, THREE.MathUtils.degToRad(90));
@@ -332,6 +361,7 @@ function setupEnvironment(scene) {
         updateSideBamboos(scene, delta);
         updateSideBamboosMid(scene, delta);
         updateSideBamboosFar(scene, delta);
+        updateSideGrass(scene, delta);
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
@@ -370,7 +400,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
             instance.position.z -= speed * delta;
-            if(instance.position.z <= -3) {
+            if(instance.position.z <= -4) {
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
             }
