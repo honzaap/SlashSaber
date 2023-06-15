@@ -7,14 +7,17 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OBB } from "three/examples/jsm/math/OBB.js";
-import { CSG } from 'three-csg-ts';
-import { FLOOR_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
-import Stats from 'three/examples/jsm/libs/stats.module';
-import { SAOPass } from 'three/examples/jsm/postprocessing/SAOPass';
-import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
-import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
+import { CSG } from "three-csg-ts";
+import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
+import Stats from "three/examples/jsm/libs/stats.module";
+import { SAOPass } from "three/examples/jsm/postprocessing/SAOPass";
+import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass";
+import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
-import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min';
+import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
+import { SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass";
+import { UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import { GodRaysEffect } from "postprocessing";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -89,13 +92,13 @@ export function createScene() {
 // Create and cofigure camera and return it
 function createCamera() {
     const camera = new THREE.PerspectiveCamera(
-        75,
+        65,
         window.innerWidth / window.innerHeight,
         0.1,
         400,
     );
     camera.position.set(0, 1.2, 0);
-    camera.lookAt(0, 0.5, 5);
+    camera.lookAt(0, 0.5, -5);
 
     return camera;
 }
@@ -104,7 +107,7 @@ function createCamera() {
 function createSword(scene) {
     loader.load("./assets/katana.glb", (obj) => {
         sword = obj.scene;
-        sword.position.set(0, 0.7, 0.85);
+        sword.position.set(0, 0.7, -0.85);
         sword.up = new THREE.Vector3(0, 0, 1);
 
         // Get model size
@@ -133,7 +136,7 @@ function createSword(scene) {
         const shMesh = new THREE.Mesh(swordHelperGeometry, new THREE.MeshBasicMaterial());
         swordHelper = new THREE.Object3D();
         shMesh.material.wireframe = true;
-        shMesh.position.set(0, 0, sword.userData.size.z / 2);
+        shMesh.position.set(0, 0, -sword.userData.size.z / 2);
         swordHelper.up = new THREE.Vector3(0, 0, 1);
         swordHelper.add(shMesh);
 
@@ -182,12 +185,12 @@ function controlSword(e) {
     // Calculate which way the blade is facing
     const p = intersectMouse.x / Math.sqrt(Math.pow(intersectMouse.x, 2) + Math.pow(intersectMouse.y, 2));
     const beta = Math.asin(p);
-    let alpha = -THREE.MathUtils.radToDeg(beta);
-    if(intersectMouse.y >= 0) alpha = 180 + THREE.MathUtils.radToDeg(beta);
+    let alpha = THREE.MathUtils.radToDeg(beta);
+    if(intersectMouse.y >= 0) alpha = -180 - THREE.MathUtils.radToDeg(beta);
 
     sword.position.x = 0;
     sword.position.y = 0.7;
-    sword.rotation.x = THREE.MathUtils.degToRad(swordMouse.y * -70);
+    sword.rotation.x = THREE.MathUtils.degToRad(swordMouse.y * 70);
     sword.rotation.y = THREE.MathUtils.degToRad(swordMouse.x * -90);
     sword.rotation.z = THREE.MathUtils.degToRad(alpha); 
 }
@@ -196,7 +199,7 @@ function controlSword(e) {
 function createRenderer(scene, camera) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
-        antialias: true,
+        //antialias: true,
         depth: true,
         canvas: document.querySelector("#canvas"),
     });
@@ -211,6 +214,9 @@ function createRenderer(scene, camera) {
     renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.useLegacyLights = false;
 
     return renderer;
 }
@@ -227,7 +233,14 @@ function setupPostProcessing(scene, camera, renderer) {
     composer.addPass(new RenderPass(scene, camera));
     const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
     composer.addPass(gammaCorrectionPass);
-    /*const saoPass = new SAOPass(scene, camera, false, true, new THREE.Vector2(1024, 1024));
+
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+    bloomPass.threshold = 0.25;
+    bloomPass.strength = 0.15;
+    bloomPass.radius = 1.2;
+    composer.addPass(bloomPass);
+
+    const saoPass = new SAOPass(scene, camera, false, true, new THREE.Vector2(1024, 1024));
     saoPass.params.output = SAOPass.OUTPUT.Default;
     saoPass.params.saoBias = 0.5;
     saoPass.params.saoIntensity = 0.01;
@@ -239,10 +252,13 @@ function setupPostProcessing(scene, camera, renderer) {
     saoPass.params.saoBlurStdDev = 4;
     saoPass.params.saoBlurDepthCutoff = .01;
     saoPass.resolution = new THREE.Vector2(1024, 1024)
-    composer.addPass(saoPass);*/
+    composer.addPass(saoPass);
+
+    const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
+    composer.addPass(smaaPass);
 
     /*const bokehPass = new BokehPass(scene, camera, {
-        focus: 2,
+        focus: 8,
         aperture: 0.0001,
         maxblur: 0.01,
         width: window.innerWidth,
@@ -252,27 +268,29 @@ function setupPostProcessing(scene, camera, renderer) {
     
     composer.addPass(bokehPass);*/
 
-    /*const gui = new GUI();
+    const gui = new GUI();
     gui.add( saoPass.params, 'output', {
         'Beauty': SAOPass.OUTPUT.Beauty,
         'Beauty+SAO': SAOPass.OUTPUT.Default,
         'SAO': SAOPass.OUTPUT.SAO,
         'Depth': SAOPass.OUTPUT.Depth,
         'Normal': SAOPass.OUTPUT.Normal
-    } ).onChange( function ( value ) {
-
-        saoPass.params.output = parseInt( value );
-
-    } );
-    gui.add( saoPass.params, 'saoBias', - 1, 1 );
-    gui.add( saoPass.params, 'saoIntensity', 0, 1 );
-    gui.add( saoPass.params, 'saoScale', 0, 10 );
-    gui.add( saoPass.params, 'saoKernelRadius', 1, 100 );
-    gui.add( saoPass.params, 'saoMinResolution', 0, 1 );
-    gui.add( saoPass.params, 'saoBlur' );
-    gui.add( saoPass.params, 'saoBlurRadius', 0, 200 );
-    gui.add( saoPass.params, 'saoBlurStdDev', 0.5, 150 );
-    gui.add( saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1 );*/
+    }).onChange(function(value) {
+        saoPass.params.output = parseInt(value);
+    });
+    gui.add(saoPass.params, 'saoBias', - 1, 1);
+    gui.add(saoPass.params, 'saoIntensity', 0, 1);
+    gui.add(saoPass.params, 'saoScale', 0, 10);
+    gui.add(saoPass.params, 'saoKernelRadius', 1, 100);
+    gui.add(saoPass.params, 'saoMinResolution', 0, 1);
+    gui.add(saoPass.params, 'saoBlur');
+    gui.add(saoPass.params, 'saoBlurRadius', 0, 200);
+    gui.add(saoPass.params, 'saoBlurStdDev', 0.5, 150);
+    gui.add(saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1);
+    gui.add(smaaPass, 'enabled');
+    gui.add(bloomPass, 'threshold', 0, 2);
+    gui.add(bloomPass, 'strength', 0, 2);
+    gui.add(bloomPass, 'radius', 0.0, 2);
 
     return composer;
 }
@@ -288,82 +306,50 @@ function setShadow(obj, cast = false, receive = false) {
     }
 }
 
+function generateLightOnEmission(obj) {
+    if(obj.material?.emissiveIntensity > 1) {
+        obj.material.emissiveIntensity = 1;
+        const pointLight = new THREE.PointLight(0xffffff, 7, 0, 2);
+        pointLight.position.y = -1.4;
+        pointLight.castShadow = true;
+        pointLight.shadow.mapSize.width = 4096;
+        pointLight.shadow.mapSize.height = 4096;
+        pointLight.shadow.bias = -0.0001
+        obj.add(pointLight);
+    }
+    if (obj?.children != null) {
+        for (const child of obj.children) {
+            generateLightOnEmission(child);
+        }
+    }
+}
+
 // Create and configure lighting in the scene
 function setupLighting(scene) {
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 1.1);
-    hemiLight.color.setHSL(.6, 1, 0.6);
-    hemiLight.groundColor.setHSL(0.095, 1, 0.75);
-    hemiLight.position.set(0, 2, 0);
-    //scene.add(hemiLight);
-
-    const ambLight = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(ambLight);
-    
-    /*const dirLight = new THREE.PointLight(0xffffff, 10, 10);
-    dirLight.color.setHSL(0.1, 1, 0.95);
-    dirLight.position.set(0, 1, 3);
-    dirLight.position.multiplyScalar(30);
-    scene.add(dirLight);
-
-    dirLight.castShadow = true;
-
-    dirLight.shadow.mapSize.width = 4096;
-    dirLight.shadow.mapSize.height = 4096;
-
-    const d = 50;
-
-    dirLight.shadow.camera.left = - d;
-    dirLight.shadow.camera.right = d;
-    dirLight.shadow.camera.top = d;
-    dirLight.shadow.camera.bottom = - d;
-
-    dirLight.shadow.camera.far = 3500;
-    dirLight.shadow.bias = -0.0001;*/
-
-    const spotLight = new THREE.SpotLight( 0xffffff );
-    spotLight.position.set(-1, 1000, 6 );
-
-    spotLight.castShadow = false;
-
-    spotLight.shadow.mapSize.width = 1024;
-    spotLight.shadow.mapSize.height = 1024;
-
-    spotLight.shadow.camera.near = 500;
-    spotLight.shadow.camera.far = 4000;
-    spotLight.shadow.camera.fov = 30;
-
-    //scene.add( spotLight );
+    const hemiLight = new THREE.HemisphereLight(0xeae9e1, 0x483204, 0.74);
+    hemiLight.position.set(0, 10, 0);
+    scene.add(hemiLight);
 }
 
 // Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    //const sceneBackground = new THREE.Color(0x101218); //0x101218
-    //scene.background = sceneBackground;
-    //scene.fog = new THREE.Fog(0x002412, 10, 15);
-    //scene.background = new THREE.Color().setHSL(0.6, 1, 0.8);
     scene.background = new THREE.Color().setHSL(0, 0, 0);
-    //scene.fog = new THREE.Fog(scene.background, 1, 28);
-
-    setInterval(() => {
-        //const col = Math.random() * 0xffffff;
-        //scene.fog = new THREE.Fog(col, 5, 15);
-        //scene.background = new THREE.Color(col);
-        //console.log(col);
-    }, 3000);
+    scene.fog = new THREE.FogExp2(scene.background, 0.055);
 
     const movingSpeed = 3;
 
     // Setup moving environment
-    const updateFloors = generateMovingAsset(FLOOR_ASSET, 10, 0, movingSpeed, true, true);
-    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 10, 0, movingSpeed, true, true);
-    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 10, 0, movingSpeed, true, true);
-    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 10, 0, movingSpeed, true, true);
-    const updateRoofs = generateMovingAsset(ROOF_ASSET, 10, 0, movingSpeed, true, true);
+    const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
+    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, 0, movingSpeed, true, true);
+    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, movingSpeed, true, true);
+    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, movingSpeed, true, true);
+    const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, movingSpeed, true, true);
+    const updateLamps = generateMovingAsset(LAMP_ASSET, 10, 7, movingSpeed, true, true);
 
     // Create static environment
     const planeGeometry = new THREE.PlaneGeometry(50, 15);
     const sideWall1 = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0xBB7435}));
-    sideWall1.position.set(-6, 0.4, 10)
+    sideWall1.position.set(-6, 0.4, -10)
     sideWall1.rotation.y = THREE.MathUtils.degToRad(90);
     //scene.add(sideWall1);
 
@@ -373,7 +359,7 @@ function setupEnvironment(scene) {
     //scene.add(sideWall2);
 
     const endWall = sideWall1.clone();
-    endWall.position.z = 25;
+    endWall.position.z = -25;
     endWall.rotation.y = THREE.MathUtils.degToRad(180);
     //scene.add(endWall);
 
@@ -413,6 +399,7 @@ function setupEnvironment(scene) {
         updateRightWalls(scene, delta);
         updateUpperWalls(scene, delta);
         updateRoofs(scene, delta);
+        updateLamps(scene, delta);
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
@@ -430,6 +417,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         const instance = gltf.scene;
         instance.position.set(0, 0, 0);
         setShadow(gltf.scene, castShadow, receiveShadow);
+        generateLightOnEmission(gltf.scene);
         originalInstance = instance;
     });
 
@@ -438,11 +426,11 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         if(originalInstance != null) {
             if(instances.length < maxNumber) {
                 const newInstance = originalInstance.clone(true);
-                const newPosition = instances[instances.length -1]?.position ?? new THREE.Vector3();
+                const newPosition = instances[instances.length -1]?.position ?? new THREE.Vector3(0, 0, 7);
                 const box3 = new THREE.Box3().setFromObject(newInstance);
                 const size = new THREE.Vector3();
                 box3.getSize(size);
-                newInstance.position.z = newPosition.z + size.z + offset;
+                newInstance.position.z = newPosition.z - size.z - offset;
                 instances.push(newInstance);
                 scene.add(newInstance);
             }
@@ -450,8 +438,8 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
 
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
-            instance.position.z -= speed * delta;
-            if(instance.position.z <= -4) {
+            instance.position.z += speed * delta;
+            if(instance.position.z >= 10) {
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
             }
