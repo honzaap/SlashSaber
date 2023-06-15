@@ -1,13 +1,11 @@
-export const GROUND_ASSET = "ground.glb";
+export const FLOOR_ASSET = "floor.glb";
 
-export const FENCE_ASSET = "fence.glb";
+export const RIGHT_WALL_ASSET = "right_wall.glb";
 
-export const SIDE_GROUND_ASSET = "side_ground.glb";
+export const LEFT_WALL_ASSET = "left_wall.glb";
 
-export const SIDE_BAMBOOS_ASSET = "side_bamboos.glb";
+export const ROOF_ASSET = "roof.glb";
 
-export const SIDE_BAMBOOS_MID_ASSET = "side_bamboos_mid.glb";
+export const UPPER_WALL_ASSET = "wall_upper.glb";
 
-export const SIDE_BAMBOOS_FAR_ASSET = "side_bamboos_far.glb";
-
-export const SIDE_GRASS_ASSET = "side_grass.glb";
+export const LAMP_ASSET = "lamp.glb";

@@ -8,7 +8,13 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from 'three-csg-ts';
-import { FENCE_ASSET, GROUND_ASSET, SIDE_BAMBOOS_ASSET, SIDE_BAMBOOS_FAR_ASSET, SIDE_BAMBOOS_MID_ASSET, SIDE_GRASS_ASSET, SIDE_GROUND_ASSET } from "./constants";
+import { FLOOR_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
+import Stats from 'three/examples/jsm/libs/stats.module';
+import { SAOPass } from 'three/examples/jsm/postprocessing/SAOPass';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
+import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min';
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -44,6 +50,9 @@ export function createScene() {
 
     const clock = new THREE.Clock();
 
+    const stats = new Stats();
+    document.body.appendChild(stats.dom);
+
     // Animation loop
     function animate() {
         const delta = clock.getDelta();
@@ -59,6 +68,7 @@ export function createScene() {
             cube.position.z += cube.userData.normal.z * delta * 2;
         }
 
+        stats.update();
         composer.render();
         setTimeout(() => {
             requestAnimationFrame(animate);
@@ -155,8 +165,8 @@ function controlCamera(e, camera) {
         delta.y = mouse.y - e.offsetY;
     }
     mouse = {x: e.offsetX, y: e.offsetY};
-    camera.rotation.y -= delta.x / 5000;
-    camera.rotation.x -= delta.y / 5000;
+    //camera.rotation.y -= delta.x / 5000;
+    //camera.rotation.x -= delta.y / 5000;
 }
 
 // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
@@ -192,13 +202,15 @@ function createRenderer(scene, camera) {
     });
 
     renderer.localClippingEnabled = true;
+    renderer.gammaInput = true;
+    renderer.gammaOutput = true;
 
     resizeRenderer(renderer);
 
     renderer.render(scene, camera);
-    //renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     return renderer;
 }
@@ -213,6 +225,54 @@ function resizeRenderer(renderer) {
 function setupPostProcessing(scene, camera, renderer) {
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
+    const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
+    composer.addPass(gammaCorrectionPass);
+    /*const saoPass = new SAOPass(scene, camera, false, true, new THREE.Vector2(1024, 1024));
+    saoPass.params.output = SAOPass.OUTPUT.Default;
+    saoPass.params.saoBias = 0.5;
+    saoPass.params.saoIntensity = 0.01;
+    saoPass.params.saoScale = 4.7;
+    saoPass.params.saoKernelRadius = 37;
+    saoPass.params.saoMinResolution = 0;
+    saoPass.params.saoBlur = true;
+    saoPass.params.saoBlurRadius = 8;
+    saoPass.params.saoBlurStdDev = 4;
+    saoPass.params.saoBlurDepthCutoff = .01;
+    saoPass.resolution = new THREE.Vector2(1024, 1024)
+    composer.addPass(saoPass);*/
+
+    /*const bokehPass = new BokehPass(scene, camera, {
+        focus: 2,
+        aperture: 0.0001,
+        maxblur: 0.01,
+        width: window.innerWidth,
+        height: window.innerHeight
+    });
+    bokehPass.renderToScreen = true;
+    
+    composer.addPass(bokehPass);*/
+
+    /*const gui = new GUI();
+    gui.add( saoPass.params, 'output', {
+        'Beauty': SAOPass.OUTPUT.Beauty,
+        'Beauty+SAO': SAOPass.OUTPUT.Default,
+        'SAO': SAOPass.OUTPUT.SAO,
+        'Depth': SAOPass.OUTPUT.Depth,
+        'Normal': SAOPass.OUTPUT.Normal
+    } ).onChange( function ( value ) {
+
+        saoPass.params.output = parseInt( value );
+
+    } );
+    gui.add( saoPass.params, 'saoBias', - 1, 1 );
+    gui.add( saoPass.params, 'saoIntensity', 0, 1 );
+    gui.add( saoPass.params, 'saoScale', 0, 10 );
+    gui.add( saoPass.params, 'saoKernelRadius', 1, 100 );
+    gui.add( saoPass.params, 'saoMinResolution', 0, 1 );
+    gui.add( saoPass.params, 'saoBlur' );
+    gui.add( saoPass.params, 'saoBlurRadius', 0, 200 );
+    gui.add( saoPass.params, 'saoBlurStdDev', 0.5, 150 );
+    gui.add( saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1 );*/
 
     return composer;
 }
@@ -230,32 +290,18 @@ function setShadow(obj, cast = false, receive = false) {
 
 // Create and configure lighting in the scene
 function setupLighting(scene) {
-    // Ambient lighting
-   /* const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-    scene.add(ambientLight);
-
-    // Directional lighting and shadows
-    const directionLight = new THREE.DirectionalLight(0xa0a0a2);
-    directionLight.position.set(4, 8, 3);
-    directionLight.castShadow = true;
-    directionLight.shadow.mapSize.x = 2048;
-    directionLight.shadow.mapSize.y = 2048;
-    directionLight.shadow.camera.near = 0;
-    directionLight.shadow.camera.far = 150.0;
-    directionLight.shadow.camera.right = 75;
-    directionLight.shadow.camera.left = -75;
-    directionLight.shadow.camera.top = 75;
-    directionLight.shadow.camera.bottom = -75;
-    scene.add(directionLight);*/
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 1.1);
     hemiLight.color.setHSL(.6, 1, 0.6);
     hemiLight.groundColor.setHSL(0.095, 1, 0.75);
-    hemiLight.position.set(0, 50, 0);
-    scene.add(hemiLight);
+    hemiLight.position.set(0, 2, 0);
+    //scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    const ambLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambLight);
+    
+    /*const dirLight = new THREE.PointLight(0xffffff, 10, 10);
     dirLight.color.setHSL(0.1, 1, 0.95);
-    dirLight.position.set(- 1, 1.75, 1);
+    dirLight.position.set(0, 1, 3);
     dirLight.position.multiplyScalar(30);
     scene.add(dirLight);
 
@@ -272,16 +318,31 @@ function setupLighting(scene) {
     dirLight.shadow.camera.bottom = - d;
 
     dirLight.shadow.camera.far = 3500;
-    dirLight.shadow.bias = - 0.0001;
+    dirLight.shadow.bias = -0.0001;*/
+
+    const spotLight = new THREE.SpotLight( 0xffffff );
+    spotLight.position.set(-1, 1000, 6 );
+
+    spotLight.castShadow = false;
+
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;
+
+    spotLight.shadow.camera.near = 500;
+    spotLight.shadow.camera.far = 4000;
+    spotLight.shadow.camera.fov = 30;
+
+    //scene.add( spotLight );
 }
 
 // Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    //const sceneBackground = new THREE.Color(0x002412); //0x101218
+    //const sceneBackground = new THREE.Color(0x101218); //0x101218
     //scene.background = sceneBackground;
     //scene.fog = new THREE.Fog(0x002412, 10, 15);
-    scene.background = new THREE.Color().setHSL(0.6, 1, 0.8);
-    scene.fog = new THREE.Fog(scene.background, 1, 28);
+    //scene.background = new THREE.Color().setHSL(0.6, 1, 0.8);
+    scene.background = new THREE.Color().setHSL(0, 0, 0);
+    //scene.fog = new THREE.Fog(scene.background, 1, 28);
 
     setInterval(() => {
         //const col = Math.random() * 0xffffff;
@@ -293,23 +354,21 @@ function setupEnvironment(scene) {
     const movingSpeed = 3;
 
     // Setup moving environment
-    const updateGrounds = generateMovingAsset(GROUND_ASSET, 30, 0.08, movingSpeed, false, true);
-    const updateFences = generateMovingAsset(FENCE_ASSET, 20, 0.08, movingSpeed, true, false);
-    const updateSideGrounds = generateMovingAsset(SIDE_GROUND_ASSET, 10, 0, movingSpeed, false, true);
-    const updateSideBamboos = generateMovingAsset(SIDE_BAMBOOS_ASSET, 10, 0, movingSpeed, true, false);
-    const updateSideBamboosMid = generateMovingAsset(SIDE_BAMBOOS_MID_ASSET, 10, 0, movingSpeed, true, false);
-    const updateSideBamboosFar = generateMovingAsset(SIDE_BAMBOOS_FAR_ASSET, 10, 0, movingSpeed, true, false);
-    const updateSideGrass = generateMovingAsset(SIDE_GRASS_ASSET, 30, 0, movingSpeed, true, false);
+    const updateFloors = generateMovingAsset(FLOOR_ASSET, 10, 0, movingSpeed, true, true);
+    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 10, 0, movingSpeed, true, true);
+    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 10, 0, movingSpeed, true, true);
+    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 10, 0, movingSpeed, true, true);
+    const updateRoofs = generateMovingAsset(ROOF_ASSET, 10, 0, movingSpeed, true, true);
 
     // Create static environment
-    const planeGeometry = new THREE.PlaneGeometry(50, 5);
-    const sideWall1 = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0x8C9F50}));
-    sideWall1.position.set(-3, 0.4, 10)
+    const planeGeometry = new THREE.PlaneGeometry(50, 15);
+    const sideWall1 = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0xBB7435}));
+    sideWall1.position.set(-6, 0.4, 10)
     sideWall1.rotation.y = THREE.MathUtils.degToRad(90);
     //scene.add(sideWall1);
 
     const sideWall2 = sideWall1.clone();
-    sideWall2.position.x = 3;
+    sideWall2.position.x = 6;
     sideWall2.rotation.y = THREE.MathUtils.degToRad(-90);
     //scene.add(sideWall2);
 
@@ -317,12 +376,6 @@ function setupEnvironment(scene) {
     endWall.position.z = 25;
     endWall.rotation.y = THREE.MathUtils.degToRad(180);
     //scene.add(endWall);
-
-    const groundPlane = new THREE.Mesh(planeGeometry, new THREE.MeshLambertMaterial({color: 0x000000}));
-    groundPlane.rotation.set(THREE.MathUtils.degToRad(270), 0, THREE.MathUtils.degToRad(90));
-    groundPlane.position.y = -0.1;
-    scene.add(groundPlane);
-
 
     // Cube
     /*const spawnCubes = () => {
@@ -355,13 +408,11 @@ function setupEnvironment(scene) {
             cube.position.z -= 2.8 * delta;
         }*/
 
-        updateGrounds(scene, delta);
-        updateFences(scene, delta);
-        updateSideGrounds(scene, delta);
-        updateSideBamboos(scene, delta);
-        updateSideBamboosMid(scene, delta);
-        updateSideBamboosFar(scene, delta);
-        updateSideGrass(scene, delta);
+        updateFloors(scene, delta);
+        updateLeftWalls(scene, delta);
+        updateRightWalls(scene, delta);
+        updateUpperWalls(scene, delta);
+        updateRoofs(scene, delta);
     };
     //mixer = new THREE.AnimationMixer(envAnimated);
 
