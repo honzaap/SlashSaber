@@ -14,8 +14,10 @@ import { SAOPass } from "three/examples/jsm/postprocessing/SAOPass";
 import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
+import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
 import { SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass";
+import { SSAARenderPass} from "three/examples/jsm/postprocessing/SSAARenderPass";
 import { UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { GodRaysEffect } from "postprocessing";
 
@@ -217,6 +219,7 @@ function createRenderer(scene, camera) {
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.toneMappingExposure = 1;
     renderer.useLegacyLights = false;
+    renderer.setClearColor(0x000000);
 
     return renderer;
 }
@@ -230,15 +233,24 @@ function resizeRenderer(renderer) {
 // Configure postprocessing and return composer
 function setupPostProcessing(scene, camera, renderer) {
     const composer = new EffectComposer(renderer);
+    
     composer.addPass(new RenderPass(scene, camera));
-    const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
-    composer.addPass(gammaCorrectionPass);
 
-    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
-    bloomPass.threshold = 0.25;
-    bloomPass.strength = 0.15;
-    bloomPass.radius = 1.2;
-    composer.addPass(bloomPass);
+    // SSAA render pass - looks good, terrible performance
+    const ssaaRenderPass = new SSAARenderPass(scene, camera, 0x000000, 1);
+    ssaaRenderPass.unbiased = true
+    //composer.addPass(ssaaRenderPass);
+
+    // SMAA - looks like shit
+    const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
+    //composer.addPass(smaaPass);
+
+    // FXAA - looks like shit
+    const fxaaPass = new ShaderPass(FXAAShader);
+    fxaaPass.material['uniforms']['resolution'].value.x = 1 / (window.innerWidth);
+    fxaaPass.material['uniforms']['resolution'].value.y = 1 / (window.innerHeight);
+
+    //composer.addPass(fxaaPass)
 
     const saoPass = new SAOPass(scene, camera, false, true, new THREE.Vector2(1024, 1024));
     saoPass.params.output = SAOPass.OUTPUT.Default;
@@ -252,10 +264,7 @@ function setupPostProcessing(scene, camera, renderer) {
     saoPass.params.saoBlurStdDev = 4;
     saoPass.params.saoBlurDepthCutoff = .01;
     saoPass.resolution = new THREE.Vector2(1024, 1024)
-    composer.addPass(saoPass);
-
-    const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
-    composer.addPass(smaaPass);
+    //composer.addPass(saoPass);
 
     /*const bokehPass = new BokehPass(scene, camera, {
         focus: 8,
@@ -267,6 +276,15 @@ function setupPostProcessing(scene, camera, renderer) {
     bokehPass.renderToScreen = true;
     
     composer.addPass(bokehPass);*/
+
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+    bloomPass.threshold = 0.25;
+    bloomPass.strength = 0.15;
+    bloomPass.radius = 1.2;
+    //composer.addPass(bloomPass);
+
+    const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
+    composer.addPass(gammaCorrectionPass);
 
     const gui = new GUI();
     gui.add( saoPass.params, 'output', {
@@ -288,6 +306,7 @@ function setupPostProcessing(scene, camera, renderer) {
     gui.add(saoPass.params, 'saoBlurStdDev', 0.5, 150);
     gui.add(saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1);
     gui.add(smaaPass, 'enabled');
+    gui.add(fxaaPass, 'enabled');
     gui.add(bloomPass, 'threshold', 0, 2);
     gui.add(bloomPass, 'strength', 0, 2);
     gui.add(bloomPass, 'radius', 0.0, 2);
@@ -364,7 +383,7 @@ function setupEnvironment(scene) {
     //scene.add(endWall);
 
     // Cube
-    /*const spawnCubes = () => {
+    const spawnCubes = () => {
         let geometry
         if(Math.random() > 0.5) {
             const rnd = Math.random() * (1 - 0.75) + 0.75;
@@ -376,7 +395,7 @@ function setupEnvironment(scene) {
         }
         const cube = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x98f055}));
         const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-        cube.position.set(0, 1, 10);
+        cube.position.set(0, 1, -10);
         setShadow(cube, true, false);
         scene.add(cube);
         cubeBB.setFromObject(cube);
@@ -384,15 +403,15 @@ function setupEnvironment(scene) {
         setTimeout(spawnCubes, 1500);
     }
 
-    spawnCubes();*/
+    //spawnCubes();
 
     // Render and animate animated environment, move with objects and make them despawn when out of range
     let mixer;
     const updateMixer = (delta) => {
         if (mixer) mixer.update(delta);
-        /*for(const {cube} of cubes) {
-            cube.position.z -= 2.8 * delta;
-        }*/
+        for(const {cube} of cubes) {
+            cube.position.z += movingSpeed * delta;
+        }
 
         updateFloors(scene, delta);
         updateLeftWalls(scene, delta);
