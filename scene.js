@@ -20,6 +20,7 @@ import { SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass";
 import { SSAARenderPass} from "three/examples/jsm/postprocessing/SSAARenderPass";
 import { UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { OutputPass} from "three/examples/jsm/postprocessing/OutputPass";
+import * as postprocessing from "postprocessing";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -36,6 +37,8 @@ let swordBB = new OBB();
 let swordHelper = new THREE.Mesh();
 const cubes = [];
 const slicedCubes = [];
+const dynamicSpotLights = [];
+const gui = new GUI();
 
 export function createScene() {
     // Create scene
@@ -233,6 +236,8 @@ function createRenderer(scene, camera) {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     //renderer.toneMapping = THREE.LinearToneMapping;
+    renderer.setPixelRatio(window.devicePixelRatio * 1.5); // ?
+    //renderer.setPixelRatio(window.devicePixelRatio);
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
@@ -248,55 +253,11 @@ function resizeRenderer(renderer) {
 
 // Configure postprocessing and return composer
 function setupPostProcessing(scene, camera, renderer) {
-  
-
-    // SSAA render pass - looks good, terrible performance
-    //const ssaaRenderPass = new SSAARenderPass(scene, camera, 0x000000, 1);
-    //ssaaRenderPass.unbiased = true
-    //composer.addPass(ssaaRenderPass);
-
-    // SMAA - looks like shit
-    //const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
-    //composer.addPass(smaaPass);
-
-    // FXAA - looks like shit
-    //const fxaaPass = new ShaderPass(FXAAShader);
-    //fxaaPass.material['uniforms']['resolution'].value.x = 1 / (window.innerWidth);
-    //fxaaPass.material['uniforms']['resolution'].value.y = 1 / (window.innerHeight);
-    //composer.addPass(fxaaPass)
-
-    //const saoPass = new SAOPass(scene, camera, false, true, new THREE.Vector2(1024, 1024));
-    //saoPass.params.output = SAOPass.OUTPUT.Default;
-    //saoPass.params.saoBias = 0.5;
-    //saoPass.params.saoIntensity = 0.01;
-    //saoPass.params.saoScale = 4.7;
-    //saoPass.params.saoKernelRadius = 37;
-    //saoPass.params.saoMinResolution = 0;
-    //saoPass.params.saoBlur = true;
-    //saoPass.params.saoBlurRadius = 8;
-    //saoPass.params.saoBlurStdDev = 4;
-    //saoPass.params.saoBlurDepthCutoff = .01;
-    //saoPass.resolution = new THREE.Vector2(1024, 1024)
-    //composer.addPass(saoPass);
-
-    /*const bokehPass = new BokehPass(scene, camera, {
-        focus: 8,
-        aperture: 0.0001,
-        maxblur: 0.01,
-        width: window.innerWidth,
-        height: window.innerHeight
-    });
-    bokehPass.renderToScreen = true;
-    
-    composer.addPass(bokehPass);*/
-
-    /*const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
-    bloomPass.threshold = 0.25;
-    bloomPass.strength = 2.55;
-    bloomPass.radius = 1.2;
-    composer.addPass(bloomPass);*/
-
     const renderScene = new RenderPass(scene, camera);
+    renderScene.clearColor = new THREE.Color(0, 0, 0);
+    renderScene.clearAlpha = 0;
+    //const renderScene = new SSAARenderPass(scene, camera, 0x000000, 1);
+    //renderScene.unbiased = true
 
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
     bloomPass.threshold = 0.25;
@@ -308,6 +269,7 @@ function setupPostProcessing(scene, camera, renderer) {
     bloomComposer.addPass(renderScene);
     bloomComposer.addPass(bloomPass);
 
+    /*
     const mixPass = new ShaderPass(
         new THREE.ShaderMaterial({
             uniforms: {
@@ -323,47 +285,69 @@ function setupPostProcessing(scene, camera, renderer) {
 
     const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
 
+    //const fxaaPass = new ShaderPass(FXAAShader);
+    //fxaaPass.material['uniforms']['resolution'].value.x = 1 / (window.innerWidth * renderer.getPixelRatio());
+    //fxaaPass.material['uniforms']['resolution'].value.y = 1 / (window.innerHeight * renderer.getPixelRatio());
+
     const outputPass = new OutputPass(THREE.LinearToneMapping);
     const composer = new EffectComposer(renderer);
+
     composer.addPass(renderScene);
-    composer.addPass(smaaPass);
     composer.addPass(mixPass);
     composer.addPass(outputPass);
+    composer.addPass(smaaPass);
+    //composer.addPass(fxaaPass);
 
     //const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
     //composer.addPass(gammaCorrectionPass);
+    */
+    // Postprocessing GUI
+    //gui.add(smaaPass, 'enabled');
+    //gui.add(fxaaPass, 'enabled');
+    const gui_bloom = gui.addFolder("Bloom Effect");
+    gui_bloom.close();
+    gui_bloom.add(bloomPass, 'threshold', 0, 2);
+    gui_bloom.add(bloomPass, 'strength', 0, 2);
+    gui_bloom.add(bloomPass, 'radius', 0.0, 2);
 
-    const gui = new GUI();
-    /*gui.add( saoPass.params, 'output', {
-        'Beauty': SAOPass.OUTPUT.Beauty,
-        'Beauty+SAO': SAOPass.OUTPUT.Default,
-        'SAO': SAOPass.OUTPUT.SAO,
-        'Depth': SAOPass.OUTPUT.Depth,
-        'Normal': SAOPass.OUTPUT.Normal
-    }).onChange(function(value) {
-        saoPass.params.output = parseInt(value);
+    const composer = new postprocessing.EffectComposer(renderer);
+    composer.addPass(new postprocessing.RenderPass(scene, camera));
+
+    let circleGeo = new THREE.CircleGeometry(3,50);
+    let circleMat = new THREE.MeshBasicMaterial({color: 0xffccaa});
+    let circle = new THREE.Mesh(circleGeo, circleMat);
+    circle.position.set(-11, 1 , -25);
+    scene.add(circle);
+    const grPass = new postprocessing.GodRaysEffect(camera, circle, {
+        height: 480,
+        kernelSize: postprocessing.KernelSize.SMALL,
+        density: 0.96,
+        decay: 0.92,
+        weight: 0.3,
+        exposure: 0.54,
+        samples: 60,
+        clampMax: 1.0
     });
-    gui.add(saoPass.params, 'saoBias', - 1, 1);
-    gui.add(saoPass.params, 'saoIntensity', 0, 1);
-    gui.add(saoPass.params, 'saoScale', 0, 10);
-    gui.add(saoPass.params, 'saoKernelRadius', 1, 100);
-    gui.add(saoPass.params, 'saoMinResolution', 0, 1);
-    gui.add(saoPass.params, 'saoBlur');
-    gui.add(saoPass.params, 'saoBlurRadius', 0, 200);
-    gui.add(saoPass.params, 'saoBlurStdDev', 0.5, 150);
-    gui.add(saoPass.params, 'saoBlurDepthCutoff', 0.0, 0.1);
-    gui.add(smaaPass, 'enabled');
-    gui.add(fxaaPass, 'enabled');*/
-    gui.add(bloomPass, 'threshold', 0, 2);
-    gui.add(bloomPass, 'strength', 0, 2);
-    gui.add(bloomPass, 'radius', 0.0, 2);
-    const params = {
-        background: '#ffffff',
-    };
-    gui.addColor(params, 'background').onChange(function(value) {
-        scene.background.set( value );
-        scene.fog  = new THREE.FogExp2(value, 0.035);
-    });
+
+    const mixPass = new postprocessing.ShaderPass(
+        new THREE.ShaderMaterial({
+            uniforms: {
+                baseTexture: { value: null },
+                bloomTexture: { value: bloomComposer.renderTarget2.texture }
+            },
+            vertexShader: document.getElementById('vertexshader').textContent,
+            fragmentShader: document.getElementById('fragmentshader').textContent,
+            defines: {}
+        }), 'baseTexture'
+    );
+    mixPass.needsSwap = true;
+
+    const gammaCorrectionPass = new postprocessing.ShaderPass(GammaCorrectionShader);
+
+    //composer.addPass(gammaCorrectionPass);
+    composer.addPass(mixPass);
+    composer.addPass(new postprocessing.EffectPass(camera, grPass));
+
 
     return {composer, bloomComposer};
 }
@@ -387,6 +371,11 @@ function generateLightOnEmission(obj) {
         pointLight.castShadow = false;
         obj.add(pointLight);
     }
+    if(obj.material?.opacity < 1) {
+        obj.castShadow = false;
+        obj.receiveShadow = false;
+        //obj.removeFromParent();
+    }
     if (obj?.children != null) {
         for (const child of obj.children) {
             generateLightOnEmission(child);
@@ -396,37 +385,86 @@ function generateLightOnEmission(obj) {
 
 // Create and configure lighting in the scene
 function setupLighting(scene) {
-    const hemiLight = new THREE.HemisphereLight(0xeae9e1, 0x483204, 0.74);
+    const maxSpotLights = 3;
+    
+    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1,925);
     hemiLight.position.set(0, 10, 0);
-    //scene.add(hemiLight);
+    scene.add(hemiLight);
 
     const ambiLight = new THREE.AmbientLight(0x7a7a7a, 2);
-    scene.add(ambiLight);
+    //scene.add(ambiLight);
 
-    const spotLight = new THREE.SpotLight(0xffffff, 40);
-    spotLight.angle = 0.5;
-    spotLight.castShadow = true;
-    spotLight.position.set(-8, 2, -8);
-    const targetObject = new THREE.Object3D(); 
-    targetObject.position.set(0, -0.2, -7);
-    spotLight.target = targetObject;
-    //scene.add(spotLight);
+    // Generate dynamic lights, that are always in the scene, but get moved around
+    // Creating new light every time is hard performance-wise
+    for(let i = 0; i < maxSpotLights; i++) {
+        const spotLight = new THREE.SpotLight(0xffffff, 100, undefined, 0.65, 0.4, 2.15);
+        spotLight.castShadow = true;
+        spotLight.shadow.bias = -0.001;
+        spotLight.userData.isUsed = false;
+        spotLight.position.set(200, 200, 200);
+        dynamicSpotLights.push(spotLight);
+        scene.add(spotLight);
+    }
+
+    // Lihgting GUI
+    const params = {
+        sky: 0xe5e7ff,
+        ground: 0xd2b156,
+        intensity: 1.75
+    }
+    const gui_hemiLight = gui.addFolder('Hemisphere Light');
+    gui_hemiLight.close();
+    gui_hemiLight.addColor(params, 'sky').onChange(function(value) { hemiLight.color  = new THREE.Color(value); });
+    gui_hemiLight.addColor(params, 'ground').onChange(function(value) { hemiLight.groundColor  = new THREE.Color(value); });
+    gui_hemiLight.add(hemiLight, "intensity", 0, 7)
 }
 
 // Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    scene.background = new THREE.Color().setHSL(0, 0, 0);
-    scene.fog = new THREE.FogExp2(scene.background, 0.035);
-
     const movingSpeed = 3.5;
+
+    scene.background = new THREE.Color(0x777255);
+    scene.fog = new THREE.Fog(scene.background, 40, 65);
+
+    // Fog GUI
+    const gui_bg = gui.addFolder("World Settings");
+    gui_bg.close();
+    const params = {
+        background: '#777255',
+        size: 0.027,
+        near: 20,
+        far: 30
+    };
+    gui_bg.addColor(params, 'background').onChange(function(value) {
+        scene.background.set(value);
+        scene.fog  = new THREE.Fog(value, params.near, params.far);
+    });
+    gui_bg.add(params, 'size', 0, 0.1).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, params.near, params.far); });
+    gui_bg.add(params, 'near', 20, 100).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, value, params.far); });
+    gui_bg.add(params, 'far', 20, 100).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, params.near, value); });
 
     // Setup moving environment
     const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
-    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, movingSpeed, true, true);
+    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, movingSpeed, true, true, true);
     const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, movingSpeed, true, true);
     const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, movingSpeed, true, true);
     const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, movingSpeed, true, true);
     const updateLamps = generateMovingAsset(LAMP_ASSET, 10, 7, movingSpeed, true, true);
+
+    // Setup static environment
+    const blackMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
+    const planeGeometry = new THREE.PlaneGeometry(8, 60);
+    const worldGround = new THREE.Mesh(planeGeometry, blackMaterial);
+    worldGround.rotation.x = THREE.MathUtils.degToRad(-90);
+    worldGround.position.z = -30;
+    worldGround.position.y = -1;
+    scene.add(worldGround);
+
+    const worldRoof = new THREE.Mesh(planeGeometry, blackMaterial);
+    worldRoof.rotation.x = THREE.MathUtils.degToRad(90);
+    worldRoof.position.z = -30;
+    worldRoof.position.y = 4;
+    scene.add(worldRoof);
 
     // Cube
     /*const spawnCubes = () => {
@@ -475,7 +513,7 @@ function setupEnvironment(scene) {
 
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
 // Returns update function
-function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
+function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false, spawnLigt = false) {
     const instances = [];
     let originalInstance = undefined;
 
@@ -483,7 +521,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
     loader.load(`./assets/${asset}`, function (gltf) {
         const instance = gltf.scene;
         instance.position.set(0, 0, 0);
-        //setShadow(gltf.scene, castShadow, receiveShadow);
+        setShadow(gltf.scene, castShadow, receiveShadow);
         generateLightOnEmission(gltf.scene);
         originalInstance = instance;
     });
@@ -498,6 +536,16 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
                 const size = new THREE.Vector3();
                 box3.getSize(size);
                 newInstance.position.z = newPosition.z - size.z - offset;
+
+                if(spawnLigt && Math.random() < 0.5) {
+                    const spotLight = dynamicSpotLights.find(l => l.userData.isUsed === false);
+                    if(spotLight) {
+                        spotLight.userData.isUsed = true;
+                        spotLight.position.set(-8, 3, newInstance.position.z);
+                        spotLight.target = newInstance;
+                    }
+                }
+
                 instances.push(newInstance);
                 scene.add(newInstance);
             }
@@ -506,9 +554,16 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
             instance.position.z += speed * delta;
-            if(instance.position.z >= 10) {
+            if(instance.position.z >= 10) { // TODO: Change for some constant
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
+            }
+        }
+
+        for(const spotLight of dynamicSpotLights) {
+            spotLight.position.z = spotLight.target.position.z;
+            if(spotLight.position.z >= 10) { // TODO: Change for some constant
+                spotLight.userData.isUsed = false;
             }
         }
     }
@@ -609,6 +664,7 @@ function handleCollisions(scene) {
     }
 }
 
+// Variables and methods used for selective bloom effect
 const materials = {};
 const bloomLayer = new THREE.Layers();
 bloomLayer.set(2);
