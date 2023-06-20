@@ -154,10 +154,10 @@ function createSword(scene) {
         // Setup contact points
         sword.userData.contactPoints = [];
         for(let i = 0; i < 2; i++) {
-            const phMesh = new THREE.BoxGeometry(0, 0, 0);
+            const phMesh = new THREE.BoxGeometry(0.0, 0.0, 0.0);
             const pH = new THREE.Mesh(phMesh);
             sword.add(pH);
-            pH.position.z = size.z * i;
+            pH.position.z = size.z * -i;
             pH.position.y = size.y / 2;
             sword.userData.contactPoints.push(pH);
         }
@@ -180,18 +180,20 @@ function createSword(scene) {
 
         scene.add(sword);
 
-        trail.targetObject = sword.userData.contactPoints[0];
-
+        trail.targetObject = sword.userData.contactPoints[1];
         trail.activate();
+
     });
 
     const trailHeadGeometry = [];
     trailHeadGeometry.push( 
+        //new THREE.Vector3( 0, 0.15, -2.6 ),  //1
+        //new THREE.Vector3( 0, 0.08, -2.2 ), //4 
+        //new THREE.Vector3( 0, 0.02, -1.85 ), //3 
+        //new THREE.Vector3( 0, -0.03, -1.2 ), //5 
+        //new THREE.Vector3( 0, -0.02, -0.4 ), //2
+        new THREE.Vector3( 0, 0.0, 0.0 ),  //1
         new THREE.Vector3( 0, 0.15, -2.6 ),  //1
-        new THREE.Vector3( 0, 0.08, -2.2 ), //4 
-        new THREE.Vector3( 0, 0.02, -1.85 ), //3 
-        new THREE.Vector3( 0, -0.03, -1.2 ), //5 
-        new THREE.Vector3( 0, -0.02, -0.4 ), //2
     );
 
     const trail = new TrailRenderer(scene, false);
@@ -200,8 +202,8 @@ function createSword(scene) {
 
 	trailMaterial.uniforms.headColor.value.set( 0, 1, 0, 1 );
     trailMaterial.uniforms.tailColor.value.set( 0,0, 1, 1 );
-    
-    trailMaterial.fragmentShader = `
+
+    /*trailMaterial.fragmentShader = `
         void main() {
           gl_FragColor = vec4(0.4, 0.7, 0.97, 0.4);
         }
@@ -210,10 +212,9 @@ function createSword(scene) {
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
-    `;
+    `;*/
 
-    const trailLength = 10;
-
+    const trailLength = 20;
     trail.initialize(trailMaterial, trailLength, false, 0, trailHeadGeometry, sword);
 
     return trail;
@@ -281,11 +282,11 @@ function createRenderer(scene, camera) {
     renderer.localClippingEnabled = true;
     renderer.gammaInput = true;
     renderer.gammaOutput = true;
-
+    
     resizeRenderer(renderer);
 
     renderer.render(scene, camera);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = true; // TODO: Causes LAG?
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
@@ -294,6 +295,7 @@ function createRenderer(scene, camera) {
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.sortObjects = false; // TODO: remove if unnecessary
+    renderer.setClearColor( 0x000000 );
 
     return renderer;
 }
@@ -361,7 +363,7 @@ function setupPostProcessing(scene, camera, renderer) {
     gui_bloom.add(bloomPass, 'strength', 0, 2);
     gui_bloom.add(bloomPass, 'radius', 0.0, 2);
 
-    const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8});
+    const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8}); // TODO: Causes LAG?
     composer.addPass(new postprocessing.RenderPass(scene, camera));
 
     let circleGeo = new THREE.CircleGeometry(3,50);
@@ -420,7 +422,7 @@ function generateLightOnEmission(obj) {
         const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
         pointLight.position.y = -1.4;
         pointLight.castShadow = false;
-        obj.add(pointLight);
+        obj.add(pointLight); // TODO: Causes LAG?
     }
     if(obj.material?.opacity < 1) {
         obj.castShadow = false;
@@ -457,7 +459,7 @@ function setupLighting(scene) {
         spotLight.userData.isUsed = false;
         spotLight.position.set(200, 200, 200);
         dynamicSpotLights.push(spotLight);
-        scene.add(spotLight);
+        scene.add(spotLight); // TODO: Causes LAG?
     }
 
     // Lihgting GUI
