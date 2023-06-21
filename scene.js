@@ -10,16 +10,9 @@ import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
 import Stats from "three/examples/jsm/libs/stats.module";
-import { SAOPass } from "three/examples/jsm/postprocessing/SAOPass";
-import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass";
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
-import { FXAAShader } from "three/examples/jsm/shaders/FXAAShader";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
-import { SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass";
-import { SSAARenderPass} from "three/examples/jsm/postprocessing/SSAARenderPass";
-import { UnrealBloomPass} from "three/examples/jsm/postprocessing/UnrealBloomPass";
-import { OutputPass} from "three/examples/jsm/postprocessing/OutputPass";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import * as postprocessing from "postprocessing";
 import TrailRenderer from "./utils/TrailRenderer";
 
@@ -67,6 +60,16 @@ export function createScene() {
 
     let lttu = performance.now();
 
+    // TODO: cleanup (move to constants)
+    const speedToShowTrail = 7000;
+    const trailFadeOutFactor = 1;
+    const trailFadeInFactor = 2;
+    let prevMouse = {
+        x: undefined,
+        y: undefined
+    }
+    let trailOpacingGoingUp = false;
+
     // Animation loop
     function animate() {
         if(Date.now()>=timeTarget){
@@ -84,7 +87,7 @@ export function createScene() {
                 cube.position.z += cube.userData.normal.z * delta * 2;
             }
 
-            // Update trail | TODO: do that in a separate function
+            // Update trail mesh | TODO: do that in a separate function
             const time = performance.now();
             if (time - lttu > 10) {
                 trail.advance();
@@ -93,6 +96,29 @@ export function createScene() {
             else {
                 trail.updateHead();
             }
+
+            // Update trail opacity | TODO: do that in a separate function
+            if(prevMouse.x != null) {
+                const distance = Math.sqrt(Math.pow(prevMouse.x - mouse.x, 2) + Math.pow(prevMouse.y - mouse.y, 2));
+                const speed = distance / delta;
+
+                if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
+                    trailOpacingGoingUp = true;
+                }
+
+                if(trailOpacingGoingUp) {
+                    trail.material.uniforms.headColor.value.w += trailFadeInFactor * delta; 
+                    if(trail.material.uniforms.headColor.value.w >= 0.2) { // TODO: Put that in a constant
+                        trailOpacingGoingUp = false;
+                    }
+                }
+                else { 
+                    trail.material.uniforms.headColor.value.w = Math.max(trail.material.uniforms.headColor.value.w - trailFadeOutFactor * delta, 0);
+                }
+            }
+
+            prevMouse.x = mouse.x;
+            prevMouse.y = mouse.y;
 
             // TODO: Make this thing prettier, maybe move it out of here or smth
             stats.update();
@@ -154,13 +180,22 @@ function createSword(scene) {
         // Setup contact points
         sword.userData.contactPoints = [];
         for(let i = 0; i < 2; i++) {
-            const phMesh = new THREE.BoxGeometry(0.0, 0.0, 0.0);
-            const pH = new THREE.Mesh(phMesh);
-            sword.add(pH);
-            pH.position.z = size.z * -i;
-            pH.position.y = size.y / 2;
-            sword.userData.contactPoints.push(pH);
+            const pointGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
+            const point = new THREE.Mesh(pointGeo);
+            sword.add(point);
+            point.position.z = size.z * -i;
+            point.position.y = size.y / 2;
+            sword.userData.contactPoints.push(point);
         }
+
+        // Setup a point for the trail to follow
+        const tpGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
+        const tp = new THREE.Mesh(tpGeo);
+        sword.add(tp);
+        tp.position.z = -size.z + 0.2;
+        tp.position.y = size.y + 0.1;
+        sword.userData.trailPoint = tp;
+
 
         // Setup helper
         const swordHelperGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
@@ -180,39 +215,26 @@ function createSword(scene) {
 
         scene.add(sword);
 
-        trail.targetObject = sword.userData.contactPoints[1];
+        trail.targetObject = sword.userData.trailPoint;
         trail.activate();
 
     });
 
     const trailHeadGeometry = [];
     trailHeadGeometry.push( 
-        //new THREE.Vector3( 0, 0.15, -2.6 ),  //1
-        //new THREE.Vector3( 0, 0.08, -2.2 ), //4 
-        //new THREE.Vector3( 0, 0.02, -1.85 ), //3 
-        //new THREE.Vector3( 0, -0.03, -1.2 ), //5 
-        //new THREE.Vector3( 0, -0.02, -0.4 ), //2
-        new THREE.Vector3( 0, 0.0, 0.0 ),  //1
-        new THREE.Vector3( 0, 0.15, -2.6 ),  //1
+        new THREE.Vector3(0, 0, 0),  //1
+        //new THREE.Vector3(0, -0.09, 0.2),  //3
+        //new THREE.Vector3(0, -0.17, 0.68),  //4
+        //new THREE.Vector3(0, -0.2, 1.35),  //5
+        new THREE.Vector3(0, -0.205, 2.3 ),  //2
     );
 
     const trail = new TrailRenderer(scene, false);
 
     const trailMaterial = TrailRenderer.createBaseMaterial();	
 
-	trailMaterial.uniforms.headColor.value.set( 0, 1, 0, 1 );
-    trailMaterial.uniforms.tailColor.value.set( 0,0, 1, 1 );
-
-    /*trailMaterial.fragmentShader = `
-        void main() {
-          gl_FragColor = vec4(0.4, 0.7, 0.97, 0.4);
-        }
-    `;
-    trailMaterial.vertexShader =  `
-        void main() {
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `;*/
+	trailMaterial.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
+    trailMaterial.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
 
     const trailLength = 20;
     trail.initialize(trailMaterial, trailLength, false, 0, trailHeadGeometry, sword);
@@ -276,7 +298,7 @@ function createRenderer(scene, camera) {
         powerPreference: "high-performance",
         antialias: false,
         depth: true,
-        canvas: document.querySelector("#canvas")
+        canvas: document.querySelector("#canvas"),
     });
 
     renderer.localClippingEnabled = true;
@@ -290,12 +312,10 @@ function createRenderer(scene, camera) {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
-    renderer.setPixelRatio(window.devicePixelRatio * 1.5); // ?
-    //renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
-    renderer.sortObjects = false; // TODO: remove if unnecessary
-    renderer.setClearColor( 0x000000 );
+    renderer.setClearColor(0x000000);
 
     return renderer;
 }
@@ -310,10 +330,9 @@ function resizeRenderer(renderer) {
 function setupPostProcessing(scene, camera, renderer) {
     const renderScene = new RenderPass(scene, camera);
     renderScene.clearColor = new THREE.Color(0, 0, 0);
-    renderScene.clearAlpha = 0;
-    //const renderScene = new SSAARenderPass(scene, camera, 0x000000, 1);
-    //renderScene.unbiased = true
+    renderScene.clearAlpha = 1;
 
+    // Bloom
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
     bloomPass.threshold = 0.25;
     bloomPass.strength = 0.5;
@@ -324,39 +343,6 @@ function setupPostProcessing(scene, camera, renderer) {
     bloomComposer.addPass(renderScene);
     bloomComposer.addPass(bloomPass);
 
-    /*
-    const mixPass = new ShaderPass(
-        new THREE.ShaderMaterial({
-            uniforms: {
-                baseTexture: { value: null },
-                bloomTexture: { value: bloomComposer.renderTarget2.texture }
-            },
-            vertexShader: document.getElementById( 'vertexshader' ).textContent,
-            fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
-            defines: {}
-        }), 'baseTexture'
-    );
-    mixPass.needsSwap = true;
-
-    //const fxaaPass = new ShaderPass(FXAAShader);
-    //fxaaPass.material['uniforms']['resolution'].value.x = 1 / (window.innerWidth * renderer.getPixelRatio());
-    //fxaaPass.material['uniforms']['resolution'].value.y = 1 / (window.innerHeight * renderer.getPixelRatio());
-
-    const outputPass = new OutputPass(THREE.LinearToneMapping);
-    const composer = new EffectComposer(renderer);
-
-    composer.addPass(renderScene);
-    composer.addPass(mixPass);
-    composer.addPass(outputPass);
-    composer.addPass(smaaPass);
-    //composer.addPass(fxaaPass);
-
-    //const gammaCorrectionPass = new ShaderPass(GammaCorrectionShader);
-    //composer.addPass(gammaCorrectionPass);
-    */
-    // Postprocessing GUI
-    //gui.add(smaaPass, 'enabled');
-    //gui.add(fxaaPass, 'enabled');
     const gui_bloom = gui.addFolder("Bloom Effect");
     gui_bloom.close();
     gui_bloom.add(bloomPass, 'threshold', 0, 2);
@@ -366,12 +352,13 @@ function setupPostProcessing(scene, camera, renderer) {
     const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8}); // TODO: Causes LAG?
     composer.addPass(new postprocessing.RenderPass(scene, camera));
 
-    let circleGeo = new THREE.CircleGeometry(3,50);
-    let circleMat = new THREE.MeshBasicMaterial({color: 0xffccaa});
-    let circle = new THREE.Mesh(circleGeo, circleMat);
-    circle.position.set(-11, 1 , -25);
-    scene.add(circle);
-    const grPass = new postprocessing.GodRaysEffect(camera, circle, {
+    // God rays
+    const sunGeo = new THREE.CircleGeometry(3,50);
+    const sunMat = new THREE.MeshBasicMaterial({color: 0xffccaa});
+    const sun = new THREE.Mesh(sunGeo, sunMat);
+    sun.position.set(-11, 1 , -25);
+    //scene.add(sun);
+    const grPass = new postprocessing.GodRaysEffect(camera, sun, {
         height: 480,
         kernelSize: postprocessing.KernelSize.SMALL,
         density: 0.96,
@@ -395,9 +382,6 @@ function setupPostProcessing(scene, camera, renderer) {
     );
     mixPass.needsSwap = true;
 
-    const gammaCorrectionPass = new postprocessing.ShaderPass(GammaCorrectionShader);
-
-    //composer.addPass(gammaCorrectionPass);
     composer.addPass(mixPass);
     composer.addPass(new postprocessing.EffectPass(camera, grPass));
 
@@ -479,17 +463,17 @@ function setupLighting(scene) {
 function setupEnvironment(scene) {
     const movingSpeed = 3.5;
 
-    scene.background = new THREE.Color(0x777255);
+    scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
     // Fog GUI
     const gui_bg = gui.addFolder("World Settings");
     gui_bg.close();
     const params = {
-        background: '#777255',
+        background: '#000000',
         size: 0.027,
-        near: 20,
-        far: 30
+        near: 40,
+        far: 65
     };
     gui_bg.addColor(params, 'background').onChange(function(value) {
         scene.background.set(value);
@@ -665,7 +649,7 @@ function handleCollisions(scene) {
             //cube.material = new THREE.MeshLambertMaterial({color:  0x98f055});
             cube.userData.collided = false;
             let worldPos = new THREE.Vector3();
-            sword.userData.contactPoints[1].getWorldPosition(worldPos);
+            sword.userData.trailPoint.getWorldPosition(worldPos);
 
             const points = [...cube.userData.collisionPoints, worldPos];
             cube.userData.collisionPoints = null;
