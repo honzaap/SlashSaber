@@ -10,31 +10,29 @@ import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
 import Stats from "three/examples/jsm/libs/stats.module";
-import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import * as postprocessing from "postprocessing";
 import TrailRenderer from "./libs/TrailRenderer";
 import { GodraysPass } from "./libs/GoodGodRays";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
 
 // Global mouse coordinates
-let mouse = {
-    x: undefined,
-    y: undefined
-};
+let mouse = new THREE.Vector2(-1, -1);
 let swordMouse = new THREE.Vector2();
-let intersectMouse = new THREE.Vector2();
+let mouseDirection = new THREE.Vector2();
 let sword = new THREE.Object3D();
 let swordBB = new OBB();
-let swordHelper = new THREE.Mesh();
-const cubes = [];
-const slicedCubes = [];
+const swordHelper = new THREE.Object3D();
+const cubes = []; // Only for debug
+const slicedCubes = []; // Only for debug
 const gui = new GUI();
 const movingSpeed = 3.5;
+
+// Array of functions that are called in given order every frame
+const logicHandlers = [];
 
 export function createScene() {
     // Create scene
@@ -44,9 +42,9 @@ export function createScene() {
 
     setupLighting(scene);
 
-    const updateMixer = setupEnvironment(scene);
+    setupEnvironment(scene);
 
-    const trail = createSword(scene);
+    createSword(scene);
 
     createControls(camera);
 
@@ -60,27 +58,14 @@ export function createScene() {
     const dt = 1000 / 60;
     let timeTarget = 0;
 
-    let lttu = performance.now();
-
-    // TODO: cleanup (move to constants)
-    const speedToShowTrail = 7000;
-    const trailFadeOutFactor = 1;
-    const trailFadeInFactor = 2;
-    let prevMouse = {
-        x: undefined,
-        y: undefined
-    }
-    let trailOpacingGoingUp = false;
-
     // Animation loop
     function animate() {
-        if(Date.now()>=timeTarget){
-
+        if(Date.now() >= timeTarget){
             const delta = clock.getDelta();
 
-            updateMixer(delta);
-
-            handleCollisions(scene);
+            for(const handler of logicHandlers) {
+                handler({delta, scene});
+            }
 
             // Move sliced pieces | TODO: remove this and update pieces in separate function
             for(const cube of slicedCubes) {
@@ -89,59 +74,18 @@ export function createScene() {
                 cube.position.z += cube.userData.normal.z * delta * 2;
             }
 
-            // Update trail mesh | TODO: do that in a separate function
-            const time = performance.now();
-            if (time - lttu > 10) {
-                trail.advance();
-                lttu = time;
-            } 
-            else {
-                trail.updateHead();
-            }
-
-            // Update trail opacity | TODO: do that in a separate function
-            if(prevMouse.x != null) {
-                const distance = Math.sqrt(Math.pow(prevMouse.x - mouse.x, 2) + Math.pow(prevMouse.y - mouse.y, 2));
-                const speed = distance / delta;
-
-                if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
-                    trailOpacingGoingUp = true;
-                }
-
-                if(trailOpacingGoingUp) {
-                    trail.material.uniforms.headColor.value.w += trailFadeInFactor * delta; 
-                    if(trail.material.uniforms.headColor.value.w >= 0.2) { // TODO: Put that in a constant
-                        trailOpacingGoingUp = false;
-                    }
-                }
-                else { 
-                    trail.material.uniforms.headColor.value.w = Math.max(trail.material.uniforms.headColor.value.w - trailFadeOutFactor * delta, 0);
-                }
-            }
-
-            prevMouse.x = mouse.x;
-            prevMouse.y = mouse.y;
-
-            // Update lights | TODO: Do that in a separate function
-            //grLight.position.z += movingSpeed * delta;
-            //if(grLight.position.z >= 10) {
-            //    grLight.position.z = -100;
-            //    console.log("RETURN TO -100");
-            //}
-            //grLight.target.position.z = grLight.position.z + 16;
-            //grLight.target.updateMatrixWorld();
-
             // TODO: Make this thing prettier, maybe move it out of here or smth
-            stats.update();
             scene.traverse(darkenNonBloomed);
             bloomComposer.render();
             scene.traverse(restoreMaterial);
             composer.render();
 
-            timeTarget+=dt;
-            if(Date.now()>=timeTarget){
-                timeTarget=Date.now();
+            timeTarget += dt;
+            if(Date.now() >= timeTarget){
+                timeTarget = Date.now();
             }
+
+            stats.update();
         }
         requestAnimationFrame(animate);
     }
@@ -210,7 +154,6 @@ function createSword(scene) {
         // Setup helper
         const swordHelperGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const shMesh = new THREE.Mesh(swordHelperGeometry, new THREE.MeshBasicMaterial());
-        swordHelper = new THREE.Object3D();
         shMesh.material.wireframe = true;
         shMesh.position.set(0, 0, -sword.userData.size.z / 2);
         swordHelper.up = new THREE.Vector3(0, 0, 1);
@@ -225,25 +168,76 @@ function createSword(scene) {
 
         scene.add(sword);
 
-        trail.targetObject = sword.userData.trailPoint;
-        trail.activate();
-
+        logicHandlers.push(handleCollisions);
     });
 
-    const trailHeadGeometry = [];
-    trailHeadGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3 ));
+    createSwordTrail(scene);
+}
+
+// Create sword trail
+function createSwordTrail(scene) {
+    const speedToShowTrail = 7000;
+    const fadeOutFactor = 1;
+    const fadeInFactor = 2;
+    const maxOpacity = 0.2;
+
+    const headGeometry = [];
+    headGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3));
 
     const trail = new TrailRenderer(scene, false);
 
-    const trailMaterial = TrailRenderer.createBaseMaterial();	
+    const material = TrailRenderer.createBaseMaterial();	
 
-	trailMaterial.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
-    trailMaterial.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
+	material.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
+    material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
 
     const trailLength = 20;
-    trail.initialize(trailMaterial, trailLength, false, 0, trailHeadGeometry, sword);
 
-    return trail;
+    trail.initialize(material, trailLength, false, 0, headGeometry, sword);
+
+    let lastUpdate = performance.now();
+    let opacityGoingUp = false;
+    const prevMouse = new THREE.Vector2(-1, -1);
+
+    logicHandlers.push(({ delta }) => {
+        if(sword.userData.trailPoint && !trail.isActive) {
+            trail.targetObject = sword.userData.trailPoint;
+            trail.activate();
+        }
+
+        // Update trail mesh
+        const time = performance.now();
+        if (time - lastUpdate > 10) {
+            trail.advance();
+            lastUpdate = time;
+        } 
+        else {
+            trail.updateHead();
+        }
+
+        // Update trail opacity
+        if(prevMouse.x !== -1 ) {
+            const distance = Math.sqrt(Math.pow(prevMouse.x - mouse.x, 2) + Math.pow(prevMouse.y - mouse.y, 2));
+            const speed = distance / delta;
+
+            if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
+                opacityGoingUp = true;
+            }
+
+            if(opacityGoingUp) {
+                trail.material.uniforms.headColor.value.w += fadeInFactor * delta; 
+                if(trail.material.uniforms.headColor.value.w >= maxOpacity) {
+                    opacityGoingUp = false;
+                }
+            }
+            else { 
+                trail.material.uniforms.headColor.value.w = Math.max(trail.material.uniforms.headColor.value.w - fadeOutFactor * delta, 0);
+            }
+        }
+
+        prevMouse.x = mouse.x;
+        prevMouse.y = mouse.y;
+    });
 }
 
 // Create and configure camera and sword controls
@@ -260,7 +254,8 @@ function createControls(camera) {
 // Take mouse event and camera as input and handle controls for the camera
 function controlCamera(e, camera) {
     const delta = new THREE.Vector2();
-    if(mouse.x == undefined && mouse.y == undefined) {
+
+    if(mouse.x === -1 && mouse.y === -1) {
         delta.x = window.innerWidth / 2 - e.offsetX;
         delta.y = window.innerHeight / 2 - e.offsetY;
     }
@@ -268,7 +263,10 @@ function controlCamera(e, camera) {
         delta.x = mouse.x - e.offsetX;
         delta.y = mouse.y - e.offsetY;
     }
-    mouse = {x: e.offsetX, y: e.offsetY};
+
+    mouse.x = e.offsetX;
+    mouse.y = e.offsetY;
+
     camera.rotation.y += delta.x / 5000;
     camera.rotation.x += delta.y / 5000;
 }
@@ -280,14 +278,14 @@ function controlSword(e) {
     swordMouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
     swordMouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
     const deltaI = new THREE.Vector2(swordMouse.x - prevMouse.x, swordMouse.y - prevMouse.y);
-    intersectMouse.x = Math.max(Math.min(intersectMouse.x + deltaI.x * 3.5, 1), -1);
-    intersectMouse.y = Math.max(Math.min(intersectMouse.y + deltaI.y * 3.5, 1), -1);
+    mouseDirection.x = Math.max(Math.min(mouseDirection.x + deltaI.x * 3.5, 1), -1);
+    mouseDirection.y = Math.max(Math.min(mouseDirection.y + deltaI.y * 3.5, 1), -1);
 
     // Calculate which way the blade is facing
-    const p = intersectMouse.x / Math.sqrt(Math.pow(intersectMouse.x, 2) + Math.pow(intersectMouse.y, 2));
+    const p = mouseDirection.x / Math.sqrt(Math.pow(mouseDirection.x, 2) + Math.pow(mouseDirection.y, 2));
     const beta = Math.asin(p);
     let alpha = THREE.MathUtils.radToDeg(beta);
-    if(intersectMouse.y >= 0) alpha = -180 - THREE.MathUtils.radToDeg(beta);
+    if(mouseDirection.y >= 0) alpha = -180 - THREE.MathUtils.radToDeg(beta);
 
     sword.position.x = 0;
     sword.position.y = 0.7;
@@ -377,8 +375,8 @@ function setupPostProcessing(scene, camera, renderer) {
     //scene.add(grLight);
 
     const godraysPass = new GodraysPass(grLight, camera, {
-        density: 0.03,//0.05,
-        maxDensity: 0.1,//2 / 3,
+        density: 0.03,
+        maxDensity: 0.1,
         distanceAttenuation: 2,
         color: new THREE.Color(0xffffff).getHex(),
         edgeStrength: 2,
@@ -403,10 +401,6 @@ function setupPostProcessing(scene, camera, renderer) {
     mixPass.needsSwap = true;
 
     const renderPass = new postprocessing.RenderPass(scene, camera);
-
-    //renderPass.renderToScreen = false;
-    //mixPass.renderToScreen = false;
-    //godraysPass.renderToScreen = true;
 
     composer.addPass(renderPass);
     composer.addPass(mixPass);
@@ -452,7 +446,6 @@ function generateLightOnEmission(obj) {
 
 // Create and configure lighting in the scene
 function setupLighting(scene) {
-    
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1,925);
     hemiLight.position.set(0, 10, 0);
     scene.add(hemiLight);
@@ -472,7 +465,7 @@ function setupLighting(scene) {
     dirLight.shadow.camera.top = 5;
     dirLight.shadow.camera.bottom = -8;
     dirLight.frustumCulled = false;
-    scene.add(dirLight); // TODO: Causes LAG?
+    scene.add(dirLight);
 
     // Lihgting GUI
     const params = {
@@ -480,6 +473,7 @@ function setupLighting(scene) {
         ground: 0xd2b156,
         intensity: 1.75
     }
+
     const gui_hemiLight = gui.addFolder('Hemisphere Light');
     gui_hemiLight.close();
     gui_hemiLight.addColor(params, 'sky').onChange(function(value) { hemiLight.color  = new THREE.Color(value); });
@@ -487,7 +481,7 @@ function setupLighting(scene) {
     gui_hemiLight.add(hemiLight, "intensity", 0, 7)
 }
 
-// Create and setup anything environment-related (things with which the user doesn't interact)
+// Create and setup anything environment-related
 function setupEnvironment(scene) {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
@@ -495,12 +489,14 @@ function setupEnvironment(scene) {
     // Fog GUI
     const gui_bg = gui.addFolder("World Settings");
     gui_bg.close();
+
     const params = {
         background: '#000000',
         size: 0.027,
         near: 40,
         far: 65
     };
+
     gui_bg.addColor(params, 'background').onChange(function(value) {
         scene.background.set(value);
         scene.fog  = new THREE.Fog(value, params.near, params.far);
@@ -559,7 +555,7 @@ function setupEnvironment(scene) {
 
     // Render and animate animated environment, move with objects and make them despawn when out of range
     let mixer;
-    const updateMixer = (delta) => {
+    logicHandlers.push(({ delta, scene }) => {
         if (mixer) mixer.update(delta);
         for(const {cube} of cubes) {
             cube.position.z += movingSpeed * delta;
@@ -571,10 +567,8 @@ function setupEnvironment(scene) {
         updateUpperWalls(scene, delta);
         updateRoofs(scene, delta);
         updateLamps(scene, delta);
-    };
+    });
     //mixer = new THREE.AnimationMixer(envAnimated);
-
-    return updateMixer;
 }
 
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
@@ -622,7 +616,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
 }
 
 // Update bounding boxes, handle collisions with sword and other objects
-function handleCollisions(scene) {
+function handleCollisions({scene}) {
     // Update sword bounding box
     const matrix = new THREE.Matrix4();
     const rotation = new THREE.Euler();
@@ -647,7 +641,6 @@ function handleCollisions(scene) {
     // Check sword collisions with objects
     for(const {cube, cubeBB} of cubes) {
         if(swordBB.intersectsBox3(cubeBB) && cube.userData.collided !== true) { // Collision occured
-            //cube.material = new THREE.MeshLambertMaterial({color: 0xff0000});
             for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
                 let worldPos = new THREE.Vector3();
                 point.getWorldPosition(worldPos);
@@ -656,7 +649,6 @@ function handleCollisions(scene) {
             cube.userData.collided = true;
         }
         else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
-            //cube.material = new THREE.MeshLambertMaterial({color:  0x98f055});
             cube.userData.collided = false;
             let worldPos = new THREE.Vector3();
             sword.userData.trailPoint.getWorldPosition(worldPos);
@@ -667,10 +659,6 @@ function handleCollisions(scene) {
             // Generate a plane, which cuts through the object
             const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
             plane.setFromCoplanarPoints(...points);
-
-            // Generate plane helper
-            const planeHelper = new THREE.PlaneHelper(plane, 5);
-            //scene.add(planeHelper);
 
             // Create 2 planes, one with flipped normal to correctly clip both sides
             const geometry = new THREE.PlaneGeometry(10, 10);
