@@ -14,7 +14,9 @@ import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectio
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import * as postprocessing from "postprocessing";
-import TrailRenderer from "./utils/TrailRenderer";
+import TrailRenderer from "./libs/TrailRenderer";
+import { GodraysPass } from "./libs/GoodGodRays";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -31,8 +33,8 @@ let swordBB = new OBB();
 let swordHelper = new THREE.Mesh();
 const cubes = [];
 const slicedCubes = [];
-const dynamicSpotLights = [];
 const gui = new GUI();
+const movingSpeed = 3.5;
 
 export function createScene() {
     // Create scene
@@ -120,6 +122,15 @@ export function createScene() {
             prevMouse.x = mouse.x;
             prevMouse.y = mouse.y;
 
+            // Update lights | TODO: Do that in a separate function
+            //grLight.position.z += movingSpeed * delta;
+            //if(grLight.position.z >= 10) {
+            //    grLight.position.z = -100;
+            //    console.log("RETURN TO -100");
+            //}
+            //grLight.target.position.z = grLight.position.z + 16;
+            //grLight.target.updateMatrixWorld();
+
             // TODO: Make this thing prettier, maybe move it out of here or smth
             stats.update();
             scene.traverse(darkenNonBloomed);
@@ -196,7 +207,6 @@ function createSword(scene) {
         tp.position.y = size.y + 0.1;
         sword.userData.trailPoint = tp;
 
-
         // Setup helper
         const swordHelperGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
         const shMesh = new THREE.Mesh(swordHelperGeometry, new THREE.MeshBasicMaterial());
@@ -221,13 +231,7 @@ function createSword(scene) {
     });
 
     const trailHeadGeometry = [];
-    trailHeadGeometry.push( 
-        new THREE.Vector3(0, 0, 0),  //1
-        //new THREE.Vector3(0, -0.09, 0.2),  //3
-        //new THREE.Vector3(0, -0.17, 0.68),  //4
-        //new THREE.Vector3(0, -0.2, 1.35),  //5
-        new THREE.Vector3(0, -0.205, 2.3 ),  //2
-    );
+    trailHeadGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3 ));
 
     const trail = new TrailRenderer(scene, false);
 
@@ -310,6 +314,7 @@ function createRenderer(scene, camera) {
     renderer.render(scene, camera);
     renderer.shadowMap.enabled = true; // TODO: Causes LAG?
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = true; //?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
     renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
@@ -350,23 +355,38 @@ function setupPostProcessing(scene, camera, renderer) {
     gui_bloom.add(bloomPass, 'radius', 0.0, 2);
 
     const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8}); // TODO: Causes LAG?
-    composer.addPass(new postprocessing.RenderPass(scene, camera));
 
     // God rays
-    const sunGeo = new THREE.CircleGeometry(3,50);
-    const sunMat = new THREE.MeshBasicMaterial({color: 0xffccaa});
-    const sun = new THREE.Mesh(sunGeo, sunMat);
-    sun.position.set(-11, 1 , -25);
-    //scene.add(sun);
-    const grPass = new postprocessing.GodRaysEffect(camera, sun, {
-        height: 480,
-        kernelSize: postprocessing.KernelSize.SMALL,
-        density: 0.96,
-        decay: 0.92,
-        weight: 0.3,
-        exposure: 0.54,
-        samples: 60,
-        clampMax: 1.0
+    const grLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    grLight.castShadow = true;
+    grLight.shadow.mapSize.width = 1024;
+    grLight.shadow.mapSize.height = 1024;
+    grLight.shadow.camera.updateProjectionMatrix();
+    grLight.shadow.autoUpdate = true;
+    grLight.position.set(-18, 9, -10);
+    grLight.target.position.set(20, -5, 6);
+    grLight.target.updateMatrixWorld();
+    grLight.shadow.camera.near = 0.1;
+    grLight.shadow.camera.far = 35;
+    grLight.shadow.camera.left = -38;
+    grLight.shadow.camera.right = 5;
+    grLight.shadow.camera.top = 5;
+    grLight.shadow.camera.bottom = -8;
+
+    //scene.add(grLight.target);
+    //scene.add(grLight);
+
+    const godraysPass = new GodraysPass(grLight, camera, {
+        density: 0.03,//0.05,
+        maxDensity: 0.1,//2 / 3,
+        distanceAttenuation: 2,
+        color: new THREE.Color(0xffffff).getHex(),
+        edgeStrength: 2,
+        edgeRadius: 2,
+        raymarchSteps: 60,
+        enableBlur: true,
+        blurVariance: 0.1,
+        blurKernelSize: postprocessing.KernelSize.MEDIUM,
     });
 
     const mixPass = new postprocessing.ShaderPass(
@@ -382,9 +402,16 @@ function setupPostProcessing(scene, camera, renderer) {
     );
     mixPass.needsSwap = true;
 
-    composer.addPass(mixPass);
-    composer.addPass(new postprocessing.EffectPass(camera, grPass));
+    const renderPass = new postprocessing.RenderPass(scene, camera);
 
+    //renderPass.renderToScreen = false;
+    //mixPass.renderToScreen = false;
+    //godraysPass.renderToScreen = true;
+
+    composer.addPass(renderPass);
+    composer.addPass(mixPass);
+    composer.addPass(godraysPass);
+    composer.addPass(new postprocessing.EffectPass(camera));
 
     return {composer, bloomComposer};
 }
@@ -414,7 +441,7 @@ function generateLightOnEmission(obj) {
         obj.material.emissive = new THREE.Color(0xbeb979);
         obj.material.emissiveIntensity = 0.8;
         obj.material.opacity = 1;
-        //obj.removeFromParent();
+        obj.material.depthWrite = false;
     }
     if (obj?.children != null) {
         for (const child of obj.children) {
@@ -425,26 +452,27 @@ function generateLightOnEmission(obj) {
 
 // Create and configure lighting in the scene
 function setupLighting(scene) {
-    const maxSpotLights = 7;
     
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1,925);
     hemiLight.position.set(0, 10, 0);
     scene.add(hemiLight);
 
-    const ambiLight = new THREE.AmbientLight(0x7a7a7a, 2);
-    //scene.add(ambiLight);
-
-    // Generate dynamic lights, that are always in the scene, but get moved around
-    // Creating new light every time is hard performance-wise
-    for(let i = 0; i < maxSpotLights; i++) {
-        const spotLight = new THREE.SpotLight(0xffffff, 100, undefined, 0.65, 0.4, 2.15);
-        spotLight.castShadow = true;
-        spotLight.shadow.bias = -0.001;
-        spotLight.userData.isUsed = false;
-        spotLight.position.set(200, 200, 200);
-        dynamicSpotLights.push(spotLight);
-        scene.add(spotLight); // TODO: Causes LAG?
-    }
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.castShadow = true;
+    dirLight.shadow.bias = -0.001;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.userData.isUsed = false;
+    dirLight.position.set(-18, 9, -10);
+    dirLight.target.position.set(20, -5, 0);
+    dirLight.shadow.camera.near = 0.1;
+    dirLight.shadow.camera.far = 30;
+    dirLight.shadow.camera.left = -38;
+    dirLight.shadow.camera.right = 0;
+    dirLight.shadow.camera.top = 5;
+    dirLight.shadow.camera.bottom = -8;
+    dirLight.frustumCulled = false;
+    scene.add(dirLight); // TODO: Causes LAG?
 
     // Lihgting GUI
     const params = {
@@ -461,8 +489,6 @@ function setupLighting(scene) {
 
 // Create and setup anything environment-related (things with which the user doesn't interact)
 function setupEnvironment(scene) {
-    const movingSpeed = 3.5;
-
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
@@ -485,7 +511,7 @@ function setupEnvironment(scene) {
 
     // Setup moving environment
     const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
-    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, movingSpeed, true, true, true);
+    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, movingSpeed, true, true);
     const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, movingSpeed, true, true);
     const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, movingSpeed, true, true);
     const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, movingSpeed, true, true);
@@ -553,7 +579,7 @@ function setupEnvironment(scene) {
 
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
 // Returns update function
-function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false, spawnLigt = false) {
+function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
     const instances = [];
     let originalInstance = undefined;
 
@@ -577,15 +603,6 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
                 box3.getSize(size);
                 newInstance.position.z = newPosition.z - size.z - offset;
 
-                if(spawnLigt) {// && Math.random() < 0.5) {
-                    const spotLight = dynamicSpotLights.find(l => l.userData.isUsed === false);
-                    if(spotLight) {
-                        spotLight.userData.isUsed = true;
-                        spotLight.position.set(-8, 3, newInstance.position.z);
-                        spotLight.target = newInstance;
-                    }
-                }
-
                 instances.push(newInstance);
                 scene.add(newInstance);
             }
@@ -597,13 +614,6 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
             if(instance.position.z >= 10) { // TODO: Change for some constant
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
-            }
-        }
-
-        for(const spotLight of dynamicSpotLights) {
-            spotLight.position.z = spotLight.target.position.z;
-            if(spotLight.position.z >= 10) { // TODO: Change for some constant
-                spotLight.userData.isUsed = false;
             }
         }
     }
