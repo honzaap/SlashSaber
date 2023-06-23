@@ -67,18 +67,14 @@ export function createScene() {
                 handler({delta, scene});
             }
 
-            // Move sliced pieces | TODO: remove this and update pieces in separate function
-            for(const cube of slicedCubes) {
+            // Move sliced pieces | TODO: remove when it's unnecessary
+            /*for(const cube of slicedCubes) {
                 cube.position.x += cube.userData.normal.x * delta * 2;
                 cube.position.y += cube.userData.normal.y * delta * 2;
                 cube.position.z += cube.userData.normal.z * delta * 2;
-            }
+            }*/
 
-            // TODO: Make this thing prettier, maybe move it out of here or smth
-            scene.traverse(darkenNonBloomed);
-            bloomComposer.render();
-            scene.traverse(restoreMaterial);
-            composer.render();
+            render(scene, composer, bloomComposer);
 
             timeTarget += dt;
             if(Date.now() >= timeTarget){
@@ -152,8 +148,7 @@ function createSword(scene) {
         sword.userData.trailPoint = tp;
 
         // Setup helper
-        const swordHelperGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
-        const shMesh = new THREE.Mesh(swordHelperGeometry, new THREE.MeshBasicMaterial());
+        const shMesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial());
         shMesh.material.wireframe = true;
         shMesh.position.set(0, 0, -sword.userData.size.z / 2);
         swordHelper.up = new THREE.Vector3(0, 0, 1);
@@ -161,7 +156,7 @@ function createSword(scene) {
         //scene.add(swordHelper);
 
         sword.layers.toggle(2);
-        sword.traverse((obj) => { // TODO: Make this shit better
+        sword.traverse((obj) => {
             if(obj.parent?.name === "Blade")
             obj.layers.toggle(2);
         });
@@ -200,7 +195,7 @@ function createSwordTrail(scene) {
     const prevMouse = new THREE.Vector2(-1, -1);
 
     logicHandlers.push(({ delta }) => {
-        if(sword.userData.trailPoint && !trail.isActive) {
+        if(sword.userData.trailPoint && !trail.isActive) { // TODO: try to find why activating out of update loop doesn't work
             trail.targetObject = sword.userData.trailPoint;
             trail.activate();
         }
@@ -575,6 +570,7 @@ function setupEnvironment(scene) {
 // Returns update function
 function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
     const instances = [];
+    const despawnPosition = 10;
     let originalInstance = undefined;
 
     // Create instance
@@ -605,7 +601,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
             instance.position.z += speed * delta;
-            if(instance.position.z >= 10) { // TODO: Change for some constant
+            if(instance.position.z >= despawnPosition) {
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
             }
@@ -700,6 +696,14 @@ function handleCollisions({scene}) {
             cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
         }
     }
+}
+
+// Render the scene
+function render(scene, composer, bloomComposer) {
+    scene.traverse(darkenNonBloomed);
+    bloomComposer.render();
+    scene.traverse(restoreMaterial);
+    composer.render();
 }
 
 // Variables and methods used for selective bloom effect
