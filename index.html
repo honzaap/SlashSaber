@@ -4,38 +4,26 @@
         <meta charset="UTF-8" />
         <link rel="icon" type="image/svg+xml" href="/vite.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Vite App</title>
+        <title>Vite + TS</title>
     </head>
     <body>
         <canvas id="canvas"></canvas>
-        <script type="x-shader/x-vertex" id="vertexshader">
+            <script type="x-shader/x-vertex" id="vertexshader">
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                }
+            </script>
 
-			varying vec2 vUv;
-
-			void main() {
-
-				vUv = uv;
-
-				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
-			}
-
-		</script>
-
-		<script type="x-shader/x-fragment" id="fragmentshader">
-
-			uniform sampler2D baseTexture;
-			uniform sampler2D bloomTexture;
-
-			varying vec2 vUv;
-
-			void main() {
-
-				gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
-
-			}
-
-		</script>
-        <script type="module" src="/main.js"></script>
+            <script type="x-shader/x-fragment" id="fragmentshader">
+                uniform sampler2D baseTexture;
+                uniform sampler2D bloomTexture;
+                varying vec2 vUv;
+                void main() {
+                    gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+                }
+            </script>
+        <script type="module" src="/src/main.ts"></script>
     </body>
 </html>

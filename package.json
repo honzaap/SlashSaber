@@ -1,20 +1,21 @@
 {
-  "name": "slashsaber",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "sass": "^1.62.1",
-    "vite": "^4.3.9"
-  },
-  "dependencies": {
-    "postprocessing": "^6.31.2",
-    "three": "^0.153.0",
-    "three-csg-ts": "^3.1.13"
-  }
+    "name": "slashsaber",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.2",
+        "vite": "^4.3.9",
+        "sass": "^1.62.1"
+    },
+    "dependencies": {
+      "postprocessing": "^6.31.2",
+      "three": "^0.153.0",
+      "three-csg-ts": "^3.1.13"
+    }
 }

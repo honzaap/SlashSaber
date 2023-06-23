@@ -5,15 +5,15 @@
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
-import Stats from "three/examples/jsm/libs/stats.module";
-import { GUI } from "three/examples/jsm/libs/lil-gui.module.min";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
+import Stats from "three/examples/jsm/libs/stats.module.js";
+import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
-import TrailRenderer from "./libs/TrailRenderer";
+import TrailRenderer from "./libs/TrailRenderer.ts";
 import { GodraysPass } from "./libs/GoodGodRays";
 
 // Global GLTF loader
@@ -26,13 +26,20 @@ let mouseDirection = new THREE.Vector2();
 let sword = new THREE.Object3D();
 let swordBB = new OBB();
 const swordHelper = new THREE.Object3D();
-const cubes = []; // Only for debug
-const slicedCubes = []; // Only for debug
+const cubes : any[] = []; // Only for debug
+const slicedCubes : any[] = []; // Only for debug
 const gui = new GUI();
 const movingSpeed = 3.5;
 
+interface LogicHandlerParams { // TODO : Move elsewhere
+    scene : THREE.Scene;
+    delta : number; 
+}
+
+type LogicHandlerFunction = (params : LogicHandlerParams) => void;
+
 // Array of functions that are called in given order every frame
-const logicHandlers = [];
+const logicHandlers : LogicHandlerFunction[] = [];
 
 export function createScene() {
     // Create scene
@@ -64,7 +71,7 @@ export function createScene() {
             const delta = clock.getDelta();
 
             for(const handler of logicHandlers) {
-                handler({delta, scene});
+                handler({scene, delta});
             }
 
             // Move sliced pieces | TODO: remove when it's unnecessary
@@ -112,7 +119,7 @@ function createCamera() {
 }
 
 // Create sword model, bounding box and helper
-function createSword(scene) {
+function createSword(scene : THREE.Scene) {
     loader.load("./assets/katana.glb", (obj) => {
         sword = obj.scene;
         sword.position.set(0, 0.7, -0.85);
@@ -170,7 +177,7 @@ function createSword(scene) {
 }
 
 // Create sword trail
-function createSwordTrail(scene) {
+function createSwordTrail(scene : THREE.Scene) {
     const speedToShowTrail = 7000;
     const fadeOutFactor = 1;
     const fadeInFactor = 2;
@@ -236,7 +243,7 @@ function createSwordTrail(scene) {
 }
 
 // Create and configure camera and sword controls
-function createControls(camera) {
+function createControls(camera : THREE.Camera) {
 
     document.onmousemove = (e) => {
         e.preventDefault();
@@ -247,7 +254,7 @@ function createControls(camera) {
 }
 
 // Take mouse event and camera as input and handle controls for the camera
-function controlCamera(e, camera) {
+function controlCamera(e : MouseEvent, camera : THREE.Camera) {
     const delta = new THREE.Vector2();
 
     if(mouse.x === -1 && mouse.y === -1) {
@@ -267,7 +274,7 @@ function controlCamera(e, camera) {
 }
 
 // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
-function controlSword(e) {
+function controlSword(e : MouseEvent) {
     const prevMouse = new THREE.Vector2();
     prevMouse.copy(swordMouse);
     swordMouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
@@ -290,24 +297,22 @@ function controlSword(e) {
 }
 
 // Create and configure renderer and return it
-function createRenderer(scene, camera) {
+function createRenderer(scene : THREE.Scene, camera : THREE.Camera) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
         antialias: false,
         depth: true,
-        canvas: document.querySelector("#canvas"),
+        canvas: document.getElementsByTagName("canvas")[0],
     });
 
     renderer.localClippingEnabled = true;
-    renderer.gammaInput = true;
-    renderer.gammaOutput = true;
     
     resizeRenderer(renderer);
 
     renderer.render(scene, camera);
     renderer.shadowMap.enabled = true; // TODO: Causes LAG?
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.shadowMap.autoUpdate = true; //?
+    renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
     renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
@@ -319,13 +324,13 @@ function createRenderer(scene, camera) {
 }
 
 // Set's the renderers size to current window size
-function resizeRenderer(renderer) {
+function resizeRenderer(renderer : THREE.WebGLRenderer) {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // Configure postprocessing and return composer
-function setupPostProcessing(scene, camera, renderer) {
+function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
     const renderScene = new RenderPass(scene, camera);
     renderScene.clearColor = new THREE.Color(0, 0, 0);
     renderScene.clearAlpha = 1;
@@ -369,17 +374,15 @@ function setupPostProcessing(scene, camera, renderer) {
     //scene.add(grLight.target);
     //scene.add(grLight);
 
-    const godraysPass = new GodraysPass(grLight, camera, {
+    const godraysPass = new GodraysPass(grLight, <THREE.PerspectiveCamera> camera, {
         density: 0.03,
         maxDensity: 0.1,
         distanceAttenuation: 2,
-        color: new THREE.Color(0xffffff).getHex(),
+        color: new THREE.Color(0xffffff),
         edgeStrength: 2,
         edgeRadius: 2,
         raymarchSteps: 60,
-        enableBlur: true,
-        blurVariance: 0.1,
-        blurKernelSize: postprocessing.KernelSize.MEDIUM,
+        blur: { variance: 0.1, kernelSize: postprocessing.KernelSize.SMALL },
     });
 
     const mixPass = new postprocessing.ShaderPass(
@@ -388,8 +391,8 @@ function setupPostProcessing(scene, camera, renderer) {
                 baseTexture: { value: null },
                 bloomTexture: { value: bloomComposer.renderTarget2.texture }
             },
-            vertexShader: document.getElementById('vertexshader').textContent,
-            fragmentShader: document.getElementById('fragmentshader').textContent,
+            vertexShader: (document.getElementById('vertexshader')?.textContent)?.toString(), // TODO: Move all shaders to separate file
+            fragmentShader: (document.getElementById('fragmentshader')?.textContent)?.toString(), // TODO: Move all shaders to separate file
             defines: {}
         }), 'baseTexture'
     );
@@ -406,7 +409,7 @@ function setupPostProcessing(scene, camera, renderer) {
 }
 
 // Set shadows on given object to given settings
-function setShadow(obj, cast = false, receive = false) {
+function setShadow(obj : THREE.Object3D, cast = false, receive = false) {
     obj.castShadow = cast;
     obj.receiveShadow = receive;
     if (obj?.children != null) {
@@ -416,21 +419,23 @@ function setShadow(obj, cast = false, receive = false) {
     }
 }
 
-function generateLightOnEmission(obj) {
-    if(obj.material?.emissiveIntensity > 1) {
-        obj.material.emissiveIntensity = 1;
-        const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
-        pointLight.position.y = -1.4;
-        pointLight.castShadow = false;
-        obj.add(pointLight); // TODO: Causes LAG?
-    }
-    if(obj.material?.opacity < 1) {
-        obj.castShadow = false;
-        obj.receiveShadow = false;
-        obj.material.emissive = new THREE.Color(0xbeb979);
-        obj.material.emissiveIntensity = 0.8;
-        obj.material.opacity = 1;
-        obj.material.depthWrite = false;
+function generateLightOnEmission(obj : THREE.Object3D) {
+    if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
+        if(obj.material?.emissiveIntensity > 1) {
+            obj.material.emissiveIntensity = 1;
+            const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
+            pointLight.position.y = -1.4;
+            pointLight.castShadow = false;
+            obj.add(pointLight); // TODO: Causes LAG?
+        }
+        if(obj.material?.opacity < 1) {
+            obj.castShadow = false;
+            obj.receiveShadow = false;
+            obj.material.emissive = new THREE.Color(0xbeb979);
+            obj.material.emissiveIntensity = 0.8;
+            obj.material.opacity = 1;
+            obj.material.depthWrite = false;
+        }
     }
     if (obj?.children != null) {
         for (const child of obj.children) {
@@ -440,8 +445,8 @@ function generateLightOnEmission(obj) {
 }
 
 // Create and configure lighting in the scene
-function setupLighting(scene) {
-    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1,925);
+function setupLighting(scene : THREE.Scene) {
+    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1);
     hemiLight.position.set(0, 10, 0);
     scene.add(hemiLight);
 
@@ -471,13 +476,13 @@ function setupLighting(scene) {
 
     const gui_hemiLight = gui.addFolder('Hemisphere Light');
     gui_hemiLight.close();
-    gui_hemiLight.addColor(params, 'sky').onChange(function(value) { hemiLight.color  = new THREE.Color(value); });
-    gui_hemiLight.addColor(params, 'ground').onChange(function(value) { hemiLight.groundColor  = new THREE.Color(value); });
+    gui_hemiLight.addColor(params, 'sky').onChange(function(value : number) { hemiLight.color  = new THREE.Color(value); });
+    gui_hemiLight.addColor(params, 'ground').onChange(function(value : number) { hemiLight.groundColor  = new THREE.Color(value); });
     gui_hemiLight.add(hemiLight, "intensity", 0, 7)
 }
 
 // Create and setup anything environment-related
-function setupEnvironment(scene) {
+function setupEnvironment(scene : THREE.Scene) {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
@@ -487,18 +492,16 @@ function setupEnvironment(scene) {
 
     const params = {
         background: '#000000',
-        size: 0.027,
         near: 40,
         far: 65
     };
 
-    gui_bg.addColor(params, 'background').onChange(function(value) {
-        scene.background.set(value);
+    gui_bg.addColor(params, 'background').onChange(function(value : THREE.Color) {
+        scene.background = value;
         scene.fog  = new THREE.Fog(value, params.near, params.far);
     });
-    gui_bg.add(params, 'size', 0, 0.1).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, params.near, params.far); });
-    gui_bg.add(params, 'near', 20, 100).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, value, params.far); });
-    gui_bg.add(params, 'far', 20, 100).onChange(function(value) { scene.fog = new THREE.Fog(scene.background, params.near, value); });
+    gui_bg.add(params, 'near', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), value, params.far); });
+    gui_bg.add(params, 'far', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), params.near, value); });
 
     // Setup moving environment
     const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
@@ -549,7 +552,7 @@ function setupEnvironment(scene) {
     spawnCubes();*/
 
     // Render and animate animated environment, move with objects and make them despawn when out of range
-    let mixer;
+    let mixer : THREE.AnimationMixer;
     logicHandlers.push(({ delta, scene }) => {
         if (mixer) mixer.update(delta);
         for(const {cube} of cubes) {
@@ -568,10 +571,10 @@ function setupEnvironment(scene) {
 
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
 // Returns update function
-function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
-    const instances = [];
+function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
+    const instances : THREE.Object3D[] = [];
     const despawnPosition = 10;
-    let originalInstance = undefined;
+    let originalInstance : THREE.Object3D;
 
     // Create instance
     loader.load(`./assets/${asset}`, function (gltf) {
@@ -582,7 +585,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
         originalInstance = instance;
     });
 
-    const updateLoop = (scene, delta) => {
+    const updateLoop = (scene : THREE.Scene, delta : number) => {
         // Generate asset
         if(originalInstance != null) {
             if(instances.length < maxNumber) {
@@ -612,7 +615,7 @@ function generateMovingAsset(asset, maxNumber = 30, offset = 0.08, speed = 2, ca
 }
 
 // Update bounding boxes, handle collisions with sword and other objects
-function handleCollisions({scene}) {
+function handleCollisions({ scene } : LogicHandlerParams) : void {
     // Update sword bounding box
     const matrix = new THREE.Matrix4();
     const rotation = new THREE.Euler();
@@ -622,7 +625,9 @@ function handleCollisions({scene}) {
     const position = new THREE.Vector3();
     position.copy(sword.position);
     if(sword.userData.size) {
-        swordBB.set(position, sword.userData.size, matrix);
+        const matrix3 = new THREE.Matrix3();
+        matrix3.setFromMatrix4(matrix);
+        swordBB.set(position, sword.userData.size, matrix3);
     }
 
     // Update sword bounding box helper
@@ -649,12 +654,12 @@ function handleCollisions({scene}) {
             let worldPos = new THREE.Vector3();
             sword.userData.trailPoint.getWorldPosition(worldPos);
 
-            const points = [...cube.userData.collisionPoints, worldPos];
+            const points : THREE.Vector3[] = [...cube.userData.collisionPoints, worldPos];
             cube.userData.collisionPoints = null;
 
             // Generate a plane, which cuts through the object
             const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
-            plane.setFromCoplanarPoints(...points);
+            plane.setFromCoplanarPoints(points[0], points[1], points[2]);
 
             // Create 2 planes, one with flipped normal to correctly clip both sides
             const geometry = new THREE.PlaneGeometry(10, 10);
@@ -699,7 +704,7 @@ function handleCollisions({scene}) {
 }
 
 // Render the scene
-function render(scene, composer, bloomComposer) {
+function render(scene : THREE.Scene, composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
     scene.traverse(darkenNonBloomed);
     bloomComposer.render();
     scene.traverse(restoreMaterial);
@@ -707,20 +712,20 @@ function render(scene, composer, bloomComposer) {
 }
 
 // Variables and methods used for selective bloom effect
-const materials = {};
+const materials : any = {};
 const bloomLayer = new THREE.Layers();
 bloomLayer.set(2);
 const darkMaterial = new THREE.MeshBasicMaterial({ color: 'black' });
 
-function darkenNonBloomed(obj) {
-    if (obj.isMesh && bloomLayer.test(obj.layers) === false) {
+function darkenNonBloomed(obj : THREE.Object3D) {
+    if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
         materials[obj.uuid] = obj.material;
         obj.material = darkMaterial;
     }
 }
 
-function restoreMaterial(obj) {
-    if (materials[obj.uuid]) {
+function restoreMaterial(obj : THREE.Object3D) {
+    if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
         obj.material = materials[ obj.uuid ];
         delete materials[obj.uuid];
     }
