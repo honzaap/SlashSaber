@@ -8,13 +8,13 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
-import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
-import Stats from "three/examples/jsm/libs/stats.module.js";
-import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
 import TrailRenderer from "./libs/TrailRenderer.ts";
 import { GodraysPass } from "./libs/GoodGodRays";
+import GUIManager from "./utils/GUIManager.ts";
+import HelperManager from "./utils/HelperManager.ts";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -25,27 +25,25 @@ let swordMouse = new THREE.Vector2();
 let mouseDirection = new THREE.Vector2();
 let sword = new THREE.Object3D();
 let swordBB = new OBB();
-const swordHelper = new THREE.Object3D();
 const cubes : any[] = []; // Only for debug
 const slicedCubes : any[] = []; // Only for debug
-const gui = new GUI();
 const movingSpeed = 3.5;
 
-interface LogicHandlerParams { // TODO : Move elsewhere
-    scene : THREE.Scene;
-    delta : number; 
-}
-
+interface LogicHandlerParams { scene : THREE.Scene; delta : number; }
 type LogicHandlerFunction = (params : LogicHandlerParams) => void;
 
-// Array of functions that are called in given order every frame
+// Array of functions that are called in every frame
 const logicHandlers : LogicHandlerFunction[] = [];
+
+const helperManager = new HelperManager();
 
 export function createScene() {
     // Create scene
     const scene = new THREE.Scene();
     const camera = createCamera();
     const renderer = createRenderer(scene, camera);
+
+    helperManager.setScene(scene);
 
     setupLighting(scene);
 
@@ -55,12 +53,9 @@ export function createScene() {
 
     createControls(camera);
 
-    const {composer, bloomComposer} = setupPostProcessing(scene, camera, renderer);
+    const { composer, bloomComposer } = setupPostProcessing(scene, camera, renderer);
 
     const clock = new THREE.Clock();
-
-    const stats = new Stats();
-    document.body.appendChild(stats.dom);
 
     const dt = 1000 / 60;
     let timeTarget = 0;
@@ -80,6 +75,9 @@ export function createScene() {
                 cube.position.y += cube.userData.normal.y * delta * 2;
                 cube.position.z += cube.userData.normal.z * delta * 2;
             }*/
+            
+            GUIManager.updateStats();
+            helperManager.update(delta);
 
             render(scene, composer, bloomComposer);
 
@@ -87,8 +85,6 @@ export function createScene() {
             if(Date.now() >= timeTarget){
                 timeTarget = Date.now();
             }
-
-            stats.update();
         }
         requestAnimationFrame(animate);
     }
@@ -154,14 +150,6 @@ function createSword(scene : THREE.Scene) {
         tp.position.y = size.y + 0.1;
         sword.userData.trailPoint = tp;
 
-        // Setup helper
-        const shMesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial());
-        shMesh.material.wireframe = true;
-        shMesh.position.set(0, 0, -sword.userData.size.z / 2);
-        swordHelper.up = new THREE.Vector3(0, 0, 1);
-        swordHelper.add(shMesh);
-        //scene.add(swordHelper);
-
         sword.layers.toggle(2);
         sword.traverse((obj) => {
             if(obj.parent?.name === "Blade")
@@ -171,13 +159,14 @@ function createSword(scene : THREE.Scene) {
         scene.add(sword);
 
         logicHandlers.push(handleCollisions);
+        createSwordTrail(scene, sword);
+        helperManager.createSwordHelper(sword, size);
     });
 
-    createSwordTrail(scene);
 }
 
 // Create sword trail
-function createSwordTrail(scene : THREE.Scene) {
+function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
     const speedToShowTrail = 7000;
     const fadeOutFactor = 1;
     const fadeInFactor = 2;
@@ -188,25 +177,22 @@ function createSwordTrail(scene : THREE.Scene) {
 
     const trail = new TrailRenderer(scene, false);
 
-    const material = TrailRenderer.createBaseMaterial();	
+    const material = TrailRenderer.createBaseMaterial();
 
-	material.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
+    material.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
     material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
 
     const trailLength = 20;
 
-    trail.initialize(material, trailLength, false, 0, headGeometry, sword);
+    trail.initialize(material, trailLength, false, 0, headGeometry, sword.userData.trailPoint);
+    trail.activate();
+    trail.advance();
 
     let lastUpdate = performance.now();
     let opacityGoingUp = false;
     const prevMouse = new THREE.Vector2(-1, -1);
 
     logicHandlers.push(({ delta }) => {
-        if(sword.userData.trailPoint && !trail.isActive) { // TODO: try to find why activating out of update loop doesn't work
-            trail.targetObject = sword.userData.trailPoint;
-            trail.activate();
-        }
-
         // Update trail mesh
         const time = performance.now();
         if (time - lastUpdate > 10) {
@@ -346,12 +332,6 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
     bloomComposer.addPass(renderScene);
     bloomComposer.addPass(bloomPass);
 
-    const gui_bloom = gui.addFolder("Bloom Effect");
-    gui_bloom.close();
-    gui_bloom.add(bloomPass, 'threshold', 0, 2);
-    gui_bloom.add(bloomPass, 'strength', 0, 2);
-    gui_bloom.add(bloomPass, 'radius', 0.0, 2);
-
     const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8}); // TODO: Causes LAG?
 
     // God rays
@@ -370,7 +350,6 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
     grLight.shadow.camera.right = 5;
     grLight.shadow.camera.top = 5;
     grLight.shadow.camera.bottom = -8;
-
     //scene.add(grLight.target);
     //scene.add(grLight);
 
@@ -391,8 +370,8 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
                 baseTexture: { value: null },
                 bloomTexture: { value: bloomComposer.renderTarget2.texture }
             },
-            vertexShader: (document.getElementById('vertexshader')?.textContent)?.toString(), // TODO: Move all shaders to separate file
-            fragmentShader: (document.getElementById('fragmentshader')?.textContent)?.toString(), // TODO: Move all shaders to separate file
+            vertexShader: MIX_VERTEX_SHADER,
+            fragmentShader: MIX_FRAGMENT_SHADER,
             defines: {}
         }), 'baseTexture'
     );
@@ -404,6 +383,8 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
     composer.addPass(mixPass);
     composer.addPass(godraysPass);
     composer.addPass(new postprocessing.EffectPass(camera));
+
+    GUIManager.registerPostprocessing(bloomPass);
 
     return {composer, bloomComposer};
 }
@@ -419,16 +400,19 @@ function setShadow(obj : THREE.Object3D, cast = false, receive = false) {
     }
 }
 
-function generateLightOnEmission(obj : THREE.Object3D) {
+// Looks through materials of given object and its children, then modifies it however necessary
+function modifyObjectMaterial(obj : THREE.Object3D) {
     if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-        if(obj.material?.emissiveIntensity > 1) {
+        if(obj.material?.emissiveIntensity > 1) { 
+            // Generate point light on an emissive material (used for lamps)
             obj.material.emissiveIntensity = 1;
             const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
             pointLight.position.y = -1.4;
             pointLight.castShadow = false;
             obj.add(pointLight); // TODO: Causes LAG?
         }
-        if(obj.material?.opacity < 1) {
+        if(obj.material?.opacity < 1) { 
+            // Make objects visible, but still able to pass light and godrays
             obj.castShadow = false;
             obj.receiveShadow = false;
             obj.material.emissive = new THREE.Color(0xbeb979);
@@ -439,7 +423,7 @@ function generateLightOnEmission(obj : THREE.Object3D) {
     }
     if (obj?.children != null) {
         for (const child of obj.children) {
-            generateLightOnEmission(child);
+            modifyObjectMaterial(child);
         }
     }
 }
@@ -467,41 +451,13 @@ function setupLighting(scene : THREE.Scene) {
     dirLight.frustumCulled = false;
     scene.add(dirLight);
 
-    // Lihgting GUI
-    const params = {
-        sky: 0xe5e7ff,
-        ground: 0xd2b156,
-        intensity: 1.75
-    }
-
-    const gui_hemiLight = gui.addFolder('Hemisphere Light');
-    gui_hemiLight.close();
-    gui_hemiLight.addColor(params, 'sky').onChange(function(value : number) { hemiLight.color  = new THREE.Color(value); });
-    gui_hemiLight.addColor(params, 'ground').onChange(function(value : number) { hemiLight.groundColor  = new THREE.Color(value); });
-    gui_hemiLight.add(hemiLight, "intensity", 0, 7)
+    GUIManager.registerLighting(hemiLight);
 }
 
 // Create and setup anything environment-related
 function setupEnvironment(scene : THREE.Scene) {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
-
-    // Fog GUI
-    const gui_bg = gui.addFolder("World Settings");
-    gui_bg.close();
-
-    const params = {
-        background: '#000000',
-        near: 40,
-        far: 65
-    };
-
-    gui_bg.addColor(params, 'background').onChange(function(value : THREE.Color) {
-        scene.background = value;
-        scene.fog  = new THREE.Fog(value, params.near, params.far);
-    });
-    gui_bg.add(params, 'near', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), value, params.far); });
-    gui_bg.add(params, 'far', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), params.near, value); });
 
     // Setup moving environment
     const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
@@ -567,6 +523,8 @@ function setupEnvironment(scene : THREE.Scene) {
         updateLamps(scene, delta);
     });
     //mixer = new THREE.AnimationMixer(envAnimated);
+
+    GUIManager.registerEnvironment(scene);
 }
 
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
@@ -581,7 +539,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, spee
         const instance = gltf.scene;
         instance.position.set(0, 0, 0);
         setShadow(gltf.scene, castShadow, receiveShadow);
-        generateLightOnEmission(gltf.scene);
+        modifyObjectMaterial(gltf.scene);
         originalInstance = instance;
     });
 
@@ -615,7 +573,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, spee
 }
 
 // Update bounding boxes, handle collisions with sword and other objects
-function handleCollisions({ scene } : LogicHandlerParams) : void {
+function handleCollisions({ scene } : LogicHandlerParams) {
     // Update sword bounding box
     const matrix = new THREE.Matrix4();
     const rotation = new THREE.Euler();
@@ -629,10 +587,6 @@ function handleCollisions({ scene } : LogicHandlerParams) : void {
         matrix3.setFromMatrix4(matrix);
         swordBB.set(position, sword.userData.size, matrix3);
     }
-
-    // Update sword bounding box helper
-    swordHelper.position.copy(position);
-    swordHelper.setRotationFromMatrix(matrix);
 
     // Update cubes bounding boxes
     for(const {cube, cubeBB} of cubes) {
@@ -705,28 +659,27 @@ function handleCollisions({ scene } : LogicHandlerParams) : void {
 
 // Render the scene
 function render(scene : THREE.Scene, composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
+    const materials : any = {};
+    const bloomLayer = new THREE.Layers();
+    bloomLayer.set(2);
+    const darkMaterial = new THREE.MeshBasicMaterial({ color: 'black' });
+
+    function darkenNonBloomed(obj : THREE.Object3D) {
+        if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
+            materials[obj.uuid] = obj.material;
+            obj.material = darkMaterial;
+        }
+    }
+
+    function restoreMaterial(obj : THREE.Object3D) {
+        if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
+            obj.material = materials[ obj.uuid ];
+            delete materials[obj.uuid];
+        }
+    }
+
     scene.traverse(darkenNonBloomed);
     bloomComposer.render();
     scene.traverse(restoreMaterial);
     composer.render();
-}
-
-// Variables and methods used for selective bloom effect
-const materials : any = {};
-const bloomLayer = new THREE.Layers();
-bloomLayer.set(2);
-const darkMaterial = new THREE.MeshBasicMaterial({ color: 'black' });
-
-function darkenNonBloomed(obj : THREE.Object3D) {
-    if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
-        materials[obj.uuid] = obj.material;
-        obj.material = darkMaterial;
-    }
-}
-
-function restoreMaterial(obj : THREE.Object3D) {
-    if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
-        obj.material = materials[ obj.uuid ];
-        delete materials[obj.uuid];
-    }
 }
