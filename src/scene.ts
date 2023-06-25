@@ -15,6 +15,7 @@ import TrailRenderer from "./libs/TrailRenderer.ts";
 import { GodraysPass } from "./libs/GoodGodRays";
 import GUIManager from "./utils/GUIManager.ts";
 import HelperManager from "./utils/HelperManager.ts";
+import CANNON from "cannon";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -36,6 +37,39 @@ type LogicHandlerFunction = (params : LogicHandlerParams) => void;
 const logicHandlers : LogicHandlerFunction[] = [];
 
 const helperManager = new HelperManager();
+
+// TEMP 
+// Setup our world
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0); // m/s²
+
+const groundBody = new CANNON.Body({
+    mass: 0,
+    shape: new CANNON.Plane()
+});
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+groundBody.position.set(0, -0.95, 0);
+world.addBody(groundBody);
+
+const wallBody1 = new CANNON.Body({
+    mass: 0,
+    shape: new CANNON.Plane()
+});
+wallBody1.quaternion.setFromEuler(0, -Math.PI / 2, 0);
+wallBody1.position.set(2.5, 0, 0);
+world.addBody(wallBody1);
+
+const wallBody2 = new CANNON.Body({
+    mass: 0,
+    shape: new CANNON.Plane()
+});
+wallBody2.quaternion.setFromEuler(0, Math.PI / 2, 0);
+wallBody2.position.set(-2.5, 0, 0);
+world.addBody(wallBody2);
+
+const fixedTimeStep = 1.0 / 60.0; 
+
+const spheres : THREE.Mesh[] = [];
 
 export function createScene() {
     // Create scene
@@ -60,10 +94,45 @@ export function createScene() {
     const dt = 1000 / 60;
     let timeTarget = 0;
 
+    setInterval(() => {
+        // Create a sphere
+        const size = 0.5; // m
+        const sphereBody = new CANNON.Body({
+            mass: 0.4, // kg
+            shape: new CANNON.Box(new CANNON.Vec3(size, size, size))
+        });
+        sphereBody.position.set(0, 1.5, -20);
+        sphereBody.applyLocalImpulse(new CANNON.Vec3(Math.random() * (3 - -3) + -3, Math.random() * (3 - -3) + -3, Math.random() * (3 - -3) + -3), new CANNON.Vec3(0, 0, 0));
+        world.addBody(sphereBody);
+    
+        const sphereGeo = new THREE.BoxGeometry(size, size, size);
+        const sphere = new THREE.Mesh(sphereGeo);
+    
+        sphere.userData.body = sphereBody;
+        scene.add(sphere);
+        spheres.push(sphere);
+    }, 3000);
+
     // Animation loop
     function animate() {
         if(Date.now() >= timeTarget){
             const delta = clock.getDelta();
+
+            // Update physics
+            world.step(fixedTimeStep, delta, 3);
+
+            for(const sphere of spheres) {
+                const sphereBody = sphere.userData.body;
+                sphereBody.position.z += movingSpeed * delta;
+                sphere.position.set(sphereBody.position.x, sphereBody.position.y, sphereBody.position.z);
+                sphere.quaternion.set(sphereBody.quaternion.x, sphereBody.quaternion.y, sphereBody.quaternion.z, sphereBody.quaternion.w);
+
+                if(sphereBody.position.z >= 5) {
+                    world.remove(sphereBody);
+                    scene.remove(sphere);
+                    spheres.splice(spheres.findIndex(i => i.uuid === sphere.uuid), 1);
+                }
+            }
 
             for(const handler of logicHandlers) {
                 handler({scene, delta});
@@ -118,8 +187,14 @@ function createCamera() {
 function createSword(scene : THREE.Scene) {
     loader.load("./assets/katana.glb", (obj) => {
         sword = obj.scene;
-        sword.position.set(0, 0.7, -0.85);
+        sword.position.set(0, 0.65, -0.80);
         sword.up = new THREE.Vector3(0, 0, 1);
+
+        sword.traverse(obj => {
+            if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
+                obj.material.flatShading = true;
+            }
+        })
 
         // Get model size
         const box3 = new THREE.Box3().setFromObject(sword);
@@ -553,7 +628,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, spee
                 const size = new THREE.Vector3();
                 box3.getSize(size);
                 newInstance.position.z = newPosition.z - size.z - offset;
-
+                
                 instances.push(newInstance);
                 scene.add(newInstance);
             }
@@ -561,6 +636,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, spee
 
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
+            
             instance.position.z += speed * delta;
             if(instance.position.z >= despawnPosition) {
                 scene.remove(instance);
