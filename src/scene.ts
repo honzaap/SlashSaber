@@ -153,7 +153,7 @@ function createCamera() {
     const camera = new THREE.PerspectiveCamera(
         65,
         window.innerWidth / window.innerHeight,
-        0.1,
+        0.6,
         400,
     );
     camera.position.set(0, 1.2, 0);
@@ -641,6 +641,8 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
 
 // Update bounding boxes, handle collisions with sword and other objects
 function handleCollisions({ scene } : LogicHandlerParams) {
+    const cutForce = 3;
+    
     // Update sword bounding box
     const matrix = new THREE.Matrix4();
     const rotation = new THREE.Euler();
@@ -663,19 +665,27 @@ function handleCollisions({ scene } : LogicHandlerParams) {
     // Check sword collisions with objects
     for(const {cube, cubeBB} of cubes) {
         if(swordBB.intersectsBox3(cubeBB) && cube.userData.collided !== true) { // Collision occured
-            for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
-                let worldPos = new THREE.Vector3();
-                point.getWorldPosition(worldPos);
-                cube.userData.collisionPoints = cube.userData.collisionPoints == null ? [worldPos] : [...cube.userData.collisionPoints, worldPos];
-            }
+            const point = sword.userData.contactPoints[1];
+            let worldPos = new THREE.Vector3();
+            point.getWorldPosition(worldPos);
+            cube.userData.collisionPoint = worldPos;
             cube.userData.collided = true;
         }
         else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
             cube.userData.collided = false;
-            let worldPos = new THREE.Vector3();
-            sword.userData.trailPoint.getWorldPosition(worldPos); // TODO : Why the fuck am I taking the point from trailPoint???
 
-            const points : THREE.Vector3[] = [...cube.userData.collisionPoints, worldPos];
+            const col1 = new THREE.Vector3();
+            const col2 = new THREE.Vector3();
+            col1.copy(cube.userData.collisionPoint);
+            sword.userData.contactPoints[1].getWorldPosition(col2);
+            const cutDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
+
+            const points : THREE.Vector3[] = [cube.userData.collisionPoint];
+            for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
+                const worldPos = new THREE.Vector3();
+                point.getWorldPosition(worldPos);
+                points.push(worldPos);
+            }
             cube.userData.collisionPoints = null;
 
             // Generate a plane, which cuts through the object
@@ -695,12 +705,9 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             v1.copy(points[0]).add(plane.normal);
             v2.copy(points[0]).sub(plane.normal);
 
-            const cutNormal = new THREE.Vector3(1, 0.5, 0);
-
             // Create 2 planes, one with flipped normal to correctly clip both sides
             // planeMesh is the one that leaves behind a cut piece with physics
             if(v1.distanceTo(cube.position) > v2.distanceTo(cube.position)) {
-                cutNormal.set(plane.normal.x, plane.normal.y, plane.normal.z);
                 planeMesh.position.copy(plane.normal);
                 planeMesh.position.multiplyScalar(-plane.constant);
                 planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
@@ -716,7 +723,6 @@ function handleCollisions({ scene } : LogicHandlerParams) {
                 planeMesh2.userData.normal.copy(plane.normal);
             }
             else {
-                cutNormal.set(plane.normal.x, plane.normal.y, plane.normal.z);
                 planeMesh2.position.copy(plane.normal);
                 planeMesh2.position.multiplyScalar(-plane.constant);
                 planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
@@ -768,21 +774,23 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             res.updateMatrix();
             res.updateMatrixWorld();
 
+            console.log((5 * size.x * size.y * size.z));
+
             const cutPieceBody = new CANNON.Body({
-                mass: 5 * size.x * size.y * size.z,
+                mass: Math.max(8 * size.x * size.y * size.z, 0.3),
                 shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
                 position: new CANNON.Vec3(middle.x, middle.y, middle.z),
             });
 
-            res.position.copy(middle);
- 
-            //cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutNormal.x, cutNormal.y, cutNormal.z), new CANNON.Vec3(0, 0, 0));
-            cutPieceBody.velocity.set(cutNormal.x * 5, Math.abs(cutNormal.y) * -5, cutNormal.z * 5);
             cutPieceBody.updateMassProperties();
             cutPieceBody.aabbNeedsUpdate = true;
             world.addBody(cutPieceBody);
+
             res.userData.body = cutPieceBody;
-            movingSpeed = 0;
+            res.position.copy(middle);
+
+            cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce), new CANNON.Vec3(0, 0, 0));
+            //cutPieceBody.velocity.set(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce);
 
             const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
             res2BB.setFromObject(res2);
@@ -792,6 +800,8 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             scene.remove(cube);
             slicedCubes.push(res);
             cubes[cubes.findIndex(c => c.cube.uuid === cube.uuid)] = { cube: res2, cubeBB: res2BB };
+       
+            //movingSpeed = 0; // DEBUG
         }
     }
 }

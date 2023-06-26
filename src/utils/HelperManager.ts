@@ -25,10 +25,12 @@ export default class HelperManager {
         swordHelper.visible = false;
 
         // Contact points helpers
+        let i = 0;
         for(const point of sword.userData.contactPoints) {
-            point.material = new THREE.MeshStandardMaterial({color: 0xff00ff});
+            point.material = new THREE.MeshStandardMaterial({color: 0xff00ff * i});
             point.geometry = new THREE.BoxGeometry(0.04, 0.04, 0.04);
             point.visible = false;
+            i++;
         }
 
         // Trail point helper
