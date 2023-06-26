@@ -16,84 +16,45 @@ import { GodraysPass } from "./libs/GoodGodRays";
 import GUIManager from "./utils/GUIManager.ts";
 import HelperManager from "./utils/HelperManager.ts";
 import * as CANNON from "cannon-es";
+import Sword from "./models/Sword.ts";
+import GameState from "./models/GameState.ts";
+
+// Define global GameState
+const gameState = GameState.getInstance();
 
 // Global GLTF loader
 const loader = new GLTFLoader();
 
 // Global mouse coordinates
-let mouse = new THREE.Vector2(-1, -1);
 let swordMouse = new THREE.Vector2();
 let mouseDirection = new THREE.Vector2();
-let sword = new THREE.Object3D();
+let sword : Sword = new THREE.Object3D();
 let swordBB = new OBB();
 const cubes : any[] = []; // Only for debug
 const slicedCubes : any[] = []; // Only for debug
-let movingSpeed = 3.5;
-
-interface LogicHandlerParams { scene : THREE.Scene; delta : number; }
-type LogicHandlerFunction = (params : LogicHandlerParams) => void;
-
-// Array of functions that are called in every frame
-const logicHandlers : LogicHandlerFunction[] = [];
 
 const helperManager = new HelperManager();
 
-// TEMP 
-// Setup our world
-const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0);
-
-const groundBody = new CANNON.Body({
-    mass: 0,
-    shape: new CANNON.Plane(),
-});
-groundBody.type = CANNON.Body.STATIC;
-groundBody.mass = 0;
-groundBody.updateMassProperties();
-groundBody.aabbNeedsUpdate = true;
-groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-groundBody.position.set(0, -0.95, 0);
-world.addBody(groundBody);
-
-
-const wallBody1 = new CANNON.Body({
-    mass: 0,
-    shape: new CANNON.Plane(),
-});
-wallBody1.quaternion.setFromEuler(0, -Math.PI / 2, 0);
-wallBody1.position.set(2.5, 0, 0);
-world.addBody(wallBody1);
-
-const wallBody2 = new CANNON.Body({
-    mass: 0,
-    shape: new CANNON.Plane()
-});
-wallBody2.quaternion.setFromEuler(0, Math.PI / 2, 0);
-wallBody2.position.set(-2.5, 0, 0);
-world.addBody(wallBody2);
-
-const fixedTimeStep = 1.0 / 60.0; 
-
 export function createScene() {
     // Create scene
-    const scene = new THREE.Scene();
     const camera = createCamera();
-    const renderer = createRenderer(scene, camera);
+    const renderer = createRenderer(camera);
 
-    helperManager.setScene(scene);
-    logicHandlers.push(({delta = 0}) => { helperManager.update(delta) });
+    gameState.addLogicHandler((delta : number) => { helperManager.update(delta) });
 
-    setupLighting(scene);
+    setupLighting();
 
-    setupEnvironment(scene);
+    setupEnvironment();
 
-    createSword(scene);
+    setupPhysicsEnvironment();
+
+    createSword();
 
     createControls(camera);
 
     setupObstacles();
 
-    const { composer, bloomComposer } = setupPostProcessing(scene, camera, renderer);
+    const { composer, bloomComposer } = setupPostProcessing(camera, renderer);
 
     const clock = new THREE.Clock();
 
@@ -106,28 +67,18 @@ export function createScene() {
             const delta = clock.getDelta();
 
             // Update physics
-            world.step(fixedTimeStep, delta, 3);
-
             for(const cutPiece of slicedCubes) {
                 const cutPieceBody = cutPiece.userData.body;
-                cutPieceBody.position.z += movingSpeed * delta;
+                cutPieceBody.position.z += gameState.movingSpeed * delta;
                 cutPiece.position.set(cutPieceBody.position.x, cutPieceBody.position.y, cutPieceBody.position.z);
                 cutPiece.quaternion.set(cutPieceBody.quaternion.x, cutPieceBody.quaternion.y, cutPieceBody.quaternion.z, cutPieceBody.quaternion.w);
-
-                if(cutPieceBody.position.z >= 5) {
-                    world.removeBody(cutPieceBody);
-                    scene.remove(cutPiece);
-                    slicedCubes.splice(slicedCubes.findIndex(i => i.uuid === cutPiece.uuid), 1);
-                }
             }
 
-            for(const handler of logicHandlers) {
-                handler({scene, delta});
-            }
+            gameState.update(delta);
 
             GUIManager.updateStats();
 
-            render(scene, composer, bloomComposer);
+            render(composer, bloomComposer);
 
             timeTarget += dt;
             if(Date.now() >= timeTarget){
@@ -144,8 +95,6 @@ export function createScene() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
     };
-
-    return { scene };
 }
 
 // Create and cofigure camera and return it
@@ -154,7 +103,7 @@ function createCamera() {
         65,
         window.innerWidth / window.innerHeight,
         0.6,
-        400,
+        60,
     );
     camera.position.set(0, 1.2, 0);
     camera.lookAt(0, 0.5, -5);
@@ -163,9 +112,9 @@ function createCamera() {
 }
 
 // Create sword model, bounding box and helper
-function createSword(scene : THREE.Scene) {
+function createSword() {
     loader.load("./assets/katana.glb", (obj) => {
-        sword = obj.scene;
+        sword = obj.scene as Sword;
         sword.position.set(0, 0.65, -0.80);
         sword.up = new THREE.Vector3(0, 0, 1);
 
@@ -210,17 +159,17 @@ function createSword(scene : THREE.Scene) {
             obj.layers.toggle(2);
         });
 
-        scene.add(sword);
+        gameState.sceneAdd(sword);
 
-        logicHandlers.push(handleCollisions);
-        createSwordTrail(scene, sword);
+        gameState.addLogicHandler(handleCollisions);
+        createSwordTrail(sword);
         helperManager.createSwordHelper(sword, size);
     });
 
 }
 
 // Create sword trail
-function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
+function createSwordTrail(sword : THREE.Object3D) {
     const speedToShowTrail = 7000;
     const fadeOutFactor = 1;
     const fadeInFactor = 2;
@@ -229,7 +178,7 @@ function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
     const headGeometry = [];
     headGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3));
 
-    const trail = new TrailRenderer(scene, false);
+    const trail = new TrailRenderer(gameState.getScene(), false);
 
     const material = TrailRenderer.createBaseMaterial();
 
@@ -246,7 +195,7 @@ function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
     let opacityGoingUp = false;
     const prevMouse = new THREE.Vector2(-1, -1);
 
-    logicHandlers.push(({ delta }) => {
+    const updateTrail = (delta : number) => {
         // Update trail mesh
         const time = performance.now();
         if (time - lastUpdate > 10) {
@@ -259,7 +208,7 @@ function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
 
         // Update trail opacity
         if(prevMouse.x !== -1 ) {
-            const distance = Math.sqrt(Math.pow(prevMouse.x - mouse.x, 2) + Math.pow(prevMouse.y - mouse.y, 2));
+            const distance = Math.sqrt(Math.pow(prevMouse.x - gameState.mouse.x, 2) + Math.pow(prevMouse.y - gameState.mouse.y, 2));
             const speed = distance / delta;
 
             if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
@@ -277,9 +226,11 @@ function createSwordTrail(scene : THREE.Scene, sword : THREE.Object3D) {
             }
         }
 
-        prevMouse.x = mouse.x;
-        prevMouse.y = mouse.y;
-    });
+        prevMouse.x = gameState.mouse.x;
+        prevMouse.y = gameState.mouse.y;
+    }
+
+    gameState.addLogicHandler(updateTrail);
 }
 
 // Create and configure camera and sword controls
@@ -297,17 +248,17 @@ function createControls(camera : THREE.Camera) {
 function controlCamera(e : MouseEvent, camera : THREE.Camera) {
     const delta = new THREE.Vector2();
 
-    if(mouse.x === -1 && mouse.y === -1) {
+    if(gameState.mouse.x === -1 && gameState.mouse.y === -1) {
         delta.x = window.innerWidth / 2 - e.offsetX;
         delta.y = window.innerHeight / 2 - e.offsetY;
     }
     else {
-        delta.x = mouse.x - e.offsetX;
-        delta.y = mouse.y - e.offsetY;
+        delta.x = gameState.mouse.x - e.offsetX;
+        delta.y = gameState.mouse.y - e.offsetY;
     }
 
-    mouse.x = e.offsetX;
-    mouse.y = e.offsetY;
+    gameState.mouse.x = e.offsetX;
+    gameState.mouse.y = e.offsetY;
 
     camera.rotation.y += delta.x / 5000;
     camera.rotation.x += delta.y / 5000;
@@ -337,7 +288,7 @@ function controlSword(e : MouseEvent) {
 }
 
 // Create and configure renderer and return it
-function createRenderer(scene : THREE.Scene, camera : THREE.Camera) {
+function createRenderer(camera : THREE.Camera) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
         antialias: false,
@@ -349,13 +300,14 @@ function createRenderer(scene : THREE.Scene, camera : THREE.Camera) {
     
     resizeRenderer(renderer);
 
-    renderer.render(scene, camera);
+    renderer.render(gameState.getScene(), camera);
     renderer.shadowMap.enabled = true; // TODO: Causes LAG?
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
-    renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
+    //renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
@@ -370,8 +322,8 @@ function resizeRenderer(renderer : THREE.WebGLRenderer) {
 }
 
 // Configure postprocessing and return composer
-function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
-    const renderScene = new RenderPass(scene, camera);
+function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
+    const renderScene = new RenderPass(gameState.getScene(), camera);
     renderScene.clearColor = new THREE.Color(0, 0, 0);
     renderScene.clearAlpha = 1;
 
@@ -404,8 +356,8 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
     grLight.shadow.camera.right = 5;
     grLight.shadow.camera.top = 5;
     grLight.shadow.camera.bottom = -8;
-    //scene.add(grLight.target);
-    //scene.add(grLight);
+    //gameState.sceneAdd(grLight.target);
+    //gameState.sceneAdd(grLight);
 
     const godraysPass = new GodraysPass(grLight, <THREE.PerspectiveCamera> camera, {
         density: 0.03,
@@ -431,7 +383,7 @@ function setupPostProcessing(scene : THREE.Scene, camera : THREE.Camera, rendere
     );
     mixPass.needsSwap = true;
 
-    const renderPass = new postprocessing.RenderPass(scene, camera);
+    const renderPass = new postprocessing.RenderPass(gameState.getScene(), camera);
 
     composer.addPass(renderPass);
     composer.addPass(mixPass);
@@ -483,10 +435,10 @@ function modifyObjectMaterial(obj : THREE.Object3D) {
 }
 
 // Create and configure lighting in the scene
-function setupLighting(scene : THREE.Scene) {
+function setupLighting() {
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1);
     hemiLight.position.set(0, 10, 0);
-    scene.add(hemiLight);
+    gameState.sceneAdd(hemiLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.castShadow = true;
@@ -503,13 +455,14 @@ function setupLighting(scene : THREE.Scene) {
     dirLight.shadow.camera.top = 5;
     dirLight.shadow.camera.bottom = -8;
     dirLight.frustumCulled = false;
-    scene.add(dirLight);
+    gameState.sceneAdd(dirLight);
 
     GUIManager.registerLighting(hemiLight);
 }
 
 // Create and setup anything environment-related
-function setupEnvironment(scene : THREE.Scene) {
+function setupEnvironment() {
+    const scene = gameState.getScene();
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
@@ -528,29 +481,59 @@ function setupEnvironment(scene : THREE.Scene) {
     worldGround.rotation.x = THREE.MathUtils.degToRad(-90);
     worldGround.position.z = -30;
     worldGround.position.y = -1;
-    scene.add(worldGround);
+    gameState.sceneAdd(worldGround);
 
     const worldRoof = new THREE.Mesh(planeGeometry, blackMaterial);
     worldRoof.rotation.x = THREE.MathUtils.degToRad(90);
     worldRoof.position.z = -30;
     worldRoof.position.y = 4;
-    scene.add(worldRoof);
+    gameState.sceneAdd(worldRoof);
 
-    // Render and animate animated environment, move with objects and make them despawn when out of range
-    let mixer : THREE.AnimationMixer;
-    logicHandlers.push(({ delta, scene }) => {
-        if (mixer) mixer.update(delta);
+    // Render environment, move objects and make them despawn when out of range
+    const updateEnvironment = (delta : number) => {
 
-        updateFloors(scene, delta);
-        updateLeftWalls(scene, delta);
-        updateRightWalls(scene, delta);
-        updateUpperWalls(scene, delta);
-        updateRoofs(scene, delta);
-        updateLamps(scene, delta);
+        updateFloors(delta);
+        updateLeftWalls(delta);
+        updateRightWalls(delta);
+        updateUpperWalls(delta);
+        updateRoofs(delta);
+        updateLamps(delta);
+    }
+
+    gameState.addLogicHandler(updateEnvironment);
+
+    GUIManager.registerEnvironment();
+}
+
+// Adds static ground and walls to physics world
+function setupPhysicsEnvironment() {
+    const groundBody = new CANNON.Body({
+        mass: 0,
+        shape: new CANNON.Plane(),
     });
-    //mixer = new THREE.AnimationMixer(envAnimated);
-
-    GUIManager.registerEnvironment(scene);
+    groundBody.type = CANNON.Body.STATIC;
+    groundBody.mass = 0;
+    groundBody.updateMassProperties();
+    groundBody.aabbNeedsUpdate = true;
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    groundBody.position.set(0, -0.95, 0);
+    gameState.worldAdd(groundBody);
+    
+    const wallBody1 = new CANNON.Body({
+        mass: 0,
+        shape: new CANNON.Plane(),
+    });
+    wallBody1.quaternion.setFromEuler(0, -Math.PI / 2, 0);
+    wallBody1.position.set(2.5, 0, 0);
+    gameState.worldAdd(wallBody1);
+    
+    const wallBody2 = new CANNON.Body({
+        mass: 0,
+        shape: new CANNON.Plane()
+    });
+    wallBody2.quaternion.setFromEuler(0, Math.PI / 2, 0);
+    wallBody2.position.set(-2.5, 0, 0);
+    gameState.worldAdd(wallBody2);
 }
 
 // TODO : finish this comment because I have no idea what will this function do 
@@ -566,7 +549,7 @@ function setupObstacles() {
         originalInstance = instance;
     });
 
-    logicHandlers.push(({ delta, scene }) => {
+    const updateObstacles = (delta : number) => {
         if(originalInstance != null) {
             if(cubes.length < maxNumber) {
                 const newInstance = originalInstance.clone(true);
@@ -580,21 +563,23 @@ function setupObstacles() {
                 cubeBB.setFromObject(newInstance);
 
                 cubes.push({ cube: newInstance, cubeBB });
-                scene.add(newInstance);
+                gameState.sceneAdd(newInstance);
             }
         }
 
         for(const { cube } of cubes) {
-            cube.position.z += movingSpeed * delta;
+            cube.position.z += gameState.movingSpeed * delta;
             if(cube.position.z >= despawnPosition) {
-                scene.remove(cube);
+                gameState.sceneRemove(cube);
                 cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
             }
         }
-    });
+    }
+
+    gameState.addLogicHandler(updateObstacles);
 }
 
-// Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
+// Generate a moving environment from given asset, max number, offset between instances, and given shadow preset
 // Returns update function
 function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, castShadow = true, receiveShadow = false) {
     const instances : THREE.Object3D[] = [];
@@ -610,7 +595,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
         originalInstance = instance;
     });
 
-    const updateLoop = (scene : THREE.Scene, delta : number) => {
+    const updateLoop = (delta : number) => {
         // Generate asset
         if(originalInstance != null) {
             if(instances.length < maxNumber) {
@@ -622,15 +607,15 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
                 newInstance.position.z = newPosition.z - size.z - offset;
                 
                 instances.push(newInstance);
-                scene.add(newInstance);
+                gameState.sceneAdd(newInstance);
             }
         }
 
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
-            instance.position.z += movingSpeed * delta;
+            instance.position.z += gameState.movingSpeed * delta;
             if(instance.position.z >= despawnPosition) {
-                scene.remove(instance);
+                gameState.sceneRemove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
             }
         }
@@ -640,8 +625,8 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
 }
 
 // Update bounding boxes, handle collisions with sword and other objects
-function handleCollisions({ scene } : LogicHandlerParams) {
-    const cutForce = 3;
+function handleCollisions() {
+    const cutForce = 3; // How much force should be applied to pieces that get cut off
     
     // Update sword bounding box
     const matrix = new THREE.Matrix4();
@@ -743,7 +728,7 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             planeMesh2.updateMatrix();
 
             // Cut through object (CSG)
-            const res = CSG.subtract(cube, planeMesh);
+            const res = CSG.subtract(cube, planeMesh); // TODO : Maybe name it something better that "res"
             res.updateMatrix();
             res.updateMatrixWorld();
 
@@ -774,8 +759,6 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             res.updateMatrix();
             res.updateMatrixWorld();
 
-            console.log((5 * size.x * size.y * size.z));
-
             const cutPieceBody = new CANNON.Body({
                 mass: Math.max(8 * size.x * size.y * size.z, 0.3),
                 shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
@@ -784,30 +767,36 @@ function handleCollisions({ scene } : LogicHandlerParams) {
 
             cutPieceBody.updateMassProperties();
             cutPieceBody.aabbNeedsUpdate = true;
-            world.addBody(cutPieceBody);
+            gameState.worldAdd(cutPieceBody);
 
             res.userData.body = cutPieceBody;
             res.position.copy(middle);
 
             cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce), new CANNON.Vec3(0, 0, 0));
-            //cutPieceBody.velocity.set(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce);
 
             const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
             res2BB.setFromObject(res2);
 
-            scene.add(res);
-            scene.add(res2);
-            scene.remove(cube);
+            gameState.sceneAdd(res);
+            gameState.sceneAdd(res2);
+            gameState.sceneRemove(cube);
             slicedCubes.push(res);
             cubes[cubes.findIndex(c => c.cube.uuid === cube.uuid)] = { cube: res2, cubeBB: res2BB };
+
+            // Remove cut piece after 2 seconds
+            setTimeout(() => {
+                gameState.sceneRemove(res);
+                gameState.worldRemove(cutPieceBody);
+                slicedCubes.splice(slicedCubes.findIndex(i => i.uuid === res.uuid), 1);
+            }, 2000);
        
-            //movingSpeed = 0; // DEBUG
+            gameState.movingSpeed = 0; // DEBUG
         }
     }
 }
 
 // Render the scene
-function render(scene : THREE.Scene, composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
+function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
     const materials : any = {};
     const bloomLayer = new THREE.Layers();
     bloomLayer.set(2);
@@ -827,8 +816,8 @@ function render(scene : THREE.Scene, composer : postprocessing.EffectComposer, b
         }
     }
 
-    scene.traverse(darkenNonBloomed);
+    gameState.sceneTraverse(darkenNonBloomed);
     bloomComposer.render();
-    scene.traverse(restoreMaterial);
+    gameState.sceneTraverse(restoreMaterial);
     composer.render();
 }

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import GameState from "../models/GameState";
 
 export default class GUIManager {
 
@@ -48,7 +49,10 @@ export default class GUIManager {
         gui.add(hemiLight, "intensity", 0, 7)
     }
 
-    public static registerEnvironment(scene : THREE.Scene) : void {
+    public static registerEnvironment() : void {
+        const gameState = GameState.getInstance();
+        const scene = gameState.getScene();
+        
         const gui = GUIManager.getGUI().addFolder("World Settings");
         gui.close();
 

@@ -1,27 +1,26 @@
 import * as THREE from "three";
 import GUIManager from "./GUIManager";
+import GameState from "../models/GameState";
 
 export default class HelperManager {
-    private scene : THREE.Scene | undefined;
     private logicHandlers : Function[];
 
     constructor() {
         this.logicHandlers = [];
     }
 
-    setScene(scene : THREE.Scene) {
-        this.scene = scene
-    }
-
     public createSwordHelper(sword : THREE.Object3D, size : THREE.Vector3) {
         // Main sword helper
+        const gameState = GameState.getInstance();
+        const scene = gameState.getScene();
+
         const swordHelper = new THREE.Object3D();
         const shMesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial());
         shMesh.material.wireframe = true;
         shMesh.position.set(0, 0, -sword.userData.size.z / 2);
         swordHelper.up = new THREE.Vector3(0, 0, 1);
         swordHelper.add(shMesh);
-        this.scene?.add(swordHelper);
+        scene.add(swordHelper);
         swordHelper.visible = false;
 
         // Contact points helpers
