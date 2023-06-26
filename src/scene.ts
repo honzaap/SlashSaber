@@ -15,7 +15,7 @@ import TrailRenderer from "./libs/TrailRenderer.ts";
 import { GodraysPass } from "./libs/GoodGodRays";
 import GUIManager from "./utils/GUIManager.ts";
 import HelperManager from "./utils/HelperManager.ts";
-import CANNON from "cannon";
+import * as CANNON from "cannon-es";
 
 // Global GLTF loader
 const loader = new GLTFLoader();
@@ -28,7 +28,7 @@ let sword = new THREE.Object3D();
 let swordBB = new OBB();
 const cubes : any[] = []; // Only for debug
 const slicedCubes : any[] = []; // Only for debug
-const movingSpeed = 3.5;
+let movingSpeed = 3.5;
 
 interface LogicHandlerParams { scene : THREE.Scene; delta : number; }
 type LogicHandlerFunction = (params : LogicHandlerParams) => void;
@@ -41,19 +41,24 @@ const helperManager = new HelperManager();
 // TEMP 
 // Setup our world
 const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0); // m/s²
+world.gravity.set(0, -9.82, 0);
 
 const groundBody = new CANNON.Body({
     mass: 0,
-    shape: new CANNON.Plane()
+    shape: new CANNON.Plane(),
 });
+groundBody.type = CANNON.Body.STATIC;
+groundBody.mass = 0;
+groundBody.updateMassProperties();
+groundBody.aabbNeedsUpdate = true;
 groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
 groundBody.position.set(0, -0.95, 0);
 world.addBody(groundBody);
 
+
 const wallBody1 = new CANNON.Body({
     mass: 0,
-    shape: new CANNON.Plane()
+    shape: new CANNON.Plane(),
 });
 wallBody1.quaternion.setFromEuler(0, -Math.PI / 2, 0);
 wallBody1.position.set(2.5, 0, 0);
@@ -69,8 +74,6 @@ world.addBody(wallBody2);
 
 const fixedTimeStep = 1.0 / 60.0; 
 
-const spheres : THREE.Mesh[] = [];
-
 export function createScene() {
     // Create scene
     const scene = new THREE.Scene();
@@ -78,6 +81,7 @@ export function createScene() {
     const renderer = createRenderer(scene, camera);
 
     helperManager.setScene(scene);
+    logicHandlers.push(({delta = 0}) => { helperManager.update(delta) });
 
     setupLighting(scene);
 
@@ -87,31 +91,14 @@ export function createScene() {
 
     createControls(camera);
 
+    setupObstacles();
+
     const { composer, bloomComposer } = setupPostProcessing(scene, camera, renderer);
 
     const clock = new THREE.Clock();
 
     const dt = 1000 / 60;
     let timeTarget = 0;
-
-    setInterval(() => {
-        // Create a sphere
-        const size = 0.5; // m
-        const sphereBody = new CANNON.Body({
-            mass: 0.4, // kg
-            shape: new CANNON.Box(new CANNON.Vec3(size, size, size))
-        });
-        sphereBody.position.set(0, 1.5, -20);
-        sphereBody.applyLocalImpulse(new CANNON.Vec3(Math.random() * (3 - -3) + -3, Math.random() * (3 - -3) + -3, Math.random() * (3 - -3) + -3), new CANNON.Vec3(0, 0, 0));
-        world.addBody(sphereBody);
-    
-        const sphereGeo = new THREE.BoxGeometry(size, size, size);
-        const sphere = new THREE.Mesh(sphereGeo);
-    
-        sphere.userData.body = sphereBody;
-        scene.add(sphere);
-        spheres.push(sphere);
-    }, 3000);
 
     // Animation loop
     function animate() {
@@ -121,16 +108,16 @@ export function createScene() {
             // Update physics
             world.step(fixedTimeStep, delta, 3);
 
-            for(const sphere of spheres) {
-                const sphereBody = sphere.userData.body;
-                sphereBody.position.z += movingSpeed * delta;
-                sphere.position.set(sphereBody.position.x, sphereBody.position.y, sphereBody.position.z);
-                sphere.quaternion.set(sphereBody.quaternion.x, sphereBody.quaternion.y, sphereBody.quaternion.z, sphereBody.quaternion.w);
+            for(const cutPiece of slicedCubes) {
+                const cutPieceBody = cutPiece.userData.body;
+                cutPieceBody.position.z += movingSpeed * delta;
+                cutPiece.position.set(cutPieceBody.position.x, cutPieceBody.position.y, cutPieceBody.position.z);
+                cutPiece.quaternion.set(cutPieceBody.quaternion.x, cutPieceBody.quaternion.y, cutPieceBody.quaternion.z, cutPieceBody.quaternion.w);
 
-                if(sphereBody.position.z >= 5) {
-                    world.remove(sphereBody);
-                    scene.remove(sphere);
-                    spheres.splice(spheres.findIndex(i => i.uuid === sphere.uuid), 1);
+                if(cutPieceBody.position.z >= 5) {
+                    world.removeBody(cutPieceBody);
+                    scene.remove(cutPiece);
+                    slicedCubes.splice(slicedCubes.findIndex(i => i.uuid === cutPiece.uuid), 1);
                 }
             }
 
@@ -138,15 +125,7 @@ export function createScene() {
                 handler({scene, delta});
             }
 
-            // Move sliced pieces | TODO: remove when it's unnecessary
-            /*for(const cube of slicedCubes) {
-                cube.position.x += cube.userData.normal.x * delta * 2;
-                cube.position.y += cube.userData.normal.y * delta * 2;
-                cube.position.z += cube.userData.normal.z * delta * 2;
-            }*/
-            
             GUIManager.updateStats();
-            helperManager.update(delta);
 
             render(scene, composer, bloomComposer);
 
@@ -535,12 +514,12 @@ function setupEnvironment(scene : THREE.Scene) {
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
     // Setup moving environment
-    const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, movingSpeed, true, true);
-    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, movingSpeed, true, true);
-    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, movingSpeed, true, true);
-    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, movingSpeed, true, true);
-    const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, movingSpeed, true, true);
-    const updateLamps = generateMovingAsset(LAMP_ASSET, 10, 7, movingSpeed, true, true);
+    const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, true, true);
+    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, true, true);
+    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, true, true);
+    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, true, true);
+    const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, true, true);
+    const updateLamps = generateMovingAsset(LAMP_ASSET, 10, 7, true, true);
 
     // Setup static environment
     const blackMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
@@ -557,38 +536,10 @@ function setupEnvironment(scene : THREE.Scene) {
     worldRoof.position.y = 4;
     scene.add(worldRoof);
 
-    // Cube
-    /*const spawnCubes = () => {
-        let geometry
-        if(Math.random() > 0.5) {
-            const rnd = Math.random() * (1 - 0.75) + 0.75;
-            geometry = new THREE.BoxGeometry(0.35 * rnd, 2 * rnd, 0.35 * rnd);
-        }
-        else {
-            const rnd = Math.random() * (1 - 0.75) + 0.75;
-            geometry = new THREE.BoxGeometry(2 * rnd, 0.35 * rnd, 0.35 * rnd);
-        }
-        const cube = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({color: 0x98f055}));
-        const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-        cube.position.set(0, 1, -10);
-        setShadow(cube, true, false);
-        cube.castShadow = true;
-        cube.receiveShadow = true;
-        scene.add(cube);
-        cubeBB.setFromObject(cube);
-        cubes.push({cube, cubeBB});
-        setTimeout(spawnCubes, 1500);
-    }
-
-    spawnCubes();*/
-
     // Render and animate animated environment, move with objects and make them despawn when out of range
     let mixer : THREE.AnimationMixer;
     logicHandlers.push(({ delta, scene }) => {
         if (mixer) mixer.update(delta);
-        for(const {cube} of cubes) {
-            cube.position.z += movingSpeed * delta;
-        }
 
         updateFloors(scene, delta);
         updateLeftWalls(scene, delta);
@@ -602,9 +553,50 @@ function setupEnvironment(scene : THREE.Scene) {
     GUIManager.registerEnvironment(scene);
 }
 
+// TODO : finish this comment because I have no idea what will this function do 
+function setupObstacles() {
+    const despawnPosition = 5;
+    const maxNumber = 10;
+    const distance = 10;
+    let originalInstance : THREE.Object3D;
+
+    // Create instance
+    loader.load(`./assets/obstacle_test.glb`, function (gltf) {
+        const instance = gltf.scene.children[0]; // TODO : this might break
+        originalInstance = instance;
+    });
+
+    logicHandlers.push(({ delta, scene }) => {
+        if(originalInstance != null) {
+            if(cubes.length < maxNumber) {
+                const newInstance = originalInstance.clone(true);
+                const newPosition = cubes[cubes.length -1]?.cube.position ?? new THREE.Vector3(0, 0, 0);
+                const box3 = new THREE.Box3().setFromObject(newInstance);
+                const size = new THREE.Vector3();
+                box3.getSize(size);
+                newInstance.position.z = newPosition.z - distance; // TODO : randomize a bit
+
+                const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+                cubeBB.setFromObject(newInstance);
+
+                cubes.push({ cube: newInstance, cubeBB });
+                scene.add(newInstance);
+            }
+        }
+
+        for(const { cube } of cubes) {
+            cube.position.z += movingSpeed * delta;
+            if(cube.position.z >= despawnPosition) {
+                scene.remove(cube);
+                cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
+            }
+        }
+    });
+}
+
 // Generate a moving environment from given asset, max number, offset between instances, given speed and given shadow preset
 // Returns update function
-function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, speed = 2, castShadow = true, receiveShadow = false) {
+function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, castShadow = true, receiveShadow = false) {
     const instances : THREE.Object3D[] = [];
     const despawnPosition = 10;
     let originalInstance : THREE.Object3D;
@@ -636,8 +628,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, spee
 
         // Move asset and remove any that are out of camera sight
         for(const instance of instances) {
-            
-            instance.position.z += speed * delta;
+            instance.position.z += movingSpeed * delta;
             if(instance.position.z >= despawnPosition) {
                 scene.remove(instance);
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
@@ -682,7 +673,7 @@ function handleCollisions({ scene } : LogicHandlerParams) {
         else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
             cube.userData.collided = false;
             let worldPos = new THREE.Vector3();
-            sword.userData.trailPoint.getWorldPosition(worldPos);
+            sword.userData.trailPoint.getWorldPosition(worldPos); // TODO : Why the fuck am I taking the point from trailPoint???
 
             const points : THREE.Vector3[] = [...cube.userData.collisionPoints, worldPos];
             cube.userData.collisionPoints = null;
@@ -691,44 +682,116 @@ function handleCollisions({ scene } : LogicHandlerParams) {
             const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
             plane.setFromCoplanarPoints(points[0], points[1], points[2]);
 
-            // Create 2 planes, one with flipped normal to correctly clip both sides
+            cube.updateMatrix();
+            cube.updateMatrixWorld();
+
             const geometry = new THREE.PlaneGeometry(10, 10);
             const planeMesh = new THREE.Mesh(geometry);
-            planeMesh.position.copy(plane.normal);
-            planeMesh.position.multiplyScalar(-plane.constant);
-            planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh.userData.normal = new THREE.Vector3();
-            planeMesh.userData.normal.copy(plane.normal);
-
-            plane.negate();
-
             const planeMesh2 = new THREE.Mesh(geometry);
-            planeMesh2.position.copy(plane.normal);
-            planeMesh2.position.multiplyScalar(-plane.constant);
-            planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh2.userData.normal = new THREE.Vector3();
-            planeMesh2.userData.normal.copy(plane.normal);
 
-            // Update cube and plane matrices
-            cube.updateMatrix();
+            // Points to tell, if the normal is facing the obstacle or not
+            const v1 = new THREE.Vector3();
+            const v2 = new THREE.Vector3();
+            v1.copy(points[0]).add(plane.normal);
+            v2.copy(points[0]).sub(plane.normal);
+
+            const cutNormal = new THREE.Vector3(1, 0.5, 0);
+
+            // Create 2 planes, one with flipped normal to correctly clip both sides
+            // planeMesh is the one that leaves behind a cut piece with physics
+            if(v1.distanceTo(cube.position) > v2.distanceTo(cube.position)) {
+                cutNormal.set(plane.normal.x, plane.normal.y, plane.normal.z);
+                planeMesh.position.copy(plane.normal);
+                planeMesh.position.multiplyScalar(-plane.constant);
+                planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+                planeMesh.userData.normal = new THREE.Vector3();
+                planeMesh.userData.normal.copy(plane.normal);
+
+                plane.negate();
+
+                planeMesh2.position.copy(plane.normal);
+                planeMesh2.position.multiplyScalar(-plane.constant);
+                planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+                planeMesh2.userData.normal = new THREE.Vector3();
+                planeMesh2.userData.normal.copy(plane.normal);
+            }
+            else {
+                cutNormal.set(plane.normal.x, plane.normal.y, plane.normal.z);
+                planeMesh2.position.copy(plane.normal);
+                planeMesh2.position.multiplyScalar(-plane.constant);
+                planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+                planeMesh2.userData.normal = new THREE.Vector3();
+                planeMesh2.userData.normal.copy(plane.normal);
+
+                plane.negate();
+
+                planeMesh.position.copy(plane.normal);
+                planeMesh.position.multiplyScalar(-plane.constant);
+                planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
+                planeMesh.userData.normal = new THREE.Vector3();
+                planeMesh.userData.normal.copy(plane.normal);
+            }
+
+            // Update plane matrices
             planeMesh.updateMatrix();
             planeMesh2.updateMatrix();
 
             // Cut through object (CSG)
             const res = CSG.subtract(cube, planeMesh);
-            res.material = new THREE.MeshLambertMaterial({color:  0x98f055});
-            res.userData.normal = planeMesh.userData.normal;
-            scene.add(res);
-            slicedCubes.push(res);
+            res.updateMatrix();
+            res.updateMatrixWorld();
 
             const res2 = CSG.subtract(cube, planeMesh2);
-            res2.material = new THREE.MeshLambertMaterial({color:  0x98f055});
-            res2.userData.normal = planeMesh2.userData.normal;
-            scene.add(res2);
-            slicedCubes.push(res2);
 
+            const box3 = new THREE.Box3().setFromObject(res);
+            const size = new THREE.Vector3();
+            box3.getSize(size);
+
+            // The result of the CSG operation has the pivot in the same location as the main mesh, this resets it to center
+            const boundingBox = new  THREE.Box3();
+            boundingBox.setFromObject(res);
+
+            const middle = new THREE.Vector3();
+            const g = res.geometry;
+        
+            g.computeBoundingBox();
+
+            if(g.boundingBox) {
+                middle.x = (g.boundingBox.max.x + g.boundingBox.min.x) / 2;
+                middle.y = (g.boundingBox.max.y + g.boundingBox.min.y) / 2;
+                middle.z = (g.boundingBox.max.z + g.boundingBox.min.z) / 2;
+            }
+        
+            res.localToWorld(middle);
+
+            res.geometry.center();
+            res.updateMatrix();
+            res.updateMatrixWorld();
+
+            const cutPieceBody = new CANNON.Body({
+                mass: 5 * size.x * size.y * size.z,
+                shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
+                position: new CANNON.Vec3(middle.x, middle.y, middle.z),
+            });
+
+            res.position.copy(middle);
+ 
+            //cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutNormal.x, cutNormal.y, cutNormal.z), new CANNON.Vec3(0, 0, 0));
+            cutPieceBody.velocity.set(cutNormal.x * 5, Math.abs(cutNormal.y) * -5, cutNormal.z * 5);
+            cutPieceBody.updateMassProperties();
+            cutPieceBody.aabbNeedsUpdate = true;
+            world.addBody(cutPieceBody);
+            res.userData.body = cutPieceBody;
+            movingSpeed = 0;
+
+            const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+            res2BB.setFromObject(res2);
+
+            scene.add(res);
+            scene.add(res2);
             scene.remove(cube);
-            cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
+            slicedCubes.push(res);
+            cubes[cubes.findIndex(c => c.cube.uuid === cube.uuid)] = { cube: res2, cubeBB: res2BB };
         }
     }
 }
