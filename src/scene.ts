@@ -13,12 +13,11 @@ import GUIManager from "./utils/GUIManager.ts";
 import * as CANNON from "cannon-es";
 import Sword from "./models/Sword.ts";
 import GameState from "./models/GameState.ts";
+import ObstacleManager from "./models/ObstacleManager.ts";
 
 // Define global GameState
 const gameState = GameState.getInstance();
-
-const cubes : any[] = []; // Only for debug
-const slicedCubes : any[] = []; // Only for debug
+let obstacleManager : ObstacleManager;
 
 let sword : Sword;
 
@@ -51,13 +50,7 @@ export function createScene() {
         if(Date.now() >= timeTarget){
             const delta = clock.getDelta();
 
-            // Update physics
-            for(const cutPiece of slicedCubes) {
-                const cutPieceBody = cutPiece.userData.body;
-                cutPieceBody.position.z += gameState.movingSpeed * delta;
-                cutPiece.position.set(cutPieceBody.position.x, cutPieceBody.position.y, cutPieceBody.position.z);
-                cutPiece.quaternion.set(cutPieceBody.quaternion.x, cutPieceBody.quaternion.y, cutPieceBody.quaternion.z, cutPieceBody.quaternion.w);
-            }
+           
 
             gameState.update(delta);
 
@@ -378,45 +371,7 @@ function setupPhysicsEnvironment() {
 
 // TODO : finish this comment because I have no idea what will this function do 
 function setupObstacles() {
-    const despawnPosition = 5;
-    const maxNumber = 10;
-    const distance = 10;
-    let originalInstance : THREE.Object3D;
-
-    // Create instance
-    gameState.loadGLTF(`./assets/obstacle_test.glb`, function (gltf) {
-        const instance = gltf.scene.children[0]; // TODO : this might break
-        originalInstance = instance;
-    });
-
-    const updateObstacles = (delta : number) => {
-        if(originalInstance != null) {
-            if(cubes.length < maxNumber) {
-                const newInstance = originalInstance.clone(true);
-                const newPosition = cubes[cubes.length -1]?.cube.position ?? new THREE.Vector3(0, 0, 0);
-                const box3 = new THREE.Box3().setFromObject(newInstance);
-                const size = new THREE.Vector3();
-                box3.getSize(size);
-                newInstance.position.z = newPosition.z - distance; // TODO : randomize a bit
-
-                const cubeBB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-                cubeBB.setFromObject(newInstance);
-
-                cubes.push({ cube: newInstance, cubeBB });
-                gameState.sceneAdd(newInstance);
-            }
-        }
-
-        for(const { cube } of cubes) {
-            cube.position.z += gameState.movingSpeed * delta;
-            if(cube.position.z >= despawnPosition) {
-                gameState.sceneRemove(cube);
-                cubes.splice(cubes.findIndex(c => c.cube.uuid === cube.uuid), 1);
-            }
-        }
-    }
-
-    gameState.addLogicHandler(updateObstacles);
+    obstacleManager = ObstacleManager.getInstance();
 }
 
 // Generate a moving environment from given asset, max number, offset between instances, and given shadow preset

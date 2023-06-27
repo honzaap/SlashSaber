@@ -1,27 +1,25 @@
 import * as THREE from "three";
 import { OBB } from "three/examples/jsm/math/OBB.js";
-import { CSG } from "three-csg-ts";
 import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
-import * as CANNON from "cannon-es";
+import ObstacleManager from "./ObstacleManager.ts";
 
-export default class Sword extends THREE.Object3D {
+export default class Sword {
 
     private mouse = new THREE.Vector2();
     private mouseDirection = new THREE.Vector2();
 
     private gameState : GameState;
+    private obstacleManager : ObstacleManager;
 
     private model = new THREE.Object3D();
     private boundingBox = new OBB();
 
-    //private body : CANNON.Body;
-
     // Create sword model, bounding box and helper
     constructor() {
-        super();
         this.gameState = GameState.getInstance();
+        this.obstacleManager = ObstacleManager.getInstance();
 
         this.gameState.loadGLTF("./assets/katana.glb", (obj) => {
             this.model = obj.scene;
@@ -37,12 +35,6 @@ export default class Sword extends THREE.Object3D {
 
             this.model.userData.size = size; // TODO : Move everything from userData to class
             this.boundingBox = new OBB(new THREE.Vector3(), this.model.userData.size);
-
-            // Setup collision body
-            /*this.body = new CANNON.Body({
-                mass: 0,
-                shape: new CANNON.Box(new CANNON.Vec3(0, 0, 0)),
-            });*/
 
             // Setup contact points
             this.model.userData.contactPoints = [];
@@ -120,157 +112,26 @@ export default class Sword extends THREE.Object3D {
             this.boundingBox.set(position, this.model.userData.size, matrix3);
         }
 
-        // Update obstacles bounding boxes
-        /*for(const {obstacle, obstacleBB} of obstacles) {
-            obstacleBB.copy(obstacle.geometry.boundingBox).applyMatrix4(obstacle.matrixWorld);
-        }*/
-
         // Check this.model collisions with objects
-        /*for(const {obstacle, obstacleBB} of obstacles) {
-            if(this.boundingBox.intersectsBox3(obstacleBB) && obstacle.userData.collided !== true) { // Collision occured
-                const point = this.model.userData.contactPoints[1];
-                let worldPos = new THREE.Vector3();
-                point.getWorldPosition(worldPos);
-                obstacle.userData.collisionPoint = worldPos;
-                obstacle.userData.collided = true;
-            }
-            else if(!this.boundingBox.intersectsBox3(obstacleBB) && obstacle.userData.collided === true) { // Stopped colliding
-                obstacle.userData.collided = false;
-
+        for(const obstacle of this.obstacleManager.getObstacles()) {
+            const collisionPoint = obstacle.swordCollide(this.boundingBox, this.model.userData.contactPoints[1]); // TODO : userdata x
+            if(collisionPoint != null) {
                 const col1 = new THREE.Vector3();
                 const col2 = new THREE.Vector3();
-                col1.copy(obstacle.userData.collisionPoint);
+                col1.copy(collisionPoint);
                 this.model.userData.contactPoints[1].getWorldPosition(col2);
                 const cutDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
 
-                const points : THREE.Vector3[] = [obstacle.userData.collisionPoint];
-                for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
+                const points : THREE.Vector3[] = [collisionPoint];
+                for(const point of this.model.userData.contactPoints ?? []) { // Go through each contact point on the sword
                     const worldPos = new THREE.Vector3();
                     point.getWorldPosition(worldPos);
                     points.push(worldPos);
                 }
-                obstacle.userData.collisionPoints = null;
 
-                // Generate a plane, which cuts through the object
-                const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
-                plane.setFromCoplanarPoints(points[0], points[1], points[2]);
-
-                obstacle.updateMatrix();
-                obstacle.updateMatrixWorld();
-
-                const geometry = new THREE.PlaneGeometry(10, 10);
-                const planeMesh = new THREE.Mesh(geometry);
-                const planeMesh2 = new THREE.Mesh(geometry);
-
-                // Points to tell, if the normal is facing the obstacle or not
-                const v1 = new THREE.Vector3();
-                const v2 = new THREE.Vector3();
-                v1.copy(points[0]).add(plane.normal);
-                v2.copy(points[0]).sub(plane.normal);
-
-                // Create 2 planes, one with flipped normal to correctly clip both sides
-                // planeMesh is the one that leaves behind a cut piece with physics
-                if(v1.distanceTo(obstacle.position) > v2.distanceTo(obstacle.position)) {
-                    planeMesh.position.copy(plane.normal);
-                    planeMesh.position.multiplyScalar(-plane.constant);
-                    planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                    planeMesh.userData.normal = new THREE.Vector3();
-                    planeMesh.userData.normal.copy(plane.normal);
-
-                    plane.negate();
-
-                    planeMesh2.position.copy(plane.normal);
-                    planeMesh2.position.multiplyScalar(-plane.constant);
-                    planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                    planeMesh2.userData.normal = new THREE.Vector3();
-                    planeMesh2.userData.normal.copy(plane.normal);
-                }
-                else {
-                    planeMesh2.position.copy(plane.normal);
-                    planeMesh2.position.multiplyScalar(-plane.constant);
-                    planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                    planeMesh2.userData.normal = new THREE.Vector3();
-                    planeMesh2.userData.normal.copy(plane.normal);
-
-                    plane.negate();
-
-                    planeMesh.position.copy(plane.normal);
-                    planeMesh.position.multiplyScalar(-plane.constant);
-                    planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                    planeMesh.userData.normal = new THREE.Vector3();
-                    planeMesh.userData.normal.copy(plane.normal);
-                }
-
-                // Update plane matrices
-                planeMesh.updateMatrix();
-                planeMesh2.updateMatrix();
-
-                // Cut through object (CSG)
-                const res = CSG.subtract(obstacle, planeMesh); // TODO : Maybe name it something better that "res"
-                res.updateMatrix();
-                res.updateMatrixWorld();
-
-                const res2 = CSG.subtract(obstacle, planeMesh2);
-
-                const box3 = new THREE.Box3().setFromObject(res);
-                const size = new THREE.Vector3();
-                box3.getSize(size);
-
-                // The result of the CSG operation has the pivot in the same location as the main mesh, this resets it to center
-                const boundingBox = new  THREE.Box3();
-                boundingBox.setFromObject(res);
-
-                const middle = new THREE.Vector3();
-                const g = res.geometry;
-            
-                g.computeBoundingBox();
-
-                if(g.boundingBox) {
-                    middle.x = (g.boundingBox.max.x + g.boundingBox.min.x) / 2;
-                    middle.y = (g.boundingBox.max.y + g.boundingBox.min.y) / 2;
-                    middle.z = (g.boundingBox.max.z + g.boundingBox.min.z) / 2;
-                }
-            
-                res.localToWorld(middle);
-
-                res.geometry.center();
-                res.updateMatrix();
-                res.updateMatrixWorld();
-
-                const cutPieceBody = new CANNON.Body({
-                    mass: Math.max(8 * size.x * size.y * size.z, 0.3),
-                    shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
-                    position: new CANNON.Vec3(middle.x, middle.y, middle.z),
-                });
-
-                cutPieceBody.updateMassProperties();
-                cutPieceBody.aabbNeedsUpdate = true;
-                this.gameState.worldAdd(cutPieceBody);
-
-                res.userData.body = cutPieceBody;
-                res.position.copy(middle);
-
-                cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce), new CANNON.Vec3(0, 0, 0));
-
-                const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-                res2BB.setFromObject(res2);
-
-                this.gameState.sceneAdd(res);
-                this.gameState.sceneAdd(res2);
-                this.gameState.sceneRemove(obstacle);
-                //slicedObstacles.push(res);
-                //obstacles[obstacles.findIndex(c => c.obstacle.uuid === obstacle.uuid)] = { obstacle: res2, obstacleBB: res2BB };
-
-                // Remove cut piece after 2 seconds
-                setTimeout(() => {
-                    this.gameState.sceneRemove(res);
-                    this.gameState.worldRemove(cutPieceBody);
-                    //slicedObstacles.splice(slicedObstacles.findIndex(i => i.uuid === res.uuid), 1);
-                }, 2000);
-        
-                //gameState.movingSpeed = 0; // DEBUG
+                this.obstacleManager.cutObstacle(obstacle, points, cutDirection, cutForce);
             }
-        }*/
+        }
     }
 
     // Create sword trail
