@@ -5,16 +5,11 @@
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { OBB } from "three/examples/jsm/math/OBB.js";
-import { CSG } from "three-csg-ts";
 import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
-import TrailRenderer from "./libs/TrailRenderer.ts";
 import { GodraysPass } from "./libs/GoodGodRays";
 import GUIManager from "./utils/GUIManager.ts";
-import HelperManager from "./utils/HelperManager.ts";
 import * as CANNON from "cannon-es";
 import Sword from "./models/Sword.ts";
 import GameState from "./models/GameState.ts";
@@ -22,25 +17,15 @@ import GameState from "./models/GameState.ts";
 // Define global GameState
 const gameState = GameState.getInstance();
 
-// Global GLTF loader
-const loader = new GLTFLoader();
-
-// Global mouse coordinates
-let swordMouse = new THREE.Vector2();
-let mouseDirection = new THREE.Vector2();
-let sword : Sword = new THREE.Object3D();
-let swordBB = new OBB();
 const cubes : any[] = []; // Only for debug
 const slicedCubes : any[] = []; // Only for debug
 
-const helperManager = new HelperManager();
+let sword : Sword;
 
 export function createScene() {
     // Create scene
     const camera = createCamera();
     const renderer = createRenderer(camera);
-
-    gameState.addLogicHandler((delta : number) => { helperManager.update(delta) });
 
     setupLighting();
 
@@ -48,7 +33,7 @@ export function createScene() {
 
     setupPhysicsEnvironment();
 
-    createSword();
+    sword = new Sword();
 
     createControls(camera);
 
@@ -111,128 +96,6 @@ function createCamera() {
     return camera;
 }
 
-// Create sword model, bounding box and helper
-function createSword() {
-    loader.load("./assets/katana.glb", (obj) => {
-        sword = obj.scene as Sword;
-        sword.position.set(0, 0.65, -0.80);
-        sword.up = new THREE.Vector3(0, 0, 1);
-
-        sword.traverse(obj => {
-            if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-                obj.material.flatShading = true;
-            }
-        })
-
-        // Get model size
-        const box3 = new THREE.Box3().setFromObject(sword);
-        let size = new THREE.Vector3();
-        box3.getSize(size);
-        size.x /= 2.5;
-        size.y /= 2.5;
-
-        sword.userData.size = size;
-        swordBB = new OBB(new THREE.Vector3(), sword.userData.size);
-
-        // Setup contact points
-        sword.userData.contactPoints = [];
-        for(let i = 0; i < 2; i++) {
-            const pointGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
-            const point = new THREE.Mesh(pointGeo);
-            sword.add(point);
-            point.position.z = size.z * -i;
-            point.position.y = size.y / 2;
-            sword.userData.contactPoints.push(point);
-        }
-
-        // Setup a point for the trail to follow
-        const tpGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
-        const tp = new THREE.Mesh(tpGeo);
-        sword.add(tp);
-        tp.position.z = -size.z + 0.2;
-        tp.position.y = size.y + 0.1;
-        sword.userData.trailPoint = tp;
-
-        sword.layers.toggle(2);
-        sword.traverse((obj) => {
-            if(obj.parent?.name === "Blade")
-            obj.layers.toggle(2);
-        });
-
-        gameState.sceneAdd(sword);
-
-        gameState.addLogicHandler(handleCollisions);
-        createSwordTrail(sword);
-        helperManager.createSwordHelper(sword, size);
-    });
-
-}
-
-// Create sword trail
-function createSwordTrail(sword : THREE.Object3D) {
-    const speedToShowTrail = 7000;
-    const fadeOutFactor = 1;
-    const fadeInFactor = 2;
-    const maxOpacity = 0.2;
-
-    const headGeometry = [];
-    headGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3));
-
-    const trail = new TrailRenderer(gameState.getScene(), false);
-
-    const material = TrailRenderer.createBaseMaterial();
-
-    material.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
-    material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
-
-    const trailLength = 20;
-
-    trail.initialize(material, trailLength, false, 0, headGeometry, sword.userData.trailPoint);
-    trail.activate();
-    trail.advance();
-
-    let lastUpdate = performance.now();
-    let opacityGoingUp = false;
-    const prevMouse = new THREE.Vector2(-1, -1);
-
-    const updateTrail = (delta : number) => {
-        // Update trail mesh
-        const time = performance.now();
-        if (time - lastUpdate > 10) {
-            trail.advance();
-            lastUpdate = time;
-        } 
-        else {
-            trail.updateHead();
-        }
-
-        // Update trail opacity
-        if(prevMouse.x !== -1 ) {
-            const distance = Math.sqrt(Math.pow(prevMouse.x - gameState.mouse.x, 2) + Math.pow(prevMouse.y - gameState.mouse.y, 2));
-            const speed = distance / delta;
-
-            if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
-                opacityGoingUp = true;
-            }
-
-            if(opacityGoingUp) {
-                trail.material.uniforms.headColor.value.w += fadeInFactor * delta; 
-                if(trail.material.uniforms.headColor.value.w >= maxOpacity) {
-                    opacityGoingUp = false;
-                }
-            }
-            else { 
-                trail.material.uniforms.headColor.value.w = Math.max(trail.material.uniforms.headColor.value.w - fadeOutFactor * delta, 0);
-            }
-        }
-
-        prevMouse.x = gameState.mouse.x;
-        prevMouse.y = gameState.mouse.y;
-    }
-
-    gameState.addLogicHandler(updateTrail);
-}
-
 // Create and configure camera and sword controls
 function createControls(camera : THREE.Camera) {
 
@@ -240,7 +103,7 @@ function createControls(camera : THREE.Camera) {
         e.preventDefault();
 
         controlCamera(e, camera);
-        controlSword(e);
+        sword.move(e);
     }
 }
 
@@ -262,29 +125,6 @@ function controlCamera(e : MouseEvent, camera : THREE.Camera) {
 
     camera.rotation.y += delta.x / 5000;
     camera.rotation.x += delta.y / 5000;
-}
-
-// Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
-function controlSword(e : MouseEvent) {
-    const prevMouse = new THREE.Vector2();
-    prevMouse.copy(swordMouse);
-    swordMouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
-    swordMouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
-    const deltaI = new THREE.Vector2(swordMouse.x - prevMouse.x, swordMouse.y - prevMouse.y);
-    mouseDirection.x = Math.max(Math.min(mouseDirection.x + deltaI.x * 3.5, 1), -1);
-    mouseDirection.y = Math.max(Math.min(mouseDirection.y + deltaI.y * 3.5, 1), -1);
-
-    // Calculate which way the blade is facing
-    const p = mouseDirection.x / Math.sqrt(Math.pow(mouseDirection.x, 2) + Math.pow(mouseDirection.y, 2));
-    const beta = Math.asin(p);
-    let alpha = THREE.MathUtils.radToDeg(beta);
-    if(mouseDirection.y >= 0) alpha = -180 - THREE.MathUtils.radToDeg(beta);
-
-    sword.position.x = 0;
-    sword.position.y = 0.7;
-    sword.rotation.x = THREE.MathUtils.degToRad(swordMouse.y * 70);
-    sword.rotation.y = THREE.MathUtils.degToRad(swordMouse.x * -90);
-    sword.rotation.z = THREE.MathUtils.degToRad(alpha); 
 }
 
 // Create and configure renderer and return it
@@ -544,7 +384,7 @@ function setupObstacles() {
     let originalInstance : THREE.Object3D;
 
     // Create instance
-    loader.load(`./assets/obstacle_test.glb`, function (gltf) {
+    gameState.loadGLTF(`./assets/obstacle_test.glb`, function (gltf) {
         const instance = gltf.scene.children[0]; // TODO : this might break
         originalInstance = instance;
     });
@@ -587,7 +427,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
     let originalInstance : THREE.Object3D;
 
     // Create instance
-    loader.load(`./assets/${asset}`, function (gltf) {
+    gameState.loadGLTF(`./assets/${asset}`, function (gltf) {
         const instance = gltf.scene;
         instance.position.set(0, 0, 0);
         setShadow(gltf.scene, castShadow, receiveShadow);
@@ -622,177 +462,6 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
     }
 
     return updateLoop;
-}
-
-// Update bounding boxes, handle collisions with sword and other objects
-function handleCollisions() {
-    const cutForce = 3; // How much force should be applied to pieces that get cut off
-    
-    // Update sword bounding box
-    const matrix = new THREE.Matrix4();
-    const rotation = new THREE.Euler();
-    rotation.copy(sword.rotation);
-    
-    matrix.makeRotationFromEuler(rotation);
-    const position = new THREE.Vector3();
-    position.copy(sword.position);
-    if(sword.userData.size) {
-        const matrix3 = new THREE.Matrix3();
-        matrix3.setFromMatrix4(matrix);
-        swordBB.set(position, sword.userData.size, matrix3);
-    }
-
-    // Update cubes bounding boxes
-    for(const {cube, cubeBB} of cubes) {
-        cubeBB.copy(cube.geometry.boundingBox).applyMatrix4(cube.matrixWorld);
-    }
-
-    // Check sword collisions with objects
-    for(const {cube, cubeBB} of cubes) {
-        if(swordBB.intersectsBox3(cubeBB) && cube.userData.collided !== true) { // Collision occured
-            const point = sword.userData.contactPoints[1];
-            let worldPos = new THREE.Vector3();
-            point.getWorldPosition(worldPos);
-            cube.userData.collisionPoint = worldPos;
-            cube.userData.collided = true;
-        }
-        else if(!swordBB.intersectsBox3(cubeBB) && cube.userData.collided === true) { // Stopped colliding
-            cube.userData.collided = false;
-
-            const col1 = new THREE.Vector3();
-            const col2 = new THREE.Vector3();
-            col1.copy(cube.userData.collisionPoint);
-            sword.userData.contactPoints[1].getWorldPosition(col2);
-            const cutDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
-
-            const points : THREE.Vector3[] = [cube.userData.collisionPoint];
-            for(const point of sword.userData.contactPoints ?? []) { // Go through each contact point on the sword
-                const worldPos = new THREE.Vector3();
-                point.getWorldPosition(worldPos);
-                points.push(worldPos);
-            }
-            cube.userData.collisionPoints = null;
-
-            // Generate a plane, which cuts through the object
-            const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
-            plane.setFromCoplanarPoints(points[0], points[1], points[2]);
-
-            cube.updateMatrix();
-            cube.updateMatrixWorld();
-
-            const geometry = new THREE.PlaneGeometry(10, 10);
-            const planeMesh = new THREE.Mesh(geometry);
-            const planeMesh2 = new THREE.Mesh(geometry);
-
-            // Points to tell, if the normal is facing the obstacle or not
-            const v1 = new THREE.Vector3();
-            const v2 = new THREE.Vector3();
-            v1.copy(points[0]).add(plane.normal);
-            v2.copy(points[0]).sub(plane.normal);
-
-            // Create 2 planes, one with flipped normal to correctly clip both sides
-            // planeMesh is the one that leaves behind a cut piece with physics
-            if(v1.distanceTo(cube.position) > v2.distanceTo(cube.position)) {
-                planeMesh.position.copy(plane.normal);
-                planeMesh.position.multiplyScalar(-plane.constant);
-                planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                planeMesh.userData.normal = new THREE.Vector3();
-                planeMesh.userData.normal.copy(plane.normal);
-
-                plane.negate();
-
-                planeMesh2.position.copy(plane.normal);
-                planeMesh2.position.multiplyScalar(-plane.constant);
-                planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                planeMesh2.userData.normal = new THREE.Vector3();
-                planeMesh2.userData.normal.copy(plane.normal);
-            }
-            else {
-                planeMesh2.position.copy(plane.normal);
-                planeMesh2.position.multiplyScalar(-plane.constant);
-                planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                planeMesh2.userData.normal = new THREE.Vector3();
-                planeMesh2.userData.normal.copy(plane.normal);
-
-                plane.negate();
-
-                planeMesh.position.copy(plane.normal);
-                planeMesh.position.multiplyScalar(-plane.constant);
-                planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-                planeMesh.userData.normal = new THREE.Vector3();
-                planeMesh.userData.normal.copy(plane.normal);
-            }
-
-            // Update plane matrices
-            planeMesh.updateMatrix();
-            planeMesh2.updateMatrix();
-
-            // Cut through object (CSG)
-            const res = CSG.subtract(cube, planeMesh); // TODO : Maybe name it something better that "res"
-            res.updateMatrix();
-            res.updateMatrixWorld();
-
-            const res2 = CSG.subtract(cube, planeMesh2);
-
-            const box3 = new THREE.Box3().setFromObject(res);
-            const size = new THREE.Vector3();
-            box3.getSize(size);
-
-            // The result of the CSG operation has the pivot in the same location as the main mesh, this resets it to center
-            const boundingBox = new  THREE.Box3();
-            boundingBox.setFromObject(res);
-
-            const middle = new THREE.Vector3();
-            const g = res.geometry;
-        
-            g.computeBoundingBox();
-
-            if(g.boundingBox) {
-                middle.x = (g.boundingBox.max.x + g.boundingBox.min.x) / 2;
-                middle.y = (g.boundingBox.max.y + g.boundingBox.min.y) / 2;
-                middle.z = (g.boundingBox.max.z + g.boundingBox.min.z) / 2;
-            }
-        
-            res.localToWorld(middle);
-
-            res.geometry.center();
-            res.updateMatrix();
-            res.updateMatrixWorld();
-
-            const cutPieceBody = new CANNON.Body({
-                mass: Math.max(8 * size.x * size.y * size.z, 0.3),
-                shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
-                position: new CANNON.Vec3(middle.x, middle.y, middle.z),
-            });
-
-            cutPieceBody.updateMassProperties();
-            cutPieceBody.aabbNeedsUpdate = true;
-            gameState.worldAdd(cutPieceBody);
-
-            res.userData.body = cutPieceBody;
-            res.position.copy(middle);
-
-            cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce), new CANNON.Vec3(0, 0, 0));
-
-            const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-            res2BB.setFromObject(res2);
-
-            gameState.sceneAdd(res);
-            gameState.sceneAdd(res2);
-            gameState.sceneRemove(cube);
-            slicedCubes.push(res);
-            cubes[cubes.findIndex(c => c.cube.uuid === cube.uuid)] = { cube: res2, cubeBB: res2BB };
-
-            // Remove cut piece after 2 seconds
-            setTimeout(() => {
-                gameState.sceneRemove(res);
-                gameState.worldRemove(cutPieceBody);
-                slicedCubes.splice(slicedCubes.findIndex(i => i.uuid === res.uuid), 1);
-            }, 2000);
-       
-            gameState.movingSpeed = 0; // DEBUG
-        }
-    }
 }
 
 // Render the scene

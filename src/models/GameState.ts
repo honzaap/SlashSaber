@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import { GLTFLoader, GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // Singleton class
 export default class GameState {
@@ -10,6 +11,7 @@ export default class GameState {
     private static instance : GameState;
     private scene : THREE.Scene;
     private world : CANNON.World;
+    private loader : GLTFLoader
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
 
@@ -21,6 +23,7 @@ export default class GameState {
         this.world = new CANNON.World();
         this.world.gravity.set(0, -9.82, 0);
         this.logicHandlers = [];
+        this.loader = new GLTFLoader();
     }
 
     public static getInstance() {
@@ -61,6 +64,10 @@ export default class GameState {
         for(const handler of this.logicHandlers) {
             handler(delta);
         }
+    }
+
+    public loadGLTF(path : string, callback : (model : GLTF) => void) {
+        this.loader.load(path, callback);
     }
 }
 

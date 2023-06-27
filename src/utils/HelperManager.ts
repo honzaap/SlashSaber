@@ -7,12 +7,21 @@ export default class HelperManager {
 
     constructor() {
         this.logicHandlers = [];
+        const gameState = GameState.getInstance();
+        gameState.addLogicHandler((delta : number) => { this.update(delta) });
     }
 
-    public createSwordHelper(sword : THREE.Object3D, size : THREE.Vector3) {
+    public createSwordHelper(sword : THREE.Object3D) {
         // Main sword helper
         const gameState = GameState.getInstance();
         const scene = gameState.getScene();
+
+        // Get model size
+        const box3 = new THREE.Box3().setFromObject(sword);
+        let size = new THREE.Vector3();
+        box3.getSize(size);
+        size.x /= 2.5;
+        size.y /= 2.5;
 
         const swordHelper = new THREE.Object3D();
         const shMesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial());
@@ -52,7 +61,6 @@ export default class HelperManager {
         }
 
         this.logicHandlers.push(update);
-
 
         GUIManager.registerSwordHelpers(sword, swordHelper);
     }
