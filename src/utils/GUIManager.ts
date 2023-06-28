@@ -30,9 +30,9 @@ export default class GUIManager {
     public static registerPostprocessing(bloomPass : UnrealBloomPass) : void {
         const gui = GUIManager.getGUI().addFolder("Bloom Effect");
         gui.close();
-        gui.add(bloomPass, 'threshold', 0, 2);
-        gui.add(bloomPass, 'strength', 0, 2);
-        gui.add(bloomPass, 'radius', 0.0, 2);
+        gui.add(bloomPass, "threshold", 0, 2);
+        gui.add(bloomPass, "strength", 0, 2);
+        gui.add(bloomPass, "radius", 0.0, 2);
     }
 
     public static registerLighting(hemiLight : THREE.HemisphereLight) : void {
@@ -40,13 +40,13 @@ export default class GUIManager {
             sky: 0xe5e7ff,
             ground: 0xd2b156,
             intensity: 1.75
-        }
+        };
 
-        const gui = GUIManager.getGUI().addFolder('Hemisphere Light');
+        const gui = GUIManager.getGUI().addFolder("Hemisphere Light");
         gui.close();
-        gui.addColor(params, 'sky').onChange(function(value : number) { hemiLight.color  = new THREE.Color(value); });
-        gui.addColor(params, 'ground').onChange(function(value : number) { hemiLight.groundColor  = new THREE.Color(value); });
-        gui.add(hemiLight, "intensity", 0, 7)
+        gui.addColor(params, "sky").onChange(function(value : number) { hemiLight.color  = new THREE.Color(value); });
+        gui.addColor(params, "ground").onChange(function(value : number) { hemiLight.groundColor  = new THREE.Color(value); });
+        gui.add(hemiLight, "intensity", 0, 7);
     }
 
     public static registerEnvironment() : void {
@@ -57,17 +57,17 @@ export default class GUIManager {
         gui.close();
 
         const params = {
-            background: '#000000',
+            background: "#000000",
             near: 40,
             far: 65
         };
 
-        gui.addColor(params, 'background').onChange(function(value : THREE.Color) {
+        gui.addColor(params, "background").onChange(function(value : THREE.Color) {
             scene.background = value;
             scene.fog  = new THREE.Fog(value, params.near, params.far);
         });
-        gui.add(params, 'near', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), value, params.far); });
-        gui.add(params, 'far', 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), params.near, value); });
+        gui.add(params, "near", 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), value, params.far); });
+        gui.add(params, "far", 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), params.near, value); });
     }
 
     public static registerSwordHelpers(sword : THREE.Object3D, swordHelper : THREE.Object3D) {
@@ -80,15 +80,15 @@ export default class GUIManager {
             trailPoint: false,
         };
 
-        gui.add(params, 'boundingBox').onChange(function(value : boolean) {
+        gui.add(params, "boundingBox").onChange(function(value : boolean) {
             swordHelper.visible = value;
         });
-        gui.add(params, 'contactPoints').onChange(function(value : boolean) {
+        gui.add(params, "contactPoints").onChange(function(value : boolean) {
             for(const point of sword.userData.contactPoints) {
                 point.visible = value;
             }
         });
-        gui.add(params, 'trailPoint').onChange(function(value : boolean) {
+        gui.add(params, "trailPoint").onChange(function(value : boolean) {
             sword.userData.trailPoint.visible = value;
         });
     }

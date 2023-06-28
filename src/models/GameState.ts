@@ -11,7 +11,7 @@ export default class GameState {
     private static instance : GameState;
     private scene : THREE.Scene;
     private world : CANNON.World;
-    private loader : GLTFLoader
+    private loader : GLTFLoader;
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
 
@@ -39,7 +39,7 @@ export default class GameState {
         this.scene.remove(object);
     }
 
-    public sceneTraverse(callback : (object : THREE.Object3D<THREE.Event>) => any) : void {
+    public sceneTraverse(callback : (object : THREE.Object3D<THREE.Event>) => void) : void {
         this.scene.traverse(callback);
     }
 

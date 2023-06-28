@@ -4,25 +4,18 @@ import GameState from "../models/GameState";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 
 export default class HelperManager {
-    private logicHandlers : Function[];
+    private logicHandlers : ((delta : number) => void)[];
 
     constructor() {
         this.logicHandlers = [];
         const gameState = GameState.getInstance();
-        gameState.addLogicHandler((delta : number) => { this.update(delta) });
+        gameState.addLogicHandler((delta : number) => { this.update(delta); });
     }
 
     public createSwordHelper(sword : THREE.Object3D, swordBB : OBB) {
         // Main sword helper
         const gameState = GameState.getInstance();
         const scene = gameState.getScene();
-
-        // Get model size
-        //const box3 = new THREE.Box3().setFromObject(sword);
-        //let size = new THREE.Vector3();
-        //box3.getSize(size);
-        //size.x /= 2.5;
-        //size.y /= 2.5;
 
         const size = new THREE.Vector3();
         swordBB.getSize(size);
@@ -62,7 +55,7 @@ export default class HelperManager {
             matrix.setFromMatrix3(swordBB.rotation);
             rotation.setFromRotationMatrix(matrix);
             swordHelper.rotation.copy(rotation);
-        }
+        };
 
         this.logicHandlers.push(update);
 

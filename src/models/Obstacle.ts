@@ -12,7 +12,7 @@ export default class Obstacle {
     private gameState : GameState;
 
     private swordCollisionPoint : THREE.Vector3 | null = null;
-    private swordCollided : boolean = false;
+    private swordCollided = false;
 
     private readonly despawnPosition = 5;
 

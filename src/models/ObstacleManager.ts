@@ -19,7 +19,7 @@ export default class ObstacleManager {
     private constructor() { 
         this.gameState = GameState.getInstance();
 
-        this.gameState.loadGLTF(`./assets/obstacle_test.glb`, (gltf) => {
+        this.gameState.loadGLTF("./assets/obstacle_test.glb", (gltf) => {
             const instance = gltf.scene.children[0]; // TODO : this might break
             this.obstacleModels.push(instance);
         });
@@ -64,7 +64,7 @@ export default class ObstacleManager {
                 this.gameState.sceneAdd(newInstance);
             }
         }
-    }
+    };
 
     public cutObstacle(obstacle : Obstacle, coplanarPoints : THREE.Vector3[], cutDirection : THREE.Vector3, cutForce = 1) {
         // Generate a plane, which cuts through the object

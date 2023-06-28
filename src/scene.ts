@@ -17,7 +17,6 @@ import ObstacleManager from "./models/ObstacleManager.ts";
 
 // Define global GameState
 const gameState = GameState.getInstance();
-let obstacleManager : ObstacleManager;
 
 let sword : Sword;
 
@@ -97,7 +96,7 @@ function createControls(camera : THREE.Camera) {
 
         controlCamera(e, camera);
         sword.move(e);
-    }
+    };
 }
 
 // Take mouse event and camera as input and handle controls for the camera
@@ -212,7 +211,7 @@ function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRender
             vertexShader: MIX_VERTEX_SHADER,
             fragmentShader: MIX_FRAGMENT_SHADER,
             defines: {}
-        }), 'baseTexture'
+        }), "baseTexture"
     );
     mixPass.needsSwap = true;
 
@@ -331,7 +330,7 @@ function setupEnvironment() {
         updateUpperWalls(delta);
         updateRoofs(delta);
         updateLamps(delta);
-    }
+    };
 
     gameState.addLogicHandler(updateEnvironment);
 
@@ -371,7 +370,7 @@ function setupPhysicsEnvironment() {
 
 // TODO : finish this comment because I have no idea what will this function do 
 function setupObstacles() {
-    obstacleManager = ObstacleManager.getInstance();
+    ObstacleManager.getInstance();
 }
 
 // Generate a moving environment from given asset, max number, offset between instances, and given shadow preset
@@ -414,17 +413,17 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
                 instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
             }
         }
-    }
+    };
 
     return updateLoop;
 }
 
 // Render the scene
 function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
-    const materials : any = {};
+    const materials : { [name : string] : THREE.Material } = {};
     const bloomLayer = new THREE.Layers();
     bloomLayer.set(BLOOM_LAYER);
-    const darkMaterial = new THREE.MeshBasicMaterial({ color: 'black' });
+    const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
 
     function darkenNonBloomed(obj : THREE.Object3D) {
         if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {

@@ -52,7 +52,7 @@ export default class Sword {
 
             // Get model size
             const box3 = new THREE.Box3().setFromObject(this.model);
-            let size = new THREE.Vector3();
+            const size = new THREE.Vector3();
             box3.getSize(size);
             size.x /= 2.5;
             size.y /= 2.5;
@@ -146,7 +146,7 @@ export default class Sword {
                 this.obstacleManager.cutObstacle(obstacle, points, cutDirection, cutForce);
             }
         }
-    }
+    };
 
     // Create sword trail
     private createSwordTrail(sword : THREE.Object3D) {
@@ -208,7 +208,7 @@ export default class Sword {
 
             prevMouse.x = this.gameState.mouse.x;
             prevMouse.y = this.gameState.mouse.y;
-        }
+        };
 
         this.gameState.addLogicHandler(updateTrail);
     }
