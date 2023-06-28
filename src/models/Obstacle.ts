@@ -49,6 +49,7 @@ export default class Obstacle {
     }
 
     // Test collisions against sword bounding box
+    // Returns initial collision point, if collision with this object ended just now
     public swordCollide(swordBB : OBB, contactPoint : THREE.Object3D) : THREE.Vector3 | null {
         if(swordBB.intersectsBox3(this.boundingBox) && !this.swordCollided) { // Collision occured
             const worldPos = new THREE.Vector3();
@@ -66,7 +67,7 @@ export default class Obstacle {
 
     public cutObstacle(cutPlane : THREE.Mesh, cutPlaneFlipped : THREE.Mesh, cutDirection : THREE.Vector3, cutForce = 1) {
         // The piece that gets cut off
-        const cutPiece = CSG.subtract(<THREE.Mesh> this.model, cutPlane); // TODO : Maybe name it something better that "res"
+        const cutPiece = CSG.subtract(<THREE.Mesh> this.model, cutPlane);
         cutPiece.updateMatrix();
         cutPiece.updateMatrixWorld();
 
@@ -77,7 +78,8 @@ export default class Obstacle {
         const size = new THREE.Vector3();
         box3.getSize(size);
 
-        // The result of the CSG operation has the pivot in the same location as the main mesh, this resets it to center
+        // The result of the CSG operation has pivot in the same location as the main mesh
+        // This resets it to the center of the mesh 
         const boundingBox = new  THREE.Box3();
         boundingBox.setFromObject(cutPiece);
 

@@ -11,7 +11,7 @@ export default class ObstacleManager {
     private obstacles : Obstacle[] = [];
     private slicedObstacles : THREE.Object3D[] = []; // TODO : make sliced obstacle class?
 
-    private obstacleModels : THREE.Object3D[] = [];
+    private obstacleModels : THREE.Object3D[] = []; // TODO : store models differently
 
     private readonly maxObstacles = 10;
     private readonly obstacleDistance = 10;
@@ -52,6 +52,7 @@ export default class ObstacleManager {
             cutPiece.quaternion.set(cutPieceBody.quaternion.x, cutPieceBody.quaternion.y, cutPieceBody.quaternion.z, cutPieceBody.quaternion.w);
         }
 
+        // Make sure that there are 'maxObstacles' of obstacles in the scene at all times
         if(this.obstacles.length < this.maxObstacles) {
             const model = this.obstacleModels[0]; // TODO : take model randomly or something
             if(model != null) {
@@ -121,7 +122,6 @@ export default class ObstacleManager {
         const slicedPiece = obstacle.cutObstacle(planeMesh, planeMesh2, cutDirection, cutForce);
 
         this.slicedObstacles.push(slicedPiece);
-        //obstacles[obstacles.findIndex(c => c.obstacle.uuid === obstacle.uuid)] = { obstacle: res2, obstacleBB: res2BB };
 
         // Remove cut piece after 2 seconds
         setTimeout(() => {

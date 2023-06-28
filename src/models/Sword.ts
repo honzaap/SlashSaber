@@ -4,6 +4,7 @@ import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
+import { BLOOM_LAYER } from "../constants.ts";
 
 export default class Sword {
 
@@ -15,16 +16,39 @@ export default class Sword {
 
     private model = new THREE.Object3D();
     private boundingBox = new OBB();
+    private bladeMesh : THREE.Object3D;
+    private bladeSize = new THREE.Vector3();
 
     // Create sword model, bounding box and helper
     constructor() {
         this.gameState = GameState.getInstance();
         this.obstacleManager = ObstacleManager.getInstance();
+        this.bladeMesh = new THREE.Object3D();
 
         this.gameState.loadGLTF("./assets/katana.glb", (obj) => {
             this.model = obj.scene;
             this.model.position.set(0, 0.65, -0.80);
             this.model.up = new THREE.Vector3(0, 0, 1);
+
+            console.log(this.model);
+
+            this.model.traverse((obj : THREE.Object3D) => {
+                if(obj.name === "Blade") {
+                    // Set bloom to blade mesh
+                    for(const mesh of obj.children) {
+                        mesh.layers.toggle(BLOOM_LAYER);
+                    }
+
+                    // Get blade mesh and size
+                    const bounds = new THREE.Box3();
+                    bounds.setFromObject(obj);
+                    bounds.getSize(this.bladeSize);
+                    this.bladeSize.multiplyScalar(0.5);
+
+                    this.bladeMesh = obj;
+                    this.boundingBox = new OBB(new THREE.Vector3(), this.bladeSize);
+                }
+            });
 
             // Get model size
             const box3 = new THREE.Box3().setFromObject(this.model);
@@ -32,9 +56,6 @@ export default class Sword {
             box3.getSize(size);
             size.x /= 2.5;
             size.y /= 2.5;
-
-            this.model.userData.size = size; // TODO : Move everything from userData to class
-            this.boundingBox = new OBB(new THREE.Vector3(), this.model.userData.size);
 
             // Setup contact points
             this.model.userData.contactPoints = [];
@@ -55,19 +76,13 @@ export default class Sword {
             tp.position.y = size.y + 0.1;
             this.model.userData.trailPoint = tp;
 
-            this.model.layers.toggle(2);
-            this.model.traverse((obj) => {
-                if(obj.parent?.name === "Blade")
-                obj.layers.toggle(2);
-            });
-
             this.gameState.sceneAdd(this.model);
 
             this.gameState.addLogicHandler(this.handleCollisions);
             this.createSwordTrail(this.model);
 
             const helperManager = new HelperManager();
-            helperManager.createSwordHelper(this.model);
+            helperManager.createSwordHelper(this.model, this.boundingBox);
         });
     }
 
@@ -97,20 +112,19 @@ export default class Sword {
     // Update bounding boxes, handle collisions with sword and other objects
     public handleCollisions = () => {
         const cutForce = 3; // How much force should be applied to pieces that get cut off
-        
+
         // Update sword bounding box
-        const matrix = new THREE.Matrix4();
+        const matrix4 = new THREE.Matrix4();
         const rotation = new THREE.Euler();
         rotation.copy(this.model.rotation);
-        
-        matrix.makeRotationFromEuler(rotation);
-        const position = new THREE.Vector3();
-        position.copy(this.model.position);
-        if(this.model.userData.size) {
-            const matrix3 = new THREE.Matrix3();
-            matrix3.setFromMatrix4(matrix);
-            this.boundingBox.set(position, this.model.userData.size, matrix3);
-        }
+        matrix4.makeRotationFromEuler(rotation);
+        const matrix3 = new THREE.Matrix3();
+        matrix3.setFromMatrix4(matrix4);
+
+        const bounds = new THREE.Box3();
+        bounds.setFromObject(this.bladeMesh);
+        const center = new THREE.Vector3((bounds.max.x + bounds.min.x) / 2, (bounds.max.y + bounds.min.y) / 2, (bounds.max.z + bounds.min.z) / 2);
+        this.boundingBox.set(center, this.bladeSize, matrix3);
 
         // Check this.model collisions with objects
         for(const obstacle of this.obstacleManager.getObstacles()) {

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import GUIManager from "./GUIManager";
 import GameState from "../models/GameState";
+import { OBB } from "three/examples/jsm/math/OBB.js";
 
 export default class HelperManager {
     private logicHandlers : Function[];
@@ -11,24 +12,32 @@ export default class HelperManager {
         gameState.addLogicHandler((delta : number) => { this.update(delta) });
     }
 
-    public createSwordHelper(sword : THREE.Object3D) {
+    public createSwordHelper(sword : THREE.Object3D, swordBB : OBB) {
         // Main sword helper
         const gameState = GameState.getInstance();
         const scene = gameState.getScene();
 
         // Get model size
-        const box3 = new THREE.Box3().setFromObject(sword);
-        let size = new THREE.Vector3();
-        box3.getSize(size);
-        size.x /= 2.5;
-        size.y /= 2.5;
+        //const box3 = new THREE.Box3().setFromObject(sword);
+        //let size = new THREE.Vector3();
+        //box3.getSize(size);
+        //size.x /= 2.5;
+        //size.y /= 2.5;
+
+        const size = new THREE.Vector3();
+        swordBB.getSize(size);
 
         const swordHelper = new THREE.Object3D();
         const shMesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial());
         shMesh.material.wireframe = true;
-        shMesh.position.set(0, 0, -sword.userData.size.z / 2);
+        const rotation = new THREE.Euler();
+        const matrix = new THREE.Matrix4();
+        matrix.setFromMatrix3(swordBB.rotation);
+        rotation.setFromRotationMatrix(matrix);
         swordHelper.up = new THREE.Vector3(0, 0, 1);
         swordHelper.add(shMesh);
+        swordHelper.position.copy(swordBB.center);
+        swordHelper.rotation.copy(rotation);
         scene.add(swordHelper);
         swordHelper.visible = false;
 
@@ -47,17 +56,12 @@ export default class HelperManager {
         sword.userData.trailPoint.visible = false;
 
         const update = () => {
-            const matrix = new THREE.Matrix4();
+            swordHelper.position.copy(swordBB.center);
             const rotation = new THREE.Euler();
-
-            rotation.copy(sword.rotation);
-            matrix.makeRotationFromEuler(rotation);
-
-            const position = new THREE.Vector3();
-            position.copy(sword.position);
-
-            swordHelper.position.copy(position);
-            swordHelper.setRotationFromMatrix(matrix);
+            const matrix = new THREE.Matrix4();
+            matrix.setFromMatrix3(swordBB.rotation);
+            rotation.setFromRotationMatrix(matrix);
+            swordHelper.rotation.copy(rotation);
         }
 
         this.logicHandlers.push(update);

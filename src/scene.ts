@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
+import { BLOOM_LAYER, FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
 import { GodraysPass } from "./libs/GoodGodRays";
@@ -423,7 +423,7 @@ function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, cast
 function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
     const materials : any = {};
     const bloomLayer = new THREE.Layers();
-    bloomLayer.set(2);
+    bloomLayer.set(BLOOM_LAYER);
     const darkMaterial = new THREE.MeshBasicMaterial({ color: 'black' });
 
     function darkenNonBloomed(obj : THREE.Object3D) {
