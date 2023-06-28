@@ -45,11 +45,11 @@ export default class ObstacleManager {
         }
 
         // Update physics
-        for(const cutPiece of this.slicedObstacles) {
-            const cutPieceBody = cutPiece.userData.body; // TODO : move data from userdata to class
-            cutPieceBody.position.z += this.gameState.movingSpeed * delta;
-            cutPiece.position.set(cutPieceBody.position.x, cutPieceBody.position.y, cutPieceBody.position.z);
-            cutPiece.quaternion.set(cutPieceBody.quaternion.x, cutPieceBody.quaternion.y, cutPieceBody.quaternion.z, cutPieceBody.quaternion.w);
+        for(const slicedPiece of this.slicedObstacles) {
+            const slicedPieceBody = slicedPiece.userData.body;
+            slicedPieceBody.position.z += this.gameState.movingSpeed * delta;
+            slicedPiece.position.set(slicedPieceBody.position.x, slicedPieceBody.position.y, slicedPieceBody.position.z);
+            slicedPiece.quaternion.set(slicedPieceBody.quaternion.x, slicedPieceBody.quaternion.y, slicedPieceBody.quaternion.z, slicedPieceBody.quaternion.w);
         }
 
         // Make sure that there are 'maxObstacles' of obstacles in the scene at all times
@@ -66,8 +66,8 @@ export default class ObstacleManager {
         }
     };
 
-    public cutObstacle(obstacle : Obstacle, coplanarPoints : THREE.Vector3[], cutDirection : THREE.Vector3, cutForce = 1) {
-        // Generate a plane, which cuts through the object
+    public sliceObstacle(obstacle : Obstacle, coplanarPoints : THREE.Vector3[], sliceDirection : THREE.Vector3, sliceForce = 1) {
+        // Generate a plane, which slices through the object
         const plane = new THREE.Plane(new THREE.Vector3(0.0, 0.0, 0.0));
         plane.setFromCoplanarPoints(coplanarPoints[0], coplanarPoints[1], coplanarPoints[2]);
 
@@ -82,48 +82,40 @@ export default class ObstacleManager {
         v2.copy(coplanarPoints[0]).sub(plane.normal);
 
         // Create 2 planes, one with flipped normal to correctly clip both sides
-        // planeMesh is the one that leaves behind a cut piece with physics
+        // planeMesh is the one that leaves behind a sliced piece with physics
         const position = obstacle.getPosition();
         if(v1.distanceTo(position) > v2.distanceTo(position)) {
             planeMesh.position.copy(plane.normal);
             planeMesh.position.multiplyScalar(-plane.constant);
             planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh.userData.normal = new THREE.Vector3();
-            planeMesh.userData.normal.copy(plane.normal);
 
             plane.negate();
 
             planeMesh2.position.copy(plane.normal);
             planeMesh2.position.multiplyScalar(-plane.constant);
             planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh2.userData.normal = new THREE.Vector3();
-            planeMesh2.userData.normal.copy(plane.normal);
         }
         else {
             planeMesh2.position.copy(plane.normal);
             planeMesh2.position.multiplyScalar(-plane.constant);
             planeMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh2.userData.normal = new THREE.Vector3();
-            planeMesh2.userData.normal.copy(plane.normal);
 
             plane.negate();
 
             planeMesh.position.copy(plane.normal);
             planeMesh.position.multiplyScalar(-plane.constant);
             planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), plane.normal);
-            planeMesh.userData.normal = new THREE.Vector3();
-            planeMesh.userData.normal.copy(plane.normal);
         }
 
         // Update plane matrices
         planeMesh.updateMatrix();
         planeMesh2.updateMatrix();
 
-        const slicedPiece = obstacle.cutObstacle(planeMesh, planeMesh2, cutDirection, cutForce);
+        const slicedPiece = obstacle.sliceObstacle(planeMesh, planeMesh2, sliceDirection, sliceForce);
 
         this.slicedObstacles.push(slicedPiece);
 
-        // Remove cut piece after 2 seconds
+        // Remove sliced piece after 2 seconds
         setTimeout(() => {
             this.gameState.sceneRemove(slicedPiece);
             this.gameState.worldRemove(slicedPiece.userData.body);

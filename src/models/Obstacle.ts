@@ -65,26 +65,26 @@ export default class Obstacle {
         return null;
     }
 
-    public cutObstacle(cutPlane : THREE.Mesh, cutPlaneFlipped : THREE.Mesh, cutDirection : THREE.Vector3, cutForce = 1) {
-        // The piece that gets cut off
-        const cutPiece = CSG.subtract(<THREE.Mesh> this.model, cutPlane);
-        cutPiece.updateMatrix();
-        cutPiece.updateMatrixWorld();
+    public sliceObstacle(slicePlane : THREE.Mesh, slicePlaneFlipped : THREE.Mesh, sliceDirection : THREE.Vector3, sliceForce = 1) {
+        // The piece that gets sliced off
+        const slicedPiece = CSG.subtract(<THREE.Mesh> this.model, slicePlane);
+        slicedPiece.updateMatrix();
+        slicedPiece.updateMatrixWorld();
 
-        // Rest of the obstacle mesh without the piece that got cut off 
-        const cutObstacle = CSG.subtract(<THREE.Mesh> this.model, cutPlaneFlipped);
+        // Rest of the obstacle mesh without the piece that got sliced off 
+        const sliceObstacled = CSG.subtract(<THREE.Mesh> this.model, slicePlaneFlipped);
 
-        const box3 = new THREE.Box3().setFromObject(cutPiece);
+        const box3 = new THREE.Box3().setFromObject(slicedPiece);
         const size = new THREE.Vector3();
         box3.getSize(size);
 
         // The result of the CSG operation has pivot in the same location as the main mesh
         // This resets it to the center of the mesh 
         const boundingBox = new  THREE.Box3();
-        boundingBox.setFromObject(cutPiece);
+        boundingBox.setFromObject(slicedPiece);
 
         const middle = new THREE.Vector3();
-        const g = cutPiece.geometry;
+        const g = slicedPiece.geometry;
     
         g.computeBoundingBox();
 
@@ -94,37 +94,35 @@ export default class Obstacle {
             middle.z = (g.boundingBox.max.z + g.boundingBox.min.z) / 2;
         }
     
-        cutPiece.localToWorld(middle);
+        slicedPiece.localToWorld(middle);
 
-        cutPiece.geometry.center();
-        cutPiece.updateMatrix();
-        cutPiece.updateMatrixWorld();
+        slicedPiece.geometry.center();
+        slicedPiece.updateMatrix();
+        slicedPiece.updateMatrixWorld();
 
-        const cutPieceBody = new CANNON.Body({
+        const slicedPieceBody = new CANNON.Body({
             mass: Math.max(8 * size.x * size.y * size.z, 0.3),
             shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
             position: new CANNON.Vec3(middle.x, middle.y, middle.z),
         });
 
-        cutPieceBody.updateMassProperties();
-        cutPieceBody.aabbNeedsUpdate = true;
-        this.gameState.worldAdd(cutPieceBody);
+        this.gameState.worldAdd(slicedPieceBody);
 
-        cutPiece.userData.body = cutPieceBody;
-        cutPiece.position.copy(middle);
+        slicedPiece.userData.body = slicedPieceBody;
+        slicedPiece.position.copy(middle);
 
-        cutPieceBody.applyLocalImpulse(new CANNON.Vec3(cutDirection.x * cutForce, cutDirection.y * cutForce, cutDirection.z * cutForce), new CANNON.Vec3(0, 0, 0));
+        slicedPieceBody.applyLocalImpulse(new CANNON.Vec3(sliceDirection.x * sliceForce, sliceDirection.y * sliceForce, sliceDirection.z * sliceForce), new CANNON.Vec3(0, 0, 0));
 
         const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
-        res2BB.setFromObject(cutObstacle);
+        res2BB.setFromObject(sliceObstacled);
 
         this.gameState.sceneRemove(this.model);
 
-        this.model = cutObstacle;
+        this.model = sliceObstacled;
 
-        this.gameState.sceneAdd(cutPiece);
+        this.gameState.sceneAdd(slicedPiece);
         this.gameState.sceneAdd(this.model);
 
-        return cutPiece;
+        return slicedPiece;
     }
 }

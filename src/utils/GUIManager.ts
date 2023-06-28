@@ -3,6 +3,7 @@ import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import GameState from "../models/GameState";
+import Sword from "../models/Sword";
 
 export default class GUIManager {
 
@@ -70,7 +71,7 @@ export default class GUIManager {
         gui.add(params, "far", 20, 100).onChange(function(value : number) { scene.fog = new THREE.Fog(scene.background as THREE.Color ?? new THREE.Color(0x000000), params.near, value); });
     }
 
-    public static registerSwordHelpers(sword : THREE.Object3D, swordHelper : THREE.Object3D) {
+    public static registerSwordHelpers(sword : Sword, swordHelper : THREE.Object3D) {
         const gui = GUIManager.getGUI().addFolder("Sword hepers");
         gui.close();
 
@@ -84,12 +85,10 @@ export default class GUIManager {
             swordHelper.visible = value;
         });
         gui.add(params, "contactPoints").onChange(function(value : boolean) {
-            for(const point of sword.userData.contactPoints) {
-                point.visible = value;
-            }
+            sword.setContactPointVisibility(value);
         });
         gui.add(params, "trailPoint").onChange(function(value : boolean) {
-            sword.userData.trailPoint.visible = value;
+            sword.setTrailPointVisibility(value);
         });
     }
 }

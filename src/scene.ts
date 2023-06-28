@@ -277,7 +277,6 @@ function setupLighting() {
     dirLight.shadow.bias = -0.001;
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
-    dirLight.userData.isUsed = false;
     dirLight.position.set(-18, 9, -10);
     dirLight.target.position.set(20, -5, 0);
     dirLight.shadow.camera.near = 0.1;

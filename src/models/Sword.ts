@@ -16,21 +16,22 @@ export default class Sword {
 
     private model = new THREE.Object3D();
     private boundingBox = new OBB();
-    private bladeMesh : THREE.Object3D;
+    private bladeMesh = new THREE.Object3D();
     private bladeSize = new THREE.Vector3();
+
+    private contactPointBlade = new THREE.Object3D();
+    private contactPointHilt = new THREE.Object3D();
+    private trailPoint = new THREE.Object3D();
 
     // Create sword model, bounding box and helper
     constructor() {
         this.gameState = GameState.getInstance();
         this.obstacleManager = ObstacleManager.getInstance();
-        this.bladeMesh = new THREE.Object3D();
 
         this.gameState.loadGLTF("./assets/katana.glb", (obj) => {
             this.model = obj.scene;
             this.model.position.set(0, 0.65, -0.80);
             this.model.up = new THREE.Vector3(0, 0, 1);
-
-            console.log(this.model);
 
             this.model.traverse((obj : THREE.Object3D) => {
                 if(obj.name === "Blade") {
@@ -58,31 +59,31 @@ export default class Sword {
             size.y /= 2.5;
 
             // Setup contact points
-            this.model.userData.contactPoints = [];
-            for(let i = 0; i < 2; i++) {
-                const pointGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
-                const point = new THREE.Mesh(pointGeo);
-                this.model.add(point);
-                point.position.z = size.z * -i;
-                point.position.y = size.y / 2;
-                this.model.userData.contactPoints.push(point);
-            }
+            const cpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
+            this.contactPointBlade = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0xff00ff}));
+            this.contactPointBlade.position.set(0, size.y / 2, size.z * -1);
+            this.contactPointHilt = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0x000000}));
+            this.contactPointHilt.position.set(0, size.y / 2, 0);
 
             // Setup a point for the trail to follow
-            const tpGeo = new THREE.BoxGeometry(0.0, 0.0, 0.0);
-            const tp = new THREE.Mesh(tpGeo);
-            this.model.add(tp);
-            tp.position.z = -size.z + 0.2;
-            tp.position.y = size.y + 0.1;
-            this.model.userData.trailPoint = tp;
+            const tpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
+            this.trailPoint = new THREE.Mesh(tpGeo, new THREE.MeshStandardMaterial({color: 0xffff00}));
+            this.trailPoint.position.set(0, size.y + 0.1, -size.z + 0.2);
+
+            this.model.add(this.contactPointBlade);
+            this.model.add(this.contactPointHilt);
+            this.model.add(this.trailPoint);
 
             this.gameState.sceneAdd(this.model);
-
             this.gameState.addLogicHandler(this.handleCollisions);
-            this.createSwordTrail(this.model);
+
+            this.createSwordTrail();
 
             const helperManager = new HelperManager();
-            helperManager.createSwordHelper(this.model, this.boundingBox);
+            helperManager.createSwordHelper(this, this.boundingBox);
+
+            this.setTrailPointVisibility(false);
+            this.setTrailPointVisibility(false);
         });
     }
 
@@ -111,7 +112,7 @@ export default class Sword {
 
     // Update bounding boxes, handle collisions with sword and other objects
     public handleCollisions = () => {
-        const cutForce = 3; // How much force should be applied to pieces that get cut off
+        const sliceForce = 3; // How much force should be applied to pieces that get sliced off
 
         // Update sword bounding box
         const matrix4 = new THREE.Matrix4();
@@ -126,30 +127,28 @@ export default class Sword {
         const center = new THREE.Vector3((bounds.max.x + bounds.min.x) / 2, (bounds.max.y + bounds.min.y) / 2, (bounds.max.z + bounds.min.z) / 2);
         this.boundingBox.set(center, this.bladeSize, matrix3);
 
-        // Check this.model collisions with objects
+        // Check bounding box collision with obstacles
         for(const obstacle of this.obstacleManager.getObstacles()) {
-            const collisionPoint = obstacle.swordCollide(this.boundingBox, this.model.userData.contactPoints[1]); // TODO : userdata x
+            const collisionPoint = obstacle.swordCollide(this.boundingBox, this.contactPointBlade);
             if(collisionPoint != null) {
                 const col1 = new THREE.Vector3();
                 const col2 = new THREE.Vector3();
                 col1.copy(collisionPoint);
-                this.model.userData.contactPoints[1].getWorldPosition(col2);
-                const cutDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
+                this.contactPointBlade.getWorldPosition(col2);
+                const sliceDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
 
-                const points : THREE.Vector3[] = [collisionPoint];
-                for(const point of this.model.userData.contactPoints ?? []) { // Go through each contact point on the sword
-                    const worldPos = new THREE.Vector3();
-                    point.getWorldPosition(worldPos);
-                    points.push(worldPos);
-                }
+                // Use contact points as coplanar points
+                const points : THREE.Vector3[] = [collisionPoint, new THREE.Vector3(), new THREE.Vector3()];
+                this.contactPointHilt.getWorldPosition(points[1]);
+                this.contactPointBlade.getWorldPosition(points[2]);
 
-                this.obstacleManager.cutObstacle(obstacle, points, cutDirection, cutForce);
+                this.obstacleManager.sliceObstacle(obstacle, points, sliceDirection, sliceForce);
             }
         }
     };
 
     // Create sword trail
-    private createSwordTrail(sword : THREE.Object3D) {
+    private createSwordTrail() {
         const speedToShowTrail = 7000;
         const fadeOutFactor = 1;
         const fadeInFactor = 2;
@@ -167,7 +166,7 @@ export default class Sword {
 
         const trailLength = 20;
 
-        trail.initialize(material, trailLength, false, 0, headGeometry, sword.userData.trailPoint);
+        trail.initialize(material, trailLength, false, 0, headGeometry, this.trailPoint);
         trail.activate();
         trail.advance();
 
@@ -211,5 +210,14 @@ export default class Sword {
         };
 
         this.gameState.addLogicHandler(updateTrail);
+    }
+
+    public setContactPointVisibility(visible : boolean) {
+        this.contactPointBlade.visible = visible;
+        this.contactPointHilt.visible = visible;
+    }
+
+    public setTrailPointVisibility(visible : boolean) {
+        this.trailPoint.visible = visible;
     }
 }

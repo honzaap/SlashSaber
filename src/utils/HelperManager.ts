@@ -2,6 +2,7 @@ import * as THREE from "three";
 import GUIManager from "./GUIManager";
 import GameState from "../models/GameState";
 import { OBB } from "three/examples/jsm/math/OBB.js";
+import Sword from "../models/Sword";
 
 export default class HelperManager {
     private logicHandlers : ((delta : number) => void)[];
@@ -12,7 +13,7 @@ export default class HelperManager {
         gameState.addLogicHandler((delta : number) => { this.update(delta); });
     }
 
-    public createSwordHelper(sword : THREE.Object3D, swordBB : OBB) {
+    public createSwordHelper(sword : Sword, swordBB : OBB) {
         // Main sword helper
         const gameState = GameState.getInstance();
         const scene = gameState.getScene();
@@ -34,19 +35,8 @@ export default class HelperManager {
         scene.add(swordHelper);
         swordHelper.visible = false;
 
-        // Contact points helpers
-        let i = 0;
-        for(const point of sword.userData.contactPoints) {
-            point.material = new THREE.MeshStandardMaterial({color: 0xff00ff * i});
-            point.geometry = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-            point.visible = false;
-            i++;
-        }
-
-        // Trail point helper
-        sword.userData.trailPoint.material = new THREE.MeshStandardMaterial({color: 0xffff00});
-        sword.userData.trailPoint.geometry = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-        sword.userData.trailPoint.visible = false;
+        sword.setContactPointVisibility(false);
+        sword.setContactPointVisibility(false);
 
         const update = () => {
             swordHelper.position.copy(swordBB.center);
