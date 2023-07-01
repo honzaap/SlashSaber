@@ -1,14 +1,75 @@
-export const FLOOR_ASSET = "floor.glb";
+export const BLOOM_LAYER = 2;
 
-export const RIGHT_WALL_ASSET = "right_wall.glb";
+export const ROOM_TRANSITION_ASSET = "room_transition.glb";
 
-export const LEFT_WALL_ASSET = "left_wall.glb";
+export const ENVIRONMENT_SET_TEMPLATES = [
+    [
+        {
+            asset: "floor.glb",
+            maxNumber: 15,
+            offset: 0,
+        },
+        {
+            asset: "right_wall.glb",
+            maxNumber: 7,
+            offset: 0,
+        },
+        {
+            asset: "left_wall.glb",
+            maxNumber: 7,
+            offset: -0.05,
+        },
+        {
+            asset: "roof.glb",
+            maxNumber: 20,
+            offset: 0,
+        },
+        {
+            asset: "wall_upper.glb",
+            maxNumber: 7,
+            offset: 0,
+        },
+        {
+            asset: "lamp.glb",
+            maxNumber: 10,
+            offset: 7,
+        },
+    ],
+    [
+        {
+            asset: "floor_test.glb",
+            maxNumber: 15,
+            offset: 0,
+        },
+        {
+            asset: "right_wall_test.glb",
+            maxNumber: 7,
+            offset: 0,
+        },
+        {
+            asset: "left_wall_test.glb",
+            maxNumber: 7,
+            offset: -0.05,
+        },
+        {
+            asset: "roof.glb",
+            maxNumber: 20,
+            offset: 0,
+        },
+        {
+            asset: "wall_upper_test.glb",
+            maxNumber: 7,
+            offset: 0,
+        },
+        {
+            asset: "lamp_test.glb",
+            maxNumber: 10,
+            offset: 7,
+        },
+    ],
+];
 
-export const ROOF_ASSET = "roof.glb";
-
-export const UPPER_WALL_ASSET = "wall_upper.glb";
-
-export const LAMP_ASSET = "lamp.glb";
+// Shaders
 
 export const MIX_VERTEX_SHADER = `
 varying vec2 vUv;
@@ -26,5 +87,3 @@ void main() {
     gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
 }
 `;
-
-export const BLOOM_LAYER = 2;

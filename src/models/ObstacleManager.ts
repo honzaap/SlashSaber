@@ -20,6 +20,7 @@ export default class ObstacleManager {
         this.gameState = GameState.getInstance();
 
         this.gameState.loadGLTF("./assets/obstacle_test.glb", (gltf) => {
+            // The obstacle needs a THREE.Mesh instance for CSG
             const instance = gltf.scene.children[0]; // TODO : this might break
             this.obstacleModels.push(instance);
         });
@@ -37,6 +38,7 @@ export default class ObstacleManager {
     }
 
     private update = (delta : number) : void => {
+        return;
         for(const obstacle of this.obstacles) {
             obstacle.updateBoundingBox();
             if(obstacle.moveBy(this.gameState.movingSpeed * delta)) {

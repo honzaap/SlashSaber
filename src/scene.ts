@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { BLOOM_LAYER, FLOOR_ASSET, LAMP_ASSET, LEFT_WALL_ASSET, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER, RIGHT_WALL_ASSET, ROOF_ASSET, UPPER_WALL_ASSET } from "./constants";
+import { BLOOM_LAYER, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER } from "./constants";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
 import { GodraysPass } from "./libs/GoodGodRays";
@@ -14,10 +14,9 @@ import * as CANNON from "cannon-es";
 import Sword from "./models/Sword.ts";
 import GameState from "./models/GameState.ts";
 import ObstacleManager from "./models/ObstacleManager.ts";
+import EnvironmentManager from "./models/EnvironmentManager.ts";
 
-// Define global GameState
 const gameState = GameState.getInstance();
-
 let sword : Sword;
 
 export function createScene() {
@@ -48,8 +47,6 @@ export function createScene() {
     function animate() {
         if(Date.now() >= timeTarget){
             const delta = clock.getDelta();
-
-           
 
             gameState.update(delta);
 
@@ -226,7 +223,7 @@ function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRender
 
     return {composer, bloomComposer};
 }
-
+/*
 // Set shadows on given object to given settings
 function setShadow(obj : THREE.Object3D, cast = false, receive = false) {
     obj.castShadow = cast;
@@ -264,7 +261,7 @@ function modifyObjectMaterial(obj : THREE.Object3D) {
             modifyObjectMaterial(child);
         }
     }
-}
+}*/
 
 // Create and configure lighting in the scene
 function setupLighting() {
@@ -298,12 +295,7 @@ function setupEnvironment() {
     scene.fog = new THREE.Fog(scene.background, 40, 65);
 
     // Setup moving environment
-    const updateFloors = generateMovingAsset(FLOOR_ASSET, 15, 0, true, true);
-    const updateLeftWalls = generateMovingAsset(LEFT_WALL_ASSET, 7, -0.05, true, true);
-    const updateRightWalls = generateMovingAsset(RIGHT_WALL_ASSET, 7, 0, true, true);
-    const updateUpperWalls = generateMovingAsset(UPPER_WALL_ASSET, 7, 0, true, true);
-    const updateRoofs = generateMovingAsset(ROOF_ASSET, 20, 0, true, true);
-    const updateLamps = generateMovingAsset(LAMP_ASSET, 10, 7, true, true);
+    EnvironmentManager.getInstance();
 
     // Setup static environment
     const blackMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
@@ -319,19 +311,6 @@ function setupEnvironment() {
     worldRoof.position.z = -30;
     worldRoof.position.y = 4;
     gameState.sceneAdd(worldRoof);
-
-    // Render environment, move objects and make them despawn when out of range
-    const updateEnvironment = (delta : number) => {
-
-        updateFloors(delta);
-        updateLeftWalls(delta);
-        updateRightWalls(delta);
-        updateUpperWalls(delta);
-        updateRoofs(delta);
-        updateLamps(delta);
-    };
-
-    gameState.addLogicHandler(updateEnvironment);
 
     GUIManager.registerEnvironment();
 }
@@ -367,54 +346,8 @@ function setupPhysicsEnvironment() {
     gameState.worldAdd(wallBody2);
 }
 
-// TODO : finish this comment because I have no idea what will this function do 
 function setupObstacles() {
     ObstacleManager.getInstance();
-}
-
-// Generate a moving environment from given asset, max number, offset between instances, and given shadow preset
-// Returns update function
-function generateMovingAsset(asset : string, maxNumber = 30, offset = 0.08, castShadow = true, receiveShadow = false) {
-    const instances : THREE.Object3D[] = [];
-    const despawnPosition = 10;
-    let originalInstance : THREE.Object3D;
-
-    // Create instance
-    gameState.loadGLTF(`./assets/${asset}`, function (gltf) {
-        const instance = gltf.scene;
-        instance.position.set(0, 0, 0);
-        setShadow(gltf.scene, castShadow, receiveShadow);
-        modifyObjectMaterial(gltf.scene);
-        originalInstance = instance;
-    });
-
-    const updateLoop = (delta : number) => {
-        // Generate asset
-        if(originalInstance != null) {
-            if(instances.length < maxNumber) {
-                const newInstance = originalInstance.clone(true);
-                const newPosition = instances[instances.length -1]?.position ?? new THREE.Vector3(0, 0, 7);
-                const box3 = new THREE.Box3().setFromObject(newInstance);
-                const size = new THREE.Vector3();
-                box3.getSize(size);
-                newInstance.position.z = newPosition.z - size.z - offset;
-                
-                instances.push(newInstance);
-                gameState.sceneAdd(newInstance);
-            }
-        }
-
-        // Move asset and remove any that are out of camera sight
-        for(const instance of instances) {
-            instance.position.z += gameState.movingSpeed * delta;
-            if(instance.position.z >= despawnPosition) {
-                gameState.sceneRemove(instance);
-                instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
-            }
-        }
-    };
-
-    return updateLoop;
 }
 
 // Render the scene

@@ -16,7 +16,7 @@ export default class GameState {
     private readonly fixedTimeStep = 1.0 / 60.0; 
 
     // Array of functions that are called in every frame
-    private logicHandlers : LogicHandlerFunction[];
+    private logicHandlers : ((delta : number) => void)[];
 
     private constructor() {
         this.scene = new THREE.Scene();
@@ -55,7 +55,7 @@ export default class GameState {
         return this.scene;
     }
 
-    public addLogicHandler(handler : LogicHandlerFunction) {
+    public addLogicHandler(handler : (delta : number) => void) {
         this.logicHandlers.push(handler);
     }
 
@@ -70,5 +70,3 @@ export default class GameState {
         this.loader.load(path, callback);
     }
 }
-
-type LogicHandlerFunction = (delta : number) => void;
