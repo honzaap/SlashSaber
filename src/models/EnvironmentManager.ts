@@ -17,6 +17,8 @@ export default class EnvironmentManager {
 
     private pointLightPool : PoolLight[] = [];
 
+    private lastTransitionDistance = 0;
+
     private constructor() {
         this.gameState = GameState.getInstance();
         for(const template of ENVIRONMENT_SET_TEMPLATES) {
@@ -41,9 +43,9 @@ export default class EnvironmentManager {
         }
 
         // TODO : only for debug, remove later
-        setTimeout(() => {
+        /*setTimeout(() => {
             this.makeTransition();
-        }, 3000);
+        }, 3000);*/
 
         this.setupTransition();
     }
@@ -65,9 +67,6 @@ export default class EnvironmentManager {
             this.activeSet = this.nextActiveSet;
             this.activeSet.isActive = true;
             this.nextActiveSet = this.environmentSets.filter(set => set !== this.activeSet)[0];
-            setTimeout(() => {
-                this.makeTransition();
-            }, 10000);
         }
 
         this.nextActiveSet.update(delta);
@@ -82,6 +81,12 @@ export default class EnvironmentManager {
             if(light.isActive) {
                 light.moveBy(this.gameState.movingSpeed * delta);
             }
+        }
+
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 30) { // TODO : change for some variable
+            this.makeTransition();
+            const end = Math.abs(this.transition?.getBounds().min.z ?? 0);
+            this.lastTransitionDistance = this.gameState.distanceTravelled + end;
         }
     };
 
@@ -142,6 +147,7 @@ class Transition {
     private animations : TransitionAnimation[] = [];
 
     private bounds = new THREE.Box3();
+    private size = new THREE.Vector3();
 
 
     constructor(model : THREE.Object3D, animations : THREE.AnimationClip[]) {
@@ -167,15 +173,16 @@ class Transition {
         }, 20);
 
         this.bounds.setFromObject(model);
-    }
-
-    public getPosition() {
-        return this.model.position;
+        this.bounds.getSize(this.size);
     }
 
     public getBounds() {
         this.bounds.setFromObject(this.model);
         return this.bounds;
+    }
+
+    public getSize() {
+        return this.size;
     }
 
     // Makes transition visible and resets animations

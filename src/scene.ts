@@ -38,17 +38,15 @@ export function createScene() {
 
     const { composer, bloomComposer } = setupPostProcessing(camera, renderer);
 
-    const clock = new THREE.Clock();
-
     const dt = 1000 / 300;
     let timeTarget = 0;
 
     // Animation loop
     function animate() {
+        requestAnimationFrame(animate);
+        if(gameState.paused) return;
         if(Date.now() >= timeTarget){
-            const delta = clock.getDelta();
-
-            gameState.update(delta);
+            gameState.update();
 
             GUIManager.updateStats();
 
@@ -59,16 +57,41 @@ export function createScene() {
                 timeTarget = Date.now();
             }
         }
-        requestAnimationFrame(animate);
     }
     animate();
 
     // Resize renderer when window size changes
     window.onresize = () => {
         resizeRenderer(renderer);
+        composer.setSize(window.innerWidth, window.innerHeight);
+        bloomComposer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
     };
+
+
+    const pausedScreen = document.getElementById("pausedScreen");
+    if(pausedScreen) {
+        pausedScreen.onclick = () => {
+            pausedScreen.classList.add("hide");
+            gameState.startGame();
+        };
+
+        document.onkeyup = (e) => {
+            if(e.key === "Escape") {
+                pausedScreen.classList.remove("hide");
+                gameState.pauseGame();
+            }
+        };
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible"){
+            gameState.pauseGame();
+            pausedScreen?.classList.remove("hide");
+        }
+    });
+
 }
 
 // Create and cofigure camera and return it
@@ -87,8 +110,10 @@ function createCamera() {
 
 // Create and configure camera and sword controls
 function createControls(camera : THREE.Camera) {
+    const canvas = document.getElementById("canvas");
+    if(!canvas) return;
 
-    document.onmousemove = (e) => {
+    canvas.onmousemove = (e) => {
         e.preventDefault();
 
         controlCamera(e, camera);
@@ -135,7 +160,6 @@ function createRenderer(camera : THREE.Camera) {
     renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
-    //renderer.setPixelRatio(window.devicePixelRatio * 1.5); // TODO: Causes LAG?
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
@@ -146,7 +170,7 @@ function createRenderer(camera : THREE.Camera) {
 
 // Set's the renderers size to current window size
 function resizeRenderer(renderer : THREE.WebGLRenderer) {
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 

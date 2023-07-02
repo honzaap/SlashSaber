@@ -5,13 +5,18 @@ import { GLTFLoader, GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 // Singleton class
 export default class GameState {
 
-    public movingSpeed = 3.5;
+    public movingSpeed = 0;
     public mouse = new THREE.Vector2(-1, -1);
+    public distanceTravelled = 0;
+    public paused = false; // TODO : rename to something else (this pauses the entire render process, not just movement)
 
     private static instance : GameState;
     private scene : THREE.Scene;
     private world : CANNON.World;
     private loader : GLTFLoader;
+
+    private clock = new THREE.Clock();
+
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
 
@@ -23,14 +28,33 @@ export default class GameState {
         this.world = new CANNON.World();
         this.world.gravity.set(0, -9.82, 0);
         this.logicHandlers = [];
-        this.loader = new GLTFLoader();
 
-        //this.scene.overrideMaterial = new THREE.MeshLambertMaterial();
+        const loadingManager = new THREE.LoadingManager(() => {
+            const loadingScreen = document.getElementById("loadingScreen");
+            loadingScreen?.classList.add("fade");
+            setTimeout(() => {
+                loadingScreen?.classList.add("hide");
+            }, 1000);
+        });
+
+        this.loader = new GLTFLoader(loadingManager);
     }
 
     public static getInstance() {
         if(!this.instance) this.instance = new GameState();
         return this.instance;
+    }
+
+    public startGame() {
+        this.movingSpeed = 3.5;
+        this.paused = false;
+        this.clock.start();
+    }
+
+    public pauseGame() {
+        this.movingSpeed = 0;
+        this.paused = true;
+        this.clock.running = false;
     }
 
     public sceneAdd(object : THREE.Object3D) : void {
@@ -61,11 +85,13 @@ export default class GameState {
         this.logicHandlers.push(handler);
     }
 
-    public update(delta : number) {
+    public update() {
+        const delta = this.clock.getDelta();
         this.world.step(this.fixedTimeStep, delta, 3);
         for(const handler of this.logicHandlers) {
             handler(delta);
         }
+        this.distanceTravelled += this.movingSpeed * delta;
     }
 
     public loadGLTF(path : string, callback : (model : GLTF) => void) {
