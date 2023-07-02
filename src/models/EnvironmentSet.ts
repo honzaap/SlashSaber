@@ -1,6 +1,12 @@
 import GameState from "./GameState";
 import * as THREE from "three";
 
+type EnvironmentSetTemplate = {
+    asset : string,
+    maxNumber : number,
+    offset : number,
+};
+
 export default class EnvironmentSet {
 
     public isActive = false;
@@ -11,7 +17,7 @@ export default class EnvironmentSet {
 
     private gameState : GameState;
 
-    public constructor(environmentSetTemplate : any[])  { // TODO : remove any
+    public constructor(environmentSetTemplate : EnvironmentSetTemplate[])  { // TODO : remove any
         this.gameState = GameState.getInstance();
         let loadedPieces = 0;
 
@@ -19,8 +25,8 @@ export default class EnvironmentSet {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
                 const piece = new EnvironmentPiece(gltf.scene, pieceTemplate.maxNumber, pieceTemplate.offset);
                 this.environmentPieces.push(piece);
-                //setShadow(gltf.scene, true, true);
-                //modifyObjectMaterial(gltf.scene);
+                this.setShadow(gltf.scene, true, true);
+                this.modifyObjectMaterial(gltf.scene);
                 this.generateMovingPiece(piece);
                 loadedPieces++;
                 this.isFullyLoaded = loadedPieces === environmentSetTemplate.length;
@@ -64,6 +70,7 @@ export default class EnvironmentSet {
                 }
 
                 if(newPosition.z >= -65) {
+                    console.log("env piece");
                     const newInstance = piece.model.clone(true);
                     newInstance.position.z = newPosition.z;
                     
@@ -85,6 +92,45 @@ export default class EnvironmentSet {
         };
 
         this.logicHandlers.push(updateLoop);
+    }
+
+    // Set shadows on given object to given settings
+    private setShadow(obj : THREE.Object3D, cast = false, receive = false) {
+        obj.castShadow = cast;
+        obj.receiveShadow = receive;
+        if (obj?.children != null) {
+            for (const child of obj.children) {
+                this.setShadow(child, cast, receive);
+            }
+        }
+    }
+
+    // Looks through materials of given object and its children, then modifies it however necessary
+    private modifyObjectMaterial(obj : THREE.Object3D) {
+        if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
+            if(obj.material?.emissiveIntensity > 1) { 
+                // Generate point light on an emissive material (used for lamps)
+                obj.material.emissiveIntensity = 1;
+                const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
+                pointLight.position.y = -1.4;
+                pointLight.castShadow = false;
+                //obj.add(pointLight); // TODO: Causes LAG?
+            }
+            if(obj.material?.opacity < 1) { 
+                // Make objects visible, but still able to pass light and godrays
+                obj.castShadow = false;
+                obj.receiveShadow = false;
+                obj.material.emissive = new THREE.Color(0xbeb979);
+                obj.material.emissiveIntensity = 0.8;
+                obj.material.opacity = 1;
+                obj.material.depthWrite = false;
+            }
+        }
+        if (obj?.children != null) {
+            for (const child of obj.children) {
+                this.modifyObjectMaterial(child);
+            }
+        }
     }
 }
 

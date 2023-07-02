@@ -38,7 +38,6 @@ export default class ObstacleManager {
     }
 
     private update = (delta : number) : void => {
-        return;
         for(const obstacle of this.obstacles) {
             obstacle.updateBoundingBox();
             if(obstacle.moveBy(this.gameState.movingSpeed * delta)) {

@@ -223,45 +223,6 @@ function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRender
 
     return {composer, bloomComposer};
 }
-/*
-// Set shadows on given object to given settings
-function setShadow(obj : THREE.Object3D, cast = false, receive = false) {
-    obj.castShadow = cast;
-    obj.receiveShadow = receive;
-    if (obj?.children != null) {
-        for (const child of obj.children) {
-            setShadow(child, cast, receive);
-        }
-    }
-}
-
-// Looks through materials of given object and its children, then modifies it however necessary
-function modifyObjectMaterial(obj : THREE.Object3D) {
-    if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-        if(obj.material?.emissiveIntensity > 1) { 
-            // Generate point light on an emissive material (used for lamps)
-            obj.material.emissiveIntensity = 1;
-            const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
-            pointLight.position.y = -1.4;
-            pointLight.castShadow = false;
-            obj.add(pointLight); // TODO: Causes LAG?
-        }
-        if(obj.material?.opacity < 1) { 
-            // Make objects visible, but still able to pass light and godrays
-            obj.castShadow = false;
-            obj.receiveShadow = false;
-            obj.material.emissive = new THREE.Color(0xbeb979);
-            obj.material.emissiveIntensity = 0.8;
-            obj.material.opacity = 1;
-            obj.material.depthWrite = false;
-        }
-    }
-    if (obj?.children != null) {
-        for (const child of obj.children) {
-            modifyObjectMaterial(child);
-        }
-    }
-}*/
 
 // Create and configure lighting in the scene
 function setupLighting() {
