@@ -33,6 +33,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
             asset: "lamp.glb",
             maxNumber: 10,
             offset: 7,
+            spawnLight: true,
         },
     ],
     [
@@ -65,6 +66,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
             asset: "lamp_test.glb",
             maxNumber: 10,
             offset: 7,
+            spawnLight: true,
         },
     ],
 ];

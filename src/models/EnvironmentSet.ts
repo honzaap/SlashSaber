@@ -1,3 +1,4 @@
+import EnvironmentManager from "./EnvironmentManager";
 import GameState from "./GameState";
 import * as THREE from "three";
 
@@ -5,6 +6,7 @@ type EnvironmentSetTemplate = {
     asset : string,
     maxNumber : number,
     offset : number,
+    spawnLight? : boolean,
 };
 
 export default class EnvironmentSet {
@@ -17,13 +19,13 @@ export default class EnvironmentSet {
 
     private gameState : GameState;
 
-    public constructor(environmentSetTemplate : EnvironmentSetTemplate[])  { // TODO : remove any
+    public constructor(environmentSetTemplate : EnvironmentSetTemplate[])  {
         this.gameState = GameState.getInstance();
         let loadedPieces = 0;
 
         for(const pieceTemplate of environmentSetTemplate) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
-                const piece = new EnvironmentPiece(gltf.scene, pieceTemplate.maxNumber, pieceTemplate.offset);
+                const piece = new EnvironmentPiece(gltf.scene, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
                 this.environmentPieces.push(piece);
                 this.setShadow(gltf.scene, true, true);
                 this.modifyObjectMaterial(gltf.scene);
@@ -70,10 +72,19 @@ export default class EnvironmentSet {
                 }
 
                 if(newPosition.z >= -65) {
-                    console.log("env piece");
                     const newInstance = piece.model.clone(true);
                     newInstance.position.z = newPosition.z;
-                    
+
+                    if(piece.spawnLight) {
+                        const availableLight = EnvironmentManager.getInstance().getAvailableLight();
+                        if(availableLight) {
+                            availableLight.userData.isActive = true;
+                            availableLight.intensity = availableLight.userData.activeIntensity;
+                            availableLight.position.copy(newPosition);
+                            availableLight.position.y = 2.4;
+                        }
+                    }
+
                     instances.push(newInstance);
                     this.gameState.sceneAdd(newInstance);
                 }
@@ -86,7 +97,7 @@ export default class EnvironmentSet {
                     this.gameState.sceneRemove(instance);
                     instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
                 }
-            }
+            }            
 
             return instances.length > 0;
         };
@@ -108,14 +119,6 @@ export default class EnvironmentSet {
     // Looks through materials of given object and its children, then modifies it however necessary
     private modifyObjectMaterial(obj : THREE.Object3D) {
         if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-            if(obj.material?.emissiveIntensity > 1) { 
-                // Generate point light on an emissive material (used for lamps)
-                obj.material.emissiveIntensity = 1;
-                const pointLight = new THREE.PointLight(0xffffff, 7.2, 0, 2);
-                pointLight.position.y = -1.4;
-                pointLight.castShadow = false;
-                //obj.add(pointLight); // TODO: Causes LAG?
-            }
             if(obj.material?.opacity < 1) { 
                 // Make objects visible, but still able to pass light and godrays
                 obj.castShadow = false;
@@ -138,13 +141,15 @@ class EnvironmentPiece{
     public model : THREE.Object3D;
     public maxNumber: number;
     public offset : number;
+    public spawnLight : boolean;
     public size = new THREE.Vector3();
     public initialPosition : THREE.Vector3 | null = null;
 
-    public constructor(model : THREE.Object3D, maxNumber : number, offset : number) {
+    public constructor(model : THREE.Object3D, maxNumber : number, offset : number, spawnLight = false) {
         this.model = model;
         this.maxNumber = maxNumber;
         this.offset = offset;
+        this.spawnLight = spawnLight;
         const box3 = new THREE.Box3().setFromObject(this.model);
         box3.getSize(this.size);
     }

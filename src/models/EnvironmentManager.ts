@@ -17,6 +17,8 @@ export default class EnvironmentManager {
     private transitionMixer : THREE.AnimationMixer | null = null;
     private transitionActive = false;
 
+    private pointLightPool : THREE.PointLight[] = [];
+
     private constructor() {
         this.gameState = GameState.getInstance();
         for(const template of ENVIRONMENT_SET_TEMPLATES) {
@@ -32,6 +34,16 @@ export default class EnvironmentManager {
 
         this.gameState.addLogicHandler(this.update);
 
+        // Generate pool of point lights that can be used for lamps 
+        for(let i = 0; i < 10; i++) {
+            const pointLight = new THREE.PointLight(0xffffff, 0, 0, 2);
+            pointLight.castShadow = false;
+            pointLight.userData.activeIntensity = 7.2;
+            this.pointLightPool.push(pointLight);
+            this.gameState.sceneAdd(pointLight);
+        }
+
+        // TODO : only for debug, remove later
         setTimeout(() => {
             this.makeTransition();
         }, 3000);
@@ -40,8 +52,12 @@ export default class EnvironmentManager {
     }
 
     public static getInstance() : EnvironmentManager {
-        if(!this.instance) this.instance = new EnvironmentManager();
+        if(this.instance == null) this.instance = new EnvironmentManager();
         return this.instance;
+    }
+
+    public getAvailableLight() : THREE.PointLight | undefined {
+        return this.pointLightPool.find(l => l.userData.isActive !== true);
     }
 
     private update = (delta : number) => {
@@ -76,9 +92,20 @@ export default class EnvironmentManager {
                 this.transition.visible = false;
             }
         }
+
+        for(const light of this.pointLightPool) {
+            if(light.userData.isActive) {
+                light.position.z += this.gameState.movingSpeed * delta;
+                if(light.position.z >= 10) {
+                    light.userData.isActive = false;
+                    light.intensity = 0;
+                }
+            }
+        }
     };
 
     private makeTransition() {
+        console.log("transition");
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
         this.transition.position.z = -65;
