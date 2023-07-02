@@ -24,6 +24,8 @@ export default class GameState {
         this.world.gravity.set(0, -9.82, 0);
         this.logicHandlers = [];
         this.loader = new GLTFLoader();
+
+        //this.scene.overrideMaterial = new THREE.MeshLambertMaterial();
     }
 
     public static getInstance() {

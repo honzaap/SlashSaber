@@ -20,7 +20,7 @@ export default class Obstacle {
         this.gameState = GameState.getInstance();
         this.model = model;
 
-        this.boundingBox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+        this.boundingBox = new THREE.Box3();
         this.boundingBox.setFromObject(this.model);
     }
 
@@ -113,7 +113,7 @@ export default class Obstacle {
 
         slicedPieceBody.applyLocalImpulse(new CANNON.Vec3(sliceDirection.x * sliceForce, sliceDirection.y * sliceForce, sliceDirection.z * sliceForce), new CANNON.Vec3(0, 0, 0));
 
-        const res2BB = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+        const res2BB = new THREE.Box3();
         res2BB.setFromObject(sliceObstacled);
 
         this.gameState.sceneRemove(this.model);

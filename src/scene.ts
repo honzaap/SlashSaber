@@ -40,7 +40,7 @@ export function createScene() {
 
     const clock = new THREE.Clock();
 
-    const dt = 1000 / 60;
+    const dt = 1000 / 300;
     let timeTarget = 0;
 
     // Animation loop
@@ -243,7 +243,6 @@ function setupLighting() {
     dirLight.shadow.camera.right = 0;
     dirLight.shadow.camera.top = 5;
     dirLight.shadow.camera.bottom = -8;
-    dirLight.frustumCulled = false;
     gameState.sceneAdd(dirLight);
 
     GUIManager.registerLighting(hemiLight);
@@ -265,12 +264,14 @@ function setupEnvironment() {
     worldGround.rotation.x = THREE.MathUtils.degToRad(-90);
     worldGround.position.z = -30;
     worldGround.position.y = -1;
+    worldGround.matrixAutoUpdate = false;
     gameState.sceneAdd(worldGround);
 
     const worldRoof = new THREE.Mesh(planeGeometry, blackMaterial);
     worldRoof.rotation.x = THREE.MathUtils.degToRad(90);
     worldRoof.position.z = -30;
     worldRoof.position.y = 4;
+    worldRoof.matrixAutoUpdate = false;
     gameState.sceneAdd(worldRoof);
 
     GUIManager.registerEnvironment();
@@ -281,29 +282,26 @@ function setupPhysicsEnvironment() {
     const groundBody = new CANNON.Body({
         mass: 0,
         shape: new CANNON.Plane(),
+        position: new CANNON.Vec3(0, -0.95, 0),
     });
     groundBody.type = CANNON.Body.STATIC;
-    groundBody.mass = 0;
-    groundBody.updateMassProperties();
-    groundBody.aabbNeedsUpdate = true;
     groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-    groundBody.position.set(0, -0.95, 0);
     gameState.worldAdd(groundBody);
     
     const wallBody1 = new CANNON.Body({
         mass: 0,
         shape: new CANNON.Plane(),
+        position: new CANNON.Vec3(2.5, 0, 0),
     });
     wallBody1.quaternion.setFromEuler(0, -Math.PI / 2, 0);
-    wallBody1.position.set(2.5, 0, 0);
     gameState.worldAdd(wallBody1);
     
     const wallBody2 = new CANNON.Body({
         mass: 0,
-        shape: new CANNON.Plane()
+        shape: new CANNON.Plane(),
+        position: new CANNON.Vec3(-2.5, 0, 0),
     });
     wallBody2.quaternion.setFromEuler(0, Math.PI / 2, 0);
-    wallBody2.position.set(-2.5, 0, 0);
     gameState.worldAdd(wallBody2);
 }
 

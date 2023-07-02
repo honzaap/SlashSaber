@@ -6,7 +6,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     [
         {
             asset: "floor.glb",
-            maxNumber: 15,
+            maxNumber: 10,
             offset: 0,
         },
         {
@@ -39,7 +39,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     [
         {
             asset: "floor_test.glb",
-            maxNumber: 15,
+            maxNumber: 10,
             offset: 0,
         },
         {

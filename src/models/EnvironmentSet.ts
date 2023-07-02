@@ -25,11 +25,12 @@ export default class EnvironmentSet {
 
         for(const pieceTemplate of environmentSetTemplate) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
-                const piece = new EnvironmentPiece(gltf.scene, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
+                const model = gltf.scene;
+                const piece = new EnvironmentPiece(model, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
                 this.environmentPieces.push(piece);
-                this.setShadow(gltf.scene, true, true);
-                this.modifyObjectMaterial(gltf.scene);
-                this.generateMovingPiece(piece);
+                this.modifyModel(model);
+                this.setupMovingPieces(piece);
+
                 loadedPieces++;
                 this.isFullyLoaded = loadedPieces === environmentSetTemplate.length;
             });
@@ -54,71 +55,36 @@ export default class EnvironmentSet {
         this.isActive = true;
     }
 
-    private generateMovingPiece(piece : EnvironmentPiece) : void {
-        const instances : THREE.Object3D[] = [];
+    private setupMovingPieces(piece : EnvironmentPiece) : void {
         const despawnPosition = 10;
 
         const updateLoop = (delta : number) => {
-            // Generate new environment piece
-            if(instances.length < piece.maxNumber && this.isActive) {
-                const newPosition = new THREE.Vector3();
-                if(piece.initialPosition) {
-                    newPosition.copy(piece.initialPosition);
-                    piece.initialPosition = null;
-                }
-                else {
-                    newPosition.copy(instances[instances.length -1]?.position ?? new THREE.Vector3(0, 0, 7));
-                    newPosition.z = newPosition.z - piece.size.z - piece.offset;
-                }
-
-                if(newPosition.z >= -65) {
-                    const newInstance = piece.model.clone(true);
-                    newInstance.position.z = newPosition.z;
-
-                    if(piece.spawnLight) {
-                        const availableLight = EnvironmentManager.getInstance().getAvailableLight();
-                        if(availableLight) {
-                            availableLight.userData.isActive = true;
-                            availableLight.intensity = availableLight.userData.activeIntensity;
-                            availableLight.position.copy(newPosition);
-                            availableLight.position.y = 2.4;
-                        }
-                    }
-
-                    instances.push(newInstance);
-                    this.gameState.sceneAdd(newInstance);
-                }
+            // Activate new environment piece
+            if(piece.activeInstances() < piece.maxNumber && this.isActive) {
+                piece.activateNewInstance();
             }
 
             // Move asset and remove any that are out of camera sight
-            for(const instance of instances) {
+            for(const instance of piece.instancePool) {
                 instance.position.z += this.gameState.movingSpeed * delta;
                 if(instance.position.z >= despawnPosition) {
-                    this.gameState.sceneRemove(instance);
-                    instances.splice(instances.findIndex(i => i.uuid === instance.uuid), 1);
+                    instance.visible = false;
                 }
-            }            
+            }
 
-            return instances.length > 0;
+            return piece.activeInstances() > 0;
         };
 
         this.logicHandlers.push(updateLoop);
     }
 
-    // Set shadows on given object to given settings
-    private setShadow(obj : THREE.Object3D, cast = false, receive = false) {
-        obj.castShadow = cast;
-        obj.receiveShadow = receive;
-        if (obj?.children != null) {
-            for (const child of obj.children) {
-                this.setShadow(child, cast, receive);
-            }
-        }
-    }
-
-    // Looks through materials of given object and its children, then modifies it however necessary
-    private modifyObjectMaterial(obj : THREE.Object3D) {
+    // Looks through given object and its children, then modifies it however necessary
+    private modifyModel(obj : THREE.Object3D) {
+        obj.receiveShadow = true;
+        obj.castShadow = true;
         if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
+            // Good for performace, doesn't look really good
+            //obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 0 });
             if(obj.material?.opacity < 1) { 
                 // Make objects visible, but still able to pass light and godrays
                 obj.castShadow = false;
@@ -131,26 +97,87 @@ export default class EnvironmentSet {
         }
         if (obj?.children != null) {
             for (const child of obj.children) {
-                this.modifyObjectMaterial(child);
+                this.modifyModel(child);
             }
         }
     }
 }
 
 class EnvironmentPiece{
-    public model : THREE.Object3D;
     public maxNumber: number;
     public offset : number;
     public spawnLight : boolean;
     public size = new THREE.Vector3();
     public initialPosition : THREE.Vector3 | null = null;
+    public instancePool : THREE.Object3D[] = [];
 
     public constructor(model : THREE.Object3D, maxNumber : number, offset : number, spawnLight = false) {
-        this.model = model;
+        const gameState = GameState.getInstance();
         this.maxNumber = maxNumber;
         this.offset = offset;
         this.spawnLight = spawnLight;
-        const box3 = new THREE.Box3().setFromObject(this.model);
+        const box3 = new THREE.Box3().setFromObject(model);
         box3.getSize(this.size);
+
+
+        // Populate piece pool with instances 
+        for(let i = 0; i < this.maxNumber; i++) {
+            const instance = model.clone(true);
+            instance.visible = false;
+            instance.position.set(0, 0, 7);
+            gameState.sceneAdd(instance);
+            this.instancePool.push(instance);
+        }
+    }
+
+    public activateNewInstance() {
+        const newPosition = new THREE.Vector3();
+        if(this.initialPosition) {
+            newPosition.copy(this.initialPosition);
+            this.initialPosition = null;
+        }
+        else {
+            newPosition.copy(this.getFurthestActiveInstance().position);
+            newPosition.z = newPosition.z - this.size.z - this.offset;
+        }
+
+        if(newPosition.z < -65) return;
+
+        const newInstance = this.getAvailableInstance();
+
+        if(!newInstance) return;
+
+        newInstance.position.z = newPosition.z;
+        newInstance.visible = true;
+
+        if(this.spawnLight) {
+            const availableLight = EnvironmentManager.getInstance().getAvailableLight();
+
+            if(availableLight) {
+                availableLight.userData.isActive = true;
+                availableLight.intensity = availableLight.userData.activeIntensity;
+                availableLight.position.copy(newPosition);
+                availableLight.position.y = 2.4;
+            }
+        }
+    }
+
+    private getAvailableInstance() {
+        return this.instancePool.find(i => !i.visible);
+    }
+
+    public activeInstances() {
+        return this.instancePool.filter(i => i.visible).length;
+    }
+
+    private getFurthestActiveInstance() {
+        let furthest = this.instancePool[0];
+        for(const instance of this.instancePool) {
+            if(instance.position.z < furthest.position.z) {
+                furthest = instance;
+            }
+        }
+
+        return furthest;
     }
 }
