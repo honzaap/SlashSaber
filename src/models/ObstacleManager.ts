@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { Obstacle, SlicedPiece } from "./Obstacle";
 import GameState from "./GameState";
+import EnvironmentManager from "./EnvironmentManager";
 
 export default class ObstacleManager {
 
     private static instance : ObstacleManager;
 
     private gameState : GameState;
+    private environmentManager : EnvironmentManager;
 
     private obstacles : Obstacle[] = [];
     private slicedPieces : SlicedPiece[] = [];
@@ -18,6 +20,7 @@ export default class ObstacleManager {
 
     private constructor() { 
         this.gameState = GameState.getInstance();
+        this.environmentManager = EnvironmentManager.getInstance();
 
         this.gameState.loadGLTF("./assets/obstacle_test.glb", (gltf) => {
             // The obstacle needs a THREE.Mesh instance for CSG
@@ -56,12 +59,24 @@ export default class ObstacleManager {
         if(this.obstacles.length < this.maxObstacles) {
             const model = this.obstacleModels[0]; // TODO : take model randomly or something
             if(model != null) {
-                const newInstance = model.clone(true);
-                const newPosition = this.obstacles[this.obstacles.length -1]?.getPosition() ?? new THREE.Vector3(0, 0, 0);
-                newInstance.position.z = newPosition.z - this.obstacleDistance; // TODO : randomize a bit
+                const lastPosition = this.obstacles[this.obstacles.length -1]?.getPosition() ?? new THREE.Vector3(0, 0, 0);
+                let newPosition = lastPosition.z - this.obstacleDistance; // TODO : randomize a bit
 
-                this.obstacles.push(new Obstacle(newInstance));
-                this.gameState.sceneAdd(newInstance);
+                if(this.environmentManager.transition?.isActive) {
+                    const bounds = this.environmentManager.transition.getBounds();
+                    const min = bounds.min.z;
+                    const max = bounds.max.z + 5;
+                    if(newPosition >= min && newPosition <= max) {
+                        newPosition = min - this.obstacleDistance;
+                    }
+                }
+
+                if(newPosition >= -50) {
+                    const newInstance = model.clone(true);
+                    newInstance.position.z = newPosition;
+                    this.obstacles.push(new Obstacle(newInstance));
+                    this.gameState.sceneAdd(newInstance);
+                }
             }
         }
     };

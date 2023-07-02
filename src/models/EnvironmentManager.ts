@@ -5,6 +5,8 @@ import * as THREE from "three";
 
 export default class EnvironmentManager {
 
+    public transition : Transition | null = null;
+
     private static instance : EnvironmentManager;
 
     private gameState : GameState;
@@ -12,8 +14,6 @@ export default class EnvironmentManager {
     private environmentSets : EnvironmentSet[] = [];
     private activeSet : EnvironmentSet;
     private nextActiveSet : EnvironmentSet;
-
-    private transition : Transition | null = null;
 
     private pointLightPool : PoolLight[] = [];
 
@@ -135,16 +135,17 @@ class PoolLight {
 class Transition {
     public isActive = false;
 
+    private gameState : GameState;
+
     private model = new THREE.Object3D();
     private mixer : THREE.AnimationMixer;
-
     private animations : TransitionAnimation[] = [];
 
-    private gameState : GameState;
+    private bounds = new THREE.Box3();
+
 
     constructor(model : THREE.Object3D, animations : THREE.AnimationClip[]) {
         this.gameState = GameState.getInstance();
-        model.visible = false;
 
         this.mixer = new THREE.AnimationMixer(model);
         this.mixer.timeScale = 0.5;
@@ -161,6 +162,20 @@ class Transition {
         this.model = model;
 
         this.gameState.sceneAdd(this.model);
+        setTimeout(() => {
+            model.visible = false;
+        }, 20);
+
+        this.bounds.setFromObject(model);
+    }
+
+    public getPosition() {
+        return this.model.position;
+    }
+
+    public getBounds() {
+        this.bounds.setFromObject(this.model);
+        return this.bounds;
     }
 
     // Makes transition visible and resets animations
