@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import Obstacle from "./Obstacle";
+import { Obstacle, SlicedPiece } from "./Obstacle";
 import GameState from "./GameState";
 
 export default class ObstacleManager {
@@ -9,7 +9,7 @@ export default class ObstacleManager {
     private gameState : GameState;
 
     private obstacles : Obstacle[] = [];
-    private slicedObstacles : THREE.Object3D[] = []; // TODO : make sliced obstacle class?
+    private slicedPieces : SlicedPiece[] = [];
 
     private obstacleModels : THREE.Object3D[] = []; // TODO : store models differently
 
@@ -21,7 +21,7 @@ export default class ObstacleManager {
 
         this.gameState.loadGLTF("./assets/obstacle_test.glb", (gltf) => {
             // The obstacle needs a THREE.Mesh instance for CSG
-            const instance = gltf.scene.children[0]; // TODO : this might break
+            const instance = gltf.scene.children[0];
             this.obstacleModels.push(instance);
         });
 
@@ -46,11 +46,10 @@ export default class ObstacleManager {
         }
 
         // Update physics
-        for(const slicedPiece of this.slicedObstacles) {
-            const slicedPieceBody = slicedPiece.userData.body;
-            slicedPieceBody.position.z += this.gameState.movingSpeed * delta;
-            slicedPiece.position.set(slicedPieceBody.position.x, slicedPieceBody.position.y, slicedPieceBody.position.z);
-            slicedPiece.quaternion.set(slicedPieceBody.quaternion.x, slicedPieceBody.quaternion.y, slicedPieceBody.quaternion.z, slicedPieceBody.quaternion.w);
+        for(const slicedPiece of this.slicedPieces) {
+            slicedPiece.body.position.z += this.gameState.movingSpeed * delta;
+            slicedPiece.model.position.set(slicedPiece.body.position.x, slicedPiece.body.position.y, slicedPiece.body.position.z);
+            slicedPiece.model.quaternion.set(slicedPiece.body.quaternion.x, slicedPiece.body.quaternion.y, slicedPiece.body.quaternion.z, slicedPiece.body.quaternion.w);
         }
 
         // Make sure that there are 'maxObstacles' of obstacles in the scene at all times
@@ -114,15 +113,13 @@ export default class ObstacleManager {
 
         const slicedPiece = obstacle.sliceObstacle(planeMesh, planeMesh2, sliceDirection, sliceForce);
 
-        this.slicedObstacles.push(slicedPiece);
+        this.slicedPieces.push(slicedPiece);
 
         // Remove sliced piece after 2 seconds
         setTimeout(() => {
-            this.gameState.sceneRemove(slicedPiece);
-            this.gameState.worldRemove(slicedPiece.userData.body);
-            this.slicedObstacles.splice(this.slicedObstacles.findIndex(i => i.uuid === slicedPiece.uuid), 1);
+            this.gameState.sceneRemove(slicedPiece.model);
+            this.gameState.worldRemove(slicedPiece.body);
+            this.slicedPieces.splice(0, 1);
         }, 2000);
-
-        //gameState.movingSpeed = 0; // DEBUG
     }
 }

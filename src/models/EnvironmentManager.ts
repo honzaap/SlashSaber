@@ -12,12 +12,10 @@ export default class EnvironmentManager {
     private environmentSets : EnvironmentSet[] = [];
     private activeSet : EnvironmentSet;
     private nextActiveSet : EnvironmentSet;
-    private transition = new THREE.Object3D();
 
-    private transitionMixer : THREE.AnimationMixer | null = null;
-    private transitionActive = false;
+    private transition : Transition | null = null;
 
-    private pointLightPool : THREE.PointLight[] = [];
+    private pointLightPool : PoolLight[] = [];
 
     private constructor() {
         this.gameState = GameState.getInstance();
@@ -38,8 +36,7 @@ export default class EnvironmentManager {
         for(let i = 0; i < 10; i++) {
             const pointLight = new THREE.PointLight(0xffffff, 0, 0, 2);
             pointLight.castShadow = false;
-            pointLight.userData.activeIntensity = 7.2;
-            this.pointLightPool.push(pointLight);
+            this.pointLightPool.push(new PoolLight(pointLight, 7.2));
             this.gameState.sceneAdd(pointLight);
         }
 
@@ -56,11 +53,13 @@ export default class EnvironmentManager {
         return this.instance;
     }
 
-    public getAvailableLight() : THREE.PointLight | undefined {
-        return this.pointLightPool.find(l => l.userData.isActive !== true);
+    // Get first available light in the pool
+    public getAvailableLight() : PoolLight | undefined {
+        return this.pointLightPool.find(l => l.isActive !== true);
     }
 
     private update = (delta : number) => {
+        // Switch between sets
         if(!this.activeSet.update(delta)) {
             this.activeSet.isActive = false;
             this.activeSet = this.nextActiveSet;
@@ -73,71 +72,135 @@ export default class EnvironmentManager {
 
         this.nextActiveSet.update(delta);
 
-        if(this.transitionActive) {
-            this.transitionMixer?.update(delta);
-            this.transition.position.z += this.gameState.movingSpeed * delta;
-            for(const child of this.transition.children) {
-                if(child.userData.animation && child.userData.inAnimation !== true) {
-                    const position = new THREE.Vector3();
-                    child.getWorldPosition(position);
-                    if(position.z >= -5) {
-                        child.userData.inAnimation = true;
-                        child.userData.animation.play();
-                    }
-                }
-            }
-
-            if(this.transition.position.z >= 20) {
-                this.transitionActive = false;
-                this.transition.visible = false;
-            }
+        // Update and play transition animations
+        if(this.transition?.isActive) {
+            this.transition.update(delta);
         }
 
+        // Move lights in the light pool
         for(const light of this.pointLightPool) {
-            if(light.userData.isActive) {
-                light.position.z += this.gameState.movingSpeed * delta;
-                if(light.position.z >= 10) {
-                    light.userData.isActive = false;
-                    light.intensity = 0;
-                }
+            if(light.isActive) {
+                light.moveBy(this.gameState.movingSpeed * delta);
             }
         }
     };
 
+    // Start the transition between 2 environment sets
     private makeTransition() {
         console.log("transition");
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
-        this.transition.position.z = -65;
-        this.transitionActive = true;
-        this.transition.visible = true;
-        for(const child of this.transition.children) {
-            if(child.userData.animation) {
-                child.userData.animation.stop();
-                child.userData.inAnimation = false;
-            }
+        this.transition?.activate();
+    }
+
+    // Load transition model and setup animations
+    private setupTransition() {
+        this.gameState.loadGLTF(`/assets/${ROOM_TRANSITION_ASSET}`, (gltf) => {
+            this.transition = new Transition(gltf.scene, gltf.animations);
+        });
+    }
+}
+
+class PoolLight {
+    public isActive : boolean;
+  
+    private light : THREE.Light;
+    private activeIntesitiy : number;
+
+    constructor(light : THREE.Light, activeIntesity : number) {
+        this.light = light;
+        this.activeIntesitiy = activeIntesity;
+        this.isActive = false;
+    }
+
+    public activate(position : THREE.Vector3) {
+        this.light.intensity = this.activeIntesitiy;
+        this.isActive = true;
+        this.light.position.copy(position);
+    }
+
+    public deactivate() {
+        this.light.intensity = 0;
+        this.isActive = false;
+    }
+
+    public moveBy(z : number) {
+        this.light.position.z += z;
+        if(this.light.position.z >= 10) {
+            this.deactivate();
+        }
+    }
+}
+
+class Transition {
+    public isActive = false;
+
+    private model = new THREE.Object3D();
+    private mixer : THREE.AnimationMixer;
+
+    private animations : TransitionAnimation[] = [];
+
+    private gameState : GameState;
+
+    constructor(model : THREE.Object3D, animations : THREE.AnimationClip[]) {
+        this.gameState = GameState.getInstance();
+        model.visible = false;
+
+        this.mixer = new THREE.AnimationMixer(model);
+        this.mixer.timeScale = 0.5;
+
+        for(const child of model.children) {
+            const clip = animations.find(c => c.name === child.name);
+            if(!clip) continue;
+            const animation = this.mixer.clipAction(clip);
+            animation.setLoop(THREE.LoopOnce, 1);
+            animation.clampWhenFinished = true;
+            this.animations.push(new TransitionAnimation(child, animation));
+        }
+
+        this.model = model;
+
+        this.gameState.sceneAdd(this.model);
+    }
+
+    // Makes transition visible and resets animations
+    public activate() {
+        this.isActive = true;
+        this.model.position.z = -65; // TODO : calculate/constant
+        this.model.visible = true;
+        for(const animation of this.animations) {
+            animation.action.stop();
+            animation.isActive = false;
         }
     }
 
-    private setupTransition() {
-        this.gameState.loadGLTF(`/assets/${ROOM_TRANSITION_ASSET}`, (gltf) => {
-            const transition = gltf.scene;
-            transition.visible = false;
-
-            this.transitionMixer = new THREE.AnimationMixer(transition);
-            this.transitionMixer.timeScale = 0.5;
-
-            for(const child of transition.children) {
-                const clip = gltf.animations.find(c => c.name === child.name);
-                if(!clip) continue;
-                const animation = this.transitionMixer.clipAction(clip);
-                animation.setLoop(THREE.LoopOnce, 1);
-                animation.clampWhenFinished = true;
-                child.userData.animation = animation;
+    // Update animation mixer, start animations when necessary
+    public update(delta : number) {
+        this.mixer.update(delta);
+        this.model.position.z += this.gameState.movingSpeed * delta;
+        for(const animation of this.animations) {
+            const position = new THREE.Vector3();
+            animation.model.getWorldPosition(position);
+            if(position.z >= -5) { // TODO : calculate/constant
+                animation.isActive = true;
+                animation.action.play();
             }
+        }
 
-            this.gameState.sceneAdd(transition);
-            this.transition = transition;
-        });
+        if(this.model.position.z >= 20) { // TODO : calculate
+            this.isActive = false;
+            this.model.visible = false;
+        }
+    }
+}
+
+class TransitionAnimation {
+    public model : THREE.Object3D;
+    public action : THREE.AnimationAction;
+    public isActive = false;
+
+    constructor(model : THREE.Object3D, action : THREE.AnimationAction) {
+        this.model = model;
+        this.action = action;
     }
 }

@@ -4,7 +4,7 @@ import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import * as CANNON from "cannon-es";
 
-export default class Obstacle {
+export class Obstacle {
     
     private model = new THREE.Object3D();
     private boundingBox : THREE.Box3;
@@ -72,7 +72,7 @@ export default class Obstacle {
         slicedPiece.updateMatrixWorld();
 
         // Rest of the obstacle mesh without the piece that got sliced off 
-        const sliceObstacled = CSG.subtract(<THREE.Mesh> this.model, slicePlaneFlipped);
+        const slicedObstacle = CSG.subtract(<THREE.Mesh> this.model, slicePlaneFlipped);
 
         const box3 = new THREE.Box3().setFromObject(slicedPiece);
         const size = new THREE.Vector3();
@@ -108,21 +108,30 @@ export default class Obstacle {
 
         this.gameState.worldAdd(slicedPieceBody);
 
-        slicedPiece.userData.body = slicedPieceBody;
         slicedPiece.position.copy(middle);
 
         slicedPieceBody.applyLocalImpulse(new CANNON.Vec3(sliceDirection.x * sliceForce, sliceDirection.y * sliceForce, sliceDirection.z * sliceForce), new CANNON.Vec3(0, 0, 0));
 
         const res2BB = new THREE.Box3();
-        res2BB.setFromObject(sliceObstacled);
+        res2BB.setFromObject(slicedObstacle);
 
         this.gameState.sceneRemove(this.model);
 
-        this.model = sliceObstacled;
+        this.model = slicedObstacle;
 
         this.gameState.sceneAdd(slicedPiece);
         this.gameState.sceneAdd(this.model);
 
-        return slicedPiece;
+        return new SlicedPiece(slicedPiece, slicedPieceBody);
+    }
+}
+
+export class SlicedPiece {
+    public model : THREE.Object3D;
+    public body : CANNON.Body;
+    
+    constructor(model : THREE.Object3D, body : CANNON.Body) {
+        this.model = model;
+        this.body = body;
     }
 }

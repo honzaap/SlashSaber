@@ -26,9 +26,9 @@ export default class EnvironmentSet {
         for(const pieceTemplate of environmentSetTemplate) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
                 const model = gltf.scene;
+                this.modifyModel(model);
                 const piece = new EnvironmentPiece(model, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
                 this.environmentPieces.push(piece);
-                this.modifyModel(model);
                 this.setupMovingPieces(piece);
 
                 loadedPieces++;
@@ -154,10 +154,8 @@ class EnvironmentPiece{
             const availableLight = EnvironmentManager.getInstance().getAvailableLight();
 
             if(availableLight) {
-                availableLight.userData.isActive = true;
-                availableLight.intensity = availableLight.userData.activeIntensity;
-                availableLight.position.copy(newPosition);
-                availableLight.position.y = 2.4;
+                newPosition.y = 2.4;
+                availableLight.activate(newPosition);
             }
         }
     }
