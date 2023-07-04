@@ -1,9 +1,11 @@
 <template>
-    <div :class="['loading-screen', loading === 1 ? 'fade' : '', loading === 2 ? 'hide' : '']"></div>
-    <div :class="['paused-screen', paused === false ? 'hide' : '']" @click="gameState.startGame">
-        <p>Click to start</p>
+    <div class="container">
+        <div :class="['loading-screen', loading === 1 ? 'fade' : '', loading === 2 ? 'hide' : '']"></div>
+        <div :class="['paused-screen', paused === false ? 'hide' : '']" @click="gameState.startGame">
+            <p>Click to start</p>
+        </div>
+        <canvas ref="canvas" id="canvas"></canvas>
     </div>
-    <canvas ref="canvas" id="canvas"></canvas>
 </template>
 
 <script setup lang="ts">
@@ -22,13 +24,14 @@ import GameState from "../game/models/GameState.ts";
 import { onMounted, ref } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment, setupPostProcessing } from "../game/scene";
 
+defineEmits(["switch"]);
+
 const canvas = ref(null);
 const loading = ref(0);
 const paused = ref(true);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
-
 
 function createScene() {
     if(canvas.value == null) return;
@@ -194,5 +197,10 @@ onMounted(() => {
 </script>
 
 
-<style scoped>
+<style scoped lang="scss">
+.container {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
 </style>
