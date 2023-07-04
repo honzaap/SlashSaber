@@ -11,7 +11,7 @@ body {
     background-color: #000;
 }
 
-#loadingScreen {
+.loading-screen {
     position: absolute;
     left: 0;
     top: 0;
@@ -44,7 +44,7 @@ body {
     }
 }
 
-#pausedScreen {
+.paused-screen {
     position: absolute;
     left: 0;
     top: 0;

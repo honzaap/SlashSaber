@@ -1,6 +1,6 @@
 import GameState from "./GameState";
 import EnvironmentSet from "./EnvironmentSet";
-import { ENVIRONMENT_SET_TEMPLATES, ROOM_TRANSITION_ASSET } from "../constants";
+import { ENVIRONMENT_SET_TEMPLATES, ROOM_TRANSITION_ASSET } from "../../constants";
 import * as THREE from "three";
 
 export default class EnvironmentManager {
@@ -41,11 +41,6 @@ export default class EnvironmentManager {
             this.pointLightPool.push(new PoolLight(pointLight, 7.2));
             this.gameState.sceneAdd(pointLight);
         }
-
-        // TODO : only for debug, remove later
-        /*setTimeout(() => {
-            this.makeTransition();
-        }, 3000);*/
 
         this.setupTransition();
     }

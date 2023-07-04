@@ -4,7 +4,7 @@ import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
-import { BLOOM_LAYER } from "../constants.ts";
+import { BLOOM_LAYER } from "../../constants.ts";
 
 export default class Sword {
 

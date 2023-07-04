@@ -1,153 +1,25 @@
-/*
- *  Things that handle all the 3D stuff
- */
-
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { BLOOM_LAYER, MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER } from "./constants";
+import { MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER } from "../constants";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import * as postprocessing from "postprocessing";
-import { GodraysPass } from "./libs/GoodGodRays";
-import GUIManager from "./utils/GUIManager.ts";
+import { GodraysPass } from "../game/libs/GoodGodRays";
+import GUIManager from "../game/utils/GUIManager.ts";
 import * as CANNON from "cannon-es";
-import Sword from "./models/Sword.ts";
-import GameState from "./models/GameState.ts";
-import ObstacleManager from "./models/ObstacleManager.ts";
-import EnvironmentManager from "./models/EnvironmentManager.ts";
+import GameState from "../game/models/GameState.ts";
+import ObstacleManager from "../game/models/ObstacleManager.ts";
+import EnvironmentManager from "../game/models/EnvironmentManager.ts";
 
 const gameState = GameState.getInstance();
-let sword : Sword;
-
-export function createScene() {
-    // Create scene
-    const camera = createCamera();
-    const renderer = createRenderer(camera);
-
-    setupLighting();
-
-    setupEnvironment();
-
-    setupPhysicsEnvironment();
-
-    sword = new Sword();
-
-    createControls(camera);
-
-    setupObstacles();
-
-    const { composer, bloomComposer } = setupPostProcessing(camera, renderer);
-
-    const dt = 1000 / 300;
-    let timeTarget = 0;
-
-    // Animation loop
-    function animate() {
-        requestAnimationFrame(animate);
-        if(gameState.paused) return;
-        if(Date.now() >= timeTarget){
-            gameState.update();
-
-            GUIManager.updateStats();
-
-            render(composer, bloomComposer);
-
-            timeTarget += dt;
-            if(Date.now() >= timeTarget){
-                timeTarget = Date.now();
-            }
-        }
-    }
-    animate();
-
-    // Resize renderer when window size changes
-    window.onresize = () => {
-        resizeRenderer(renderer);
-        composer.setSize(window.innerWidth, window.innerHeight);
-        bloomComposer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-    };
-
-
-    const pausedScreen = document.getElementById("pausedScreen");
-    if(pausedScreen) {
-        pausedScreen.onclick = () => {
-            pausedScreen.classList.add("hide");
-            gameState.startGame();
-        };
-
-        document.onkeyup = (e) => {
-            if(e.key === "Escape") {
-                pausedScreen.classList.remove("hide");
-                gameState.pauseGame();
-            }
-        };
-    }
-
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState !== "visible"){
-            gameState.pauseGame();
-            pausedScreen?.classList.remove("hide");
-        }
-    });
-
-}
-
-// Create and cofigure camera and return it
-function createCamera() {
-    const camera = new THREE.PerspectiveCamera(
-        65,
-        window.innerWidth / window.innerHeight,
-        0.6,
-        60,
-    );
-    camera.position.set(0, 1.2, 0);
-    camera.lookAt(0, 0.5, -5);
-
-    return camera;
-}
-
-// Create and configure camera and sword controls
-function createControls(camera : THREE.Camera) {
-    const canvas = document.getElementById("canvas");
-    if(!canvas) return;
-
-    canvas.onmousemove = (e) => {
-        e.preventDefault();
-
-        controlCamera(e, camera);
-        sword.move(e);
-    };
-}
-
-// Take mouse event and camera as input and handle controls for the camera
-function controlCamera(e : MouseEvent, camera : THREE.Camera) {
-    const delta = new THREE.Vector2();
-
-    if(gameState.mouse.x === -1 && gameState.mouse.y === -1) {
-        delta.x = window.innerWidth / 2 - e.offsetX;
-        delta.y = window.innerHeight / 2 - e.offsetY;
-    }
-    else {
-        delta.x = gameState.mouse.x - e.offsetX;
-        delta.y = gameState.mouse.y - e.offsetY;
-    }
-
-    gameState.mouse.x = e.offsetX;
-    gameState.mouse.y = e.offsetY;
-
-    camera.rotation.y += delta.x / 5000;
-    camera.rotation.x += delta.y / 5000;
-}
 
 // Create and configure renderer and return it
-function createRenderer(camera : THREE.Camera) {
+export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
         antialias: false,
         depth: true,
-        canvas: document.getElementsByTagName("canvas")[0],
+        canvas: canvas,
     });
 
     renderer.localClippingEnabled = true;
@@ -169,13 +41,13 @@ function createRenderer(camera : THREE.Camera) {
 }
 
 // Set's the renderers size to current window size
-function resizeRenderer(renderer : THREE.WebGLRenderer) {
+export function resizeRenderer(renderer : THREE.WebGLRenderer) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // Configure postprocessing and return composer
-function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
+export function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
     const renderScene = new RenderPass(gameState.getScene(), camera);
     renderScene.clearColor = new THREE.Color(0, 0, 0);
     renderScene.clearAlpha = 1;
@@ -212,7 +84,7 @@ function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRender
     //gameState.sceneAdd(grLight.target);
     //gameState.sceneAdd(grLight);
 
-    const godraysPass = new GodraysPass(grLight, <THREE.PerspectiveCamera> camera, {
+    const godraysPass = new GodraysPass(grLight, camera as THREE.PerspectiveCamera, {
         density: 0.03,
         maxDensity: 0.1,
         distanceAttenuation: 2,
@@ -249,7 +121,7 @@ function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRender
 }
 
 // Create and configure lighting in the scene
-function setupLighting() {
+export function setupLighting() {
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
@@ -273,7 +145,7 @@ function setupLighting() {
 }
 
 // Create and setup anything environment-related
-function setupEnvironment() {
+export function setupEnvironment() {
     const scene = gameState.getScene();
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(scene.background, 40, 65);
@@ -302,7 +174,7 @@ function setupEnvironment() {
 }
 
 // Adds static ground and walls to physics world
-function setupPhysicsEnvironment() {
+export function setupPhysicsEnvironment() {
     const groundBody = new CANNON.Body({
         mass: 0,
         shape: new CANNON.Plane(),
@@ -329,33 +201,6 @@ function setupPhysicsEnvironment() {
     gameState.worldAdd(wallBody2);
 }
 
-function setupObstacles() {
+export function setupObstacles() {
     ObstacleManager.getInstance();
-}
-
-// Render the scene
-function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
-    const materials : { [name : string] : THREE.Material } = {};
-    const bloomLayer = new THREE.Layers();
-    bloomLayer.set(BLOOM_LAYER);
-    const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
-
-    function darkenNonBloomed(obj : THREE.Object3D) {
-        if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
-            materials[obj.uuid] = obj.material;
-            obj.material = darkMaterial;
-        }
-    }
-
-    function restoreMaterial(obj : THREE.Object3D) {
-        if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
-            obj.material = materials[ obj.uuid ];
-            delete materials[obj.uuid];
-        }
-    }
-
-    gameState.sceneTraverse(darkenNonBloomed);
-    bloomComposer.render();
-    gameState.sceneTraverse(restoreMaterial);
-    composer.render();
 }

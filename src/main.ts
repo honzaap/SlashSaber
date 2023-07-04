@@ -1,5 +1,5 @@
-import { createScene } from "./scene";
-import "./style.scss";
+import { createApp } from "vue"
+import "./style.scss"
+import App from "./App.vue";
 
-// Create 3D environment
-createScene();
+createApp(App).mount("#app")

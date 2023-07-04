@@ -8,7 +8,11 @@ export default class GameState {
     public movingSpeed = 0;
     public mouse = new THREE.Vector2(-1, -1);
     public distanceTravelled = 0;
-    public paused = false; // TODO : rename to something else (this pauses the entire render process, not just movement)
+    public halted = false; // The render process and clock stopped completely
+
+    public onAfterLoad = () => {};
+    public onAfterStart = () => {};
+    public onAfterHalt = () => {};
 
     private static instance : GameState;
     private scene : THREE.Scene;
@@ -16,7 +20,6 @@ export default class GameState {
     private loader : GLTFLoader;
 
     private clock = new THREE.Clock();
-
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
 
@@ -30,11 +33,7 @@ export default class GameState {
         this.logicHandlers = [];
 
         const loadingManager = new THREE.LoadingManager(() => {
-            const loadingScreen = document.getElementById("loadingScreen");
-            loadingScreen?.classList.add("fade");
-            setTimeout(() => {
-                loadingScreen?.classList.add("hide");
-            }, 1000);
+            this.onAfterLoad();
         });
 
         this.loader = new GLTFLoader(loadingManager);
@@ -47,14 +46,16 @@ export default class GameState {
 
     public startGame() {
         this.movingSpeed = 3.5;
-        this.paused = false;
+        this.halted = false;
         this.clock.start();
+        this.onAfterStart();
     }
 
-    public pauseGame() {
+    public haltGame() {
         this.movingSpeed = 0;
-        this.paused = true;
-        this.clock.running = false;
+        this.halted = true;
+        this.clock.running  = false;
+        this.onAfterHalt();
     }
 
     public sceneAdd(object : THREE.Object3D) : void {
