@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div :class="['loading-screen', loading === 1 ? 'fade' : '', loading === 2 ? 'hide' : '']"></div>
+        <LoadingScreen :isLoading="loading" />
         <div :class="['paused-screen', paused === false ? 'hide' : '']" @click="gameState.startGame">
             <p>Click to start</p>
         </div>
@@ -23,11 +23,12 @@ import GameState from "../game/models/GameState.ts";
 
 import { onMounted, ref } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment, setupPostProcessing } from "../game/scene";
+import LoadingScreen from "../components/LoadingScreen.vue";
 
 defineEmits(["switch"]);
 
 const canvas = ref(null);
-const loading = ref(0);
+const loading = ref(true);
 const paused = ref(true);
 
 const gameState = GameState.getInstance();
@@ -132,8 +133,6 @@ function controlCamera(e : MouseEvent, camera : THREE.Camera) {
     camera.rotation.x += delta.y / 5000;
 }
 
-
-
 // Render the scene
 function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
     const materials : { [name : string] : THREE.Material } = {};
@@ -177,10 +176,10 @@ onMounted(() => {
     });
 
     gameState.onAfterLoad = () => {
-        loading.value = 1;
-        setTimeout(() => {
+        loading.value = false;
+        /*setTimeout(() => {
             loading.value = 2;
-        }, 1000);
+        }, 1000);*/
     };
 
     gameState.onAfterStart = () => {
@@ -192,10 +191,7 @@ onMounted(() => {
     };
 });
 
-
-
 </script>
-
 
 <style scoped lang="scss">
 .container {

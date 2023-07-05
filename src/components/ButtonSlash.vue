@@ -2,14 +2,14 @@
      <button @click="$emit('click')" :class="['btn-slash', hasMouseDown ? 'click' : '']" @mousedown="mouseDown" @mouseup="mouseUp" @mouseenter="mouseEnter">
         <div class="bg"></div>
         <span :class="['slash', showSlash ? 'anim' : '']"></span>
-        {{ props.text}}
+        {{ text }}
     </button>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 
-const props = defineProps(["text"]);
+defineProps<{ text: string }>();
 defineEmits(["click"]);
 
 const hasMouseDown = ref(false);

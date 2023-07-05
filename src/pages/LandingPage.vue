@@ -135,7 +135,7 @@
             <span class="score">6,000 pts</span>
         </div>
     </aside>
-    <img src="/icons/background_text.png" alt="Slash Saber" class="background">
+    <img src="/img/background_text.png" alt="Slash Saber" class="background-text">
     <!-- Github corner -->
     <a href="https://github.com/honzaap/SlashSaber" target="_blank" class="github-corner" style="z-index: 5000; position: absolute; top: 0; border: 0; right: 0;">
         <svg width="60" height="60" viewBox="0 0 250 250" style="color:#000;">
@@ -246,19 +246,6 @@ h1 {
             }
         }
     }
-}
-
-.background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    z-index: -1;
-    object-fit: cover;
-    opacity: 0.65;
-    @include no-drag;
 }
 
 .leaderboard {
