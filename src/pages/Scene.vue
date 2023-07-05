@@ -1,9 +1,7 @@
 <template>
     <div class="container">
-        <LoadingScreen :isLoading="loading" />
-        <div :class="['paused-screen', paused === false ? 'hide' : '']" @click="gameState.startGame">
-            <p>Click to start</p>
-        </div>
+        <LoadingScreen :isLoading="loading"/>
+        <SceneOverlay :hidden="hideOverlay" @switch="switchPage" @start="startGame"/>
         <canvas ref="canvas" id="canvas"></canvas>
     </div>
 </template>
@@ -24,17 +22,19 @@ import GameState from "../game/models/GameState.ts";
 import { onMounted, ref } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment, setupPostProcessing } from "../game/scene";
 import LoadingScreen from "../components/LoadingScreen.vue";
+import SceneOverlay from "../components/SceneOverlay.vue";
 
-defineEmits(["switch"]);
+const emit = defineEmits(["switch"]);
 
 const canvas = ref(null);
 const loading = ref(true);
 const paused = ref(true);
+const hideOverlay = ref(false);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
 
-function createScene() {
+async function createScene() {
     if(canvas.value == null) return;
 
     // Create scene
@@ -61,7 +61,9 @@ function createScene() {
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
+        console.log("before");
         if(gameState.halted) return;
+        console.log("after");
         if(Date.now() >= timeTarget){
             gameState.update();
 
@@ -161,7 +163,9 @@ function render(composer : postprocessing.EffectComposer, bloomComposer : Effect
 }
 
 onMounted(() => {
-    createScene();
+    setTimeout(() => { 
+        createScene();
+    }, 100);
 
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "visible"){
@@ -171,15 +175,19 @@ onMounted(() => {
 
     document.addEventListener("keyup", (e : KeyboardEvent) => {
         if(e.key === "Escape") {
-            gameState.haltGame();
+            if(gameState.started && gameState.halted) {
+                gameState.startGame();
+                hideOverlay.value = true;
+            }
+            else if(gameState.started && !gameState.halted) {
+                gameState.haltGame();
+                hideOverlay.value = false;
+            }
         }
     });
 
     gameState.onAfterLoad = () => {
         loading.value = false;
-        /*setTimeout(() => {
-            loading.value = 2;
-        }, 1000);*/
     };
 
     gameState.onAfterStart = () => {
@@ -190,6 +198,15 @@ onMounted(() => {
         paused.value = true;
     };
 });
+
+function startGame() {
+    hideOverlay.value = true;
+    gameState.startGame();
+}
+
+function switchPage() {
+    emit("switch", "landingPage");
+}
 
 </script>
 

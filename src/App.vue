@@ -1,6 +1,6 @@
 <template>
-    <LandingPage v-if="screen === 'landingPage'" @switch="switchPage"/>
-    <Scene v-if="screen === 'scene'" @switch="switchPage"/>
+    <Scene ref="scene" v-if="screen === 'scene'" @switch="switchPage"/>
+    <LandingPage v-if="screen === 'landingPage' || overlayLP" :overlay="overlayLP" @switch="switchPage"/>
 </template>
 
 <script setup lang="ts">
@@ -9,9 +9,20 @@ import { ref } from "vue";
 import LandingPage from "./pages/LandingPage.vue";
 
 const screen = ref("landingPage");
+const overlayLP = ref(false);
 
 function switchPage(page : string) {
-    screen.value = page;
+    if(page === "landingPage") {
+        overlayLP.value = true;        
+    }
+    else {
+        screen.value = page;
+        overlayLP.value = false;
+    }
 }
 
 </script>
+
+<style>
+
+</style>

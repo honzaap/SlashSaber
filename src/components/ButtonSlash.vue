@@ -35,7 +35,7 @@ function mouseEnter() {
 .btn-slash {
     position: relative;
     padding: 24px 60px;
-    background-color: #000;
+    background-color: transparent;
     border: 0;
     outline: none;
     color: #000;

@@ -48,6 +48,7 @@ watch(() => props.isLoading, () => {
     gap: 24px;
     -webkit-user-drag: none;
     -webkit-user-select: none;    
+    -moz-user-select: none;
     user-select: none;
     transition: opacity 1000ms ease-in;
 
@@ -72,11 +73,13 @@ watch(() => props.isLoading, () => {
 
     .bamboo-container {
         position: relative;
+        height: 190px;
 
         img {
             width: 100px;
             -webkit-user-drag: none;
             -webkit-user-select: none;    
+            -moz-user-select: none;
             user-select: none;
         }
 
@@ -134,15 +137,21 @@ watch(() => props.isLoading, () => {
         left: 0;
         opacity: 0;
     }
-    2% {
+    4% {
+        opacity: 0;
+    }
+    5% {
         opacity: 1;
     }
     50% {
         width: 100%;
         left: 0;
     }
-    98% {
+    95% {
         opacity: 1;
+    }
+    96% {
+        opacity: 0;
     }
     100% {
         opacity: 0;

@@ -87,7 +87,6 @@ export default class EnvironmentManager {
 
     // Start the transition between 2 environment sets
     private makeTransition() {
-        console.log("transition");
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
         this.transition?.activate();

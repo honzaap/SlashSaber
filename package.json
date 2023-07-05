@@ -9,13 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mdi/font": "^7.2.96",
     "@types/cannon": "^0.1.8",
     "cannon": "^0.6.2",
     "cannon-es": "^0.20.0",
     "postprocessing": "^6.31.2",
     "three": "^0.153.0",
     "three-csg-ts": "^3.1.13",
-    "vue": "^3.2.47"
+    "vue": "^3.2.47",
+    "vuetify": "^3.3.6"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.1.0",

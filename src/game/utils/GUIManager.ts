@@ -4,6 +4,7 @@ import Stats from "three/examples/jsm/libs/stats.module.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import GameState from "../models/GameState";
 import Sword from "../models/Sword";
+import { GUI_ENABLED } from "../../constants";
 
 export default class GUIManager {
 
@@ -13,6 +14,7 @@ export default class GUIManager {
     private constructor() { }
 
     private static getGUI() {
+        if(!GUI_ENABLED) return;
         if(GUIManager.gui) return GUIManager.gui;
 
         // Create stats only when the whole GUI is accessed
@@ -29,7 +31,9 @@ export default class GUIManager {
     }
 
     public static registerPostprocessing(bloomPass : UnrealBloomPass) : void {
-        const gui = GUIManager.getGUI().addFolder("Bloom Effect");
+        const g = GUIManager.getGUI();
+        if(!g) return;
+        const gui = g.addFolder("Bloom Effect");
         gui.close();
         gui.add(bloomPass, "threshold", 0, 2);
         gui.add(bloomPass, "strength", 0, 2);
@@ -43,7 +47,9 @@ export default class GUIManager {
             intensity: 1.75
         };
 
-        const gui = GUIManager.getGUI().addFolder("Hemisphere Light");
+        const g = GUIManager.getGUI();
+        if(!g) return;
+        const gui = g.addFolder("Hemisphere Light");
         gui.close();
         gui.addColor(params, "sky").onChange(function(value : number) { hemiLight.color  = new THREE.Color(value); });
         gui.addColor(params, "ground").onChange(function(value : number) { hemiLight.groundColor  = new THREE.Color(value); });
@@ -54,7 +60,9 @@ export default class GUIManager {
         const gameState = GameState.getInstance();
         const scene = gameState.getScene();
         
-        const gui = GUIManager.getGUI().addFolder("World Settings");
+        const g = GUIManager.getGUI();
+        if(!g) return;
+        const gui = g.addFolder("World Settings");
         gui.close();
 
         const params = {
@@ -72,7 +80,9 @@ export default class GUIManager {
     }
 
     public static registerSwordHelpers(sword : Sword, swordHelper : THREE.Object3D) {
-        const gui = GUIManager.getGUI().addFolder("Sword hepers");
+        const g = GUIManager.getGUI();
+        if(!g) return;
+        const gui = g.addFolder("Sword hepers");
         gui.close();
 
         const params = {

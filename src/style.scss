@@ -9,6 +9,10 @@
     --slash: #45CBDE;
 }
 
+html {
+    overflow-y: auto;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -16,30 +20,6 @@ body {
     color: #fff;
     font-family: "Kanit";
     font-weight: 500;
-}
-
-.paused-screen {
-    position: absolute;
-    left: 0;
-    top: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    background-color: #00000080;
-    z-index: 1;
-    color: #fff;
-
-    &.hide {
-        display: none;
-    }
-
-    p {
-        font-size: 24px;
-        pointer-events: none;
-        margin-bottom: 10%;
-    }
 }
 
 .background-text {
@@ -54,5 +34,22 @@ body {
     opacity: 0.65;
     -webkit-user-drag: none;
     -webkit-user-select: none;    
+    -moz-user-select: none;
     user-select: none;
+}
+
+.v-toolbar__content {
+    justify-content: space-between;
+}
+
+.v-card, .v-tab {
+    border-radius: 0;
+}
+
+.v-input__details {
+    display: none;
+}
+
+.v-selection-control__input {
+    font-size: 1.25em;
 }

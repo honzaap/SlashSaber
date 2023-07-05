@@ -1,3 +1,5 @@
+export const GUI_ENABLED = false;
+
 export const BLOOM_LAYER = 2;
 
 export const ROOM_TRANSITION_ASSET = "room_transition.glb";
