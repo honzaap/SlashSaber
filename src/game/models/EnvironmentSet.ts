@@ -93,6 +93,7 @@ export default class EnvironmentSet {
                 obj.material.emissiveIntensity = 0.8;
                 obj.material.opacity = 1;
                 obj.material.depthWrite = false;
+                obj.material.transparent = false;
             }
         }
         if (obj?.children != null) {

@@ -101,39 +101,4 @@ export default class GameState {
     public loadGLTF(path : string, callback : (model : GLTF) => void) {
         this.loader.load(path, callback);
     }
-
-    /*public reset() {
-        this.scene.traverse(obj => {
-            if(obj instanceof THREE.Mesh) {
-                obj.material?.dispose();
-                obj.geometry?.dispose();
-            }
-        });
-        this.movingSpeed = null;
-        this.mouse = null;
-        this.distanceTravelled = null;
-        this.halted = null;
-        this.started = null;
-    
-        this.onAfterLoad = null;
-        this.onAfterStart = null;
-        this.onAfterHalt = null;
-    
-        this.scene = null;
-        this.world = null;
-        this.loader = null;
-    
-        this.logicHandlers = null;
-
-        this.scene = new THREE.Scene();
-        this.world = new CANNON.World();
-        this.world.gravity.set(0, -9.82, 0);
-        this.logicHandlers = [];
-
-        const loadingManager = new THREE.LoadingManager(() => {
-            this.onAfterLoad();
-        });
-
-        this.loader = new GLTFLoader(loadingManager);
-    }*/
 }

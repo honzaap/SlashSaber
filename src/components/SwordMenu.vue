@@ -156,10 +156,6 @@ h2 {
             flex-shrink: 1;
             background-color: rgba(#000, 0.03);
             cursor: pointer;
-            -webkit-user-drag: none;
-            -webkit-user-select: none;    
-            -moz-user-select: none;
-            user-select: none;
             transition: background-color 300ms ease;
             overflow: hidden;
             box-shadow: none;
@@ -170,7 +166,11 @@ h2 {
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
-                transition: transform 300ms cubic-bezier(0.06, 0.52, 0.76, 1.23)
+                transition: transform 300ms cubic-bezier(0.06, 0.52, 0.76, 1.23);
+                -webkit-user-drag: none;
+                -webkit-user-select: none;    
+                -moz-user-select: none;
+                user-select: none;
             }
 
             &:hover {

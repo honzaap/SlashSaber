@@ -61,9 +61,9 @@ async function createScene() {
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
-        console.log("before");
+        //console.log("before");
         if(gameState.halted) return;
-        console.log("after");
+        //console.log("after");
         if(Date.now() >= timeTarget){
             gameState.update();
 

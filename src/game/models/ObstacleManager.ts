@@ -13,7 +13,7 @@ export default class ObstacleManager {
     private obstacles : Obstacle[] = [];
     private slicedPieces : SlicedPiece[] = [];
 
-    private obstacleModels : THREE.Object3D[] = []; // TODO : store models differently
+    private obstacleModels : THREE.Object3D[] = []; 
 
     private readonly maxObstacles = 10;
     private readonly obstacleDistance = 10;
@@ -22,8 +22,7 @@ export default class ObstacleManager {
         this.gameState = GameState.getInstance();
         this.environmentManager = EnvironmentManager.getInstance();
 
-        this.gameState.loadGLTF("./assets/obstacle_test.glb", (gltf) => {
-            // The obstacle needs a THREE.Mesh instance for CSG
+        this.gameState.loadGLTF("./assets/obstacle_test_2.glb", (gltf) => {
             const instance = gltf.scene.children[0];
             this.obstacleModels.push(instance);
         });
