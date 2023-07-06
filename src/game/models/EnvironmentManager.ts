@@ -38,7 +38,7 @@ export default class EnvironmentManager {
         for(let i = 0; i < 10; i++) {
             const pointLight = new THREE.PointLight(0xffffff, 0, 0, 2);
             pointLight.castShadow = false;
-            this.pointLightPool.push(new PoolLight(pointLight, 7.2));
+            this.pointLightPool.push(new PoolLight(pointLight, 5.2));
             this.gameState.sceneAdd(pointLight);
         }
 

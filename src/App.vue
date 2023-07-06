@@ -8,7 +8,7 @@ import Scene from "./pages/Scene.vue";
 import { ref } from "vue";
 import LandingPage from "./pages/LandingPage.vue";
 
-const screen = ref("landingPage");
+const screen = ref("scene");
 const overlayLP = ref(false);
 
 function switchPage(page : string) {

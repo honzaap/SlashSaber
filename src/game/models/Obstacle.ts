@@ -7,21 +7,25 @@ import * as CANNON from "cannon-es";
 export class Obstacle {
     
     private model = new THREE.Object3D();
-    private boundingBox : THREE.Box3;
+    private obstacleModel = new THREE.Mesh();
+    private boundingBox = new THREE.Box3();
 
     private gameState : GameState;
 
     private swordCollisionPoint : THREE.Vector3 | null = null;
     private swordCollided = false;
 
-    private readonly despawnPosition = 5;
+    private readonly despawnPosition = 3;
 
     constructor(model : THREE.Object3D) {
         this.gameState = GameState.getInstance();
         this.model = model;
-
-        this.boundingBox = new THREE.Box3();
-        this.boundingBox.setFromObject(this.model);
+        model.traverse(obj => {
+            if(obj.name === "Obstacle"){
+                this.obstacleModel = obj as THREE.Mesh;
+                this.boundingBox.setFromObject(this.obstacleModel);
+            }
+        });
     }
 
     // Move along z coordinate by given number
@@ -43,14 +47,16 @@ export class Obstacle {
     public updateBoundingBox() : void {
         this.model.updateMatrix();
         this.model.updateMatrixWorld();
-        // TODO : compute bounding box differently?
-        const bb = (<THREE.Mesh> this.model ).geometry.boundingBox;
-        this.boundingBox.copy(bb ?? new THREE.Box3()).applyMatrix4(this.model.matrixWorld);
+        this.obstacleModel.updateMatrix();
+        this.obstacleModel.updateMatrixWorld();
+        const bb = this.obstacleModel.geometry.boundingBox;
+        this.boundingBox.copy(bb ?? new THREE.Box3()).applyMatrix4(this.obstacleModel.matrixWorld);
     }
 
     // Test collisions against sword bounding box
     // Returns initial collision point, if collision with this object ended just now
     public swordCollide(swordBB : OBB, contactPoint : THREE.Object3D) : THREE.Vector3 | null {
+        if(this.model.position.z >= -1) return null;
         if(swordBB.intersectsBox3(this.boundingBox) && !this.swordCollided) { // Collision occured
             const worldPos = new THREE.Vector3();
             contactPoint.getWorldPosition(worldPos);
@@ -66,13 +72,18 @@ export class Obstacle {
     }
 
     public sliceObstacle(slicePlane : THREE.Mesh, slicePlaneFlipped : THREE.Mesh, sliceDirection : THREE.Vector3, sliceForce = 1) {
+        const localPos = this.obstacleModel.position;
+        this.obstacleModel.matrix.copy(this.obstacleModel.matrixWorld);
+
         // The piece that gets sliced off
-        const slicedPiece = CSG.subtract(<THREE.Mesh> this.model, slicePlane);
+        const slicedPiece = CSG.subtract(this.obstacleModel, slicePlane);
         slicedPiece.updateMatrix();
         slicedPiece.updateMatrixWorld();
 
         // Rest of the obstacle mesh without the piece that got sliced off 
-        const slicedObstacle = CSG.subtract(<THREE.Mesh> this.model, slicePlaneFlipped);
+        const slicedObstacle = CSG.subtract(this.obstacleModel, slicePlaneFlipped);
+        slicedObstacle.updateMatrix();
+        slicedObstacle.updateMatrixWorld();
 
         const box3 = new THREE.Box3().setFromObject(slicedPiece);
         const size = new THREE.Vector3();
@@ -80,9 +91,6 @@ export class Obstacle {
 
         // The result of the CSG operation has pivot in the same location as the main mesh
         // This resets it to the center of the mesh 
-        const boundingBox = new  THREE.Box3();
-        boundingBox.setFromObject(slicedPiece);
-
         const middle = new THREE.Vector3();
         const g = slicedPiece.geometry;
     
@@ -110,18 +118,16 @@ export class Obstacle {
 
         slicedPiece.position.copy(middle);
 
-        slicedPieceBody.applyLocalImpulse(new CANNON.Vec3(sliceDirection.x * sliceForce, sliceDirection.y * sliceForce, sliceDirection.z * sliceForce), new CANNON.Vec3(0, 0, 0));
+        slicedPieceBody.applyLocalImpulse(new CANNON.Vec3(sliceDirection.x * sliceForce, sliceDirection.y * sliceForce, sliceDirection.z * sliceForce - slicedPieceBody.mass * 5), new CANNON.Vec3(0, 0, 0));
 
-        const res2BB = new THREE.Box3();
-        res2BB.setFromObject(slicedObstacle);
-
-        this.gameState.sceneRemove(this.model);
-
-        this.model = slicedObstacle;
+        this.model.remove(this.obstacleModel);
+        
+        this.obstacleModel = slicedObstacle;
 
         this.gameState.sceneAdd(slicedPiece);
-        this.gameState.sceneAdd(this.model);
+        this.model.add(this.obstacleModel);
 
+        this.obstacleModel.position.copy(localPos);
         return new SlicedPiece(slicedPiece, slicedPieceBody);
     }
 }

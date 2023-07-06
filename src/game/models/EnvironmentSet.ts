@@ -155,7 +155,7 @@ class EnvironmentPiece{
             const availableLight = EnvironmentManager.getInstance().getAvailableLight();
 
             if(availableLight) {
-                newPosition.y = 2.4;
+                newPosition.y = 2.6;
                 availableLight.activate(newPosition);
             }
         }

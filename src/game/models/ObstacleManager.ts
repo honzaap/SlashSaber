@@ -2,6 +2,14 @@ import * as THREE from "three";
 import { Obstacle, SlicedPiece } from "./Obstacle";
 import GameState from "./GameState";
 import EnvironmentManager from "./EnvironmentManager";
+import { ObstaclePlacement } from "../enums/ObstaclePlacement";
+import { OBSTACLE_TEMPLTES } from "../../constants";
+
+type ObstacleTemplate = {
+    asset : string,
+    placement : ObstaclePlacement,
+    model : THREE.Object3D,
+}
 
 export default class ObstacleManager {
 
@@ -13,21 +21,35 @@ export default class ObstacleManager {
     private obstacles : Obstacle[] = [];
     private slicedPieces : SlicedPiece[] = [];
 
-    private obstacleModels : THREE.Object3D[] = []; 
+    private obstacleTemplates : ObstacleTemplate[] = []; 
 
-    private readonly maxObstacles = 10;
-    private readonly obstacleDistance = 10;
+    private readonly maxObstacles = 15;
+    private readonly minObstacleDistance = 3;
+    private readonly maxObstacleDistance = 5;
+    private lastPlacement = ObstaclePlacement.LEFT;
+
+    // How long was a given obstacle placement NOT used
+    private lastPlacementUsage : { [placement: string]: number } = { };
 
     private constructor() { 
         this.gameState = GameState.getInstance();
         this.environmentManager = EnvironmentManager.getInstance();
+        let loadedObstacles = 0;
 
-        this.gameState.loadGLTF("./assets/obstacle_test_2.glb", (gltf) => {
-            const instance = gltf.scene.children[0];
-            this.obstacleModels.push(instance);
-        });
+        for(const template of OBSTACLE_TEMPLTES) {
+            this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
+                const model = gltf.scene.children[0];
+                this.obstacleTemplates.push({...template, model});
+                loadedObstacles++;
+                if(loadedObstacles === OBSTACLE_TEMPLTES.length) {
+                    this.gameState.addLogicHandler(this.update);
+                }
+            });
+        }
 
-        this.gameState.addLogicHandler(this.update);
+        for(const key of Object.keys(ObstaclePlacement)) {
+            this.lastPlacementUsage[key] = 0;
+        }
     }
 
     public static getInstance() {
@@ -56,26 +78,24 @@ export default class ObstacleManager {
 
         // Make sure that there are 'maxObstacles' of obstacles in the scene at all times
         if(this.obstacles.length < this.maxObstacles) {
-            const model = this.obstacleModels[0]; // TODO : take model randomly or something
-            if(model != null) {
-                const lastPosition = this.obstacles[this.obstacles.length -1]?.getPosition() ?? new THREE.Vector3(0, 0, 0);
-                let newPosition = lastPosition.z - this.obstacleDistance; // TODO : randomize a bit
+            const lastPosition = this.obstacles[this.obstacles.length -1]?.getPosition() ?? new THREE.Vector3(0, 0, -8);
+            let newPosition = lastPosition.z - (Math.random() * (this.maxObstacleDistance - this.minObstacleDistance) + this.minObstacleDistance);
 
-                if(this.environmentManager.transition?.isActive) {
-                    const bounds = this.environmentManager.transition.getBounds();
-                    const min = bounds.min.z;
-                    const max = bounds.max.z + 5;
-                    if(newPosition >= min && newPosition <= max) {
-                        newPosition = min - this.obstacleDistance;
-                    }
+            if(this.environmentManager.transition?.isActive) {
+                const bounds = this.environmentManager.transition.getBounds();
+                const min = bounds.min.z;
+                const max = bounds.max.z + 5;
+                if(newPosition >= min && newPosition <= max) {
+                    newPosition = min - this.minObstacleDistance;
                 }
+            }
 
-                if(newPosition >= -50) {
-                    const newInstance = model.clone(true);
-                    newInstance.position.z = newPosition;
-                    this.obstacles.push(new Obstacle(newInstance));
-                    this.gameState.sceneAdd(newInstance);
-                }
+            if(newPosition >= -50) {
+                const template = this.getNewTemplate();
+                const newInstance = template.model.clone(true);
+                newInstance.position.z = newPosition;
+                this.obstacles.push(new Obstacle(newInstance));
+                this.gameState.sceneAdd(newInstance);
             }
         }
     };
@@ -135,5 +155,26 @@ export default class ObstacleManager {
             this.gameState.worldRemove(slicedPiece.body);
             this.slicedPieces.splice(0, 1);
         }, 2000);
+    }
+
+    // Get new obstacle template to spawn
+    private getNewTemplate() : ObstacleTemplate {
+        const filtered = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
+        // Make sure that every placement is frequently used
+        const underUsed = filtered.find(t => this.lastPlacementUsage[t.placement] >= 5);
+        const result = underUsed ?? filtered[Math.floor(Math.random() * filtered.length)];
+        this.lastPlacement = result.placement;
+        this.updateLastPlacements();
+
+        return result;
+
+    }
+
+    private updateLastPlacements() {
+        for(const key of Object.keys(ObstaclePlacement)) {
+            this.lastPlacementUsage[key] += 1;
+        }
+
+        this.lastPlacementUsage[this.lastPlacement] = 0;
     }
 }

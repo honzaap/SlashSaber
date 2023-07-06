@@ -122,7 +122,7 @@ export function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebG
 
 // Create and configure lighting in the scene
 export function setupLighting() {
-    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1);
+    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.25);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
 

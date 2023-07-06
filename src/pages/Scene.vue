@@ -170,6 +170,7 @@ onMounted(() => {
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "visible"){
             gameState.haltGame();
+            hideOverlay.value = false;
         }
     });
 

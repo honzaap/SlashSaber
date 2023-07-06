@@ -10,7 +10,6 @@ export default class GameState {
     public distanceTravelled = 0;
     public halted = false; // The render process and clock stopped completely
     public started = false;
-    public loaded = false;
 
     public onAfterLoad = () => {};
     public onAfterStart = () => {};
@@ -47,7 +46,7 @@ export default class GameState {
     }
 
     public startGame() {
-        this.movingSpeed = 3.5;
+        this.movingSpeed = 4.5;
         this.halted = false;
         this.started = true;
         this.clock.start();

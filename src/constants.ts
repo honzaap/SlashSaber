@@ -1,8 +1,38 @@
-export const GUI_ENABLED = false;
+import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
+
+export const GUI_ENABLED = true;
 
 export const BLOOM_LAYER = 2;
 
 export const ROOM_TRANSITION_ASSET = "room_transition.glb";
+
+
+export const OBSTACLE_TEMPLTES = [
+    {
+        asset: "bamboo_mid_1.glb",
+        placement: ObstaclePlacement.BOTTOM,
+    },
+    {
+        asset: "bamboo_mid_3.glb",
+        placement: ObstaclePlacement.BOTTOM,
+    },
+    {
+        asset: "bamboo_mid_5.glb",
+        placement: ObstaclePlacement.BOTTOM,
+    },
+    {
+        asset: "bamboo_mid_7.glb",
+        placement: ObstaclePlacement.BOTTOM,
+    },
+    {
+        asset: "bamboo_right_3.glb",
+        placement: ObstaclePlacement.RIGHT,
+    },
+    {
+        asset: "bamboo_left_3.glb",
+        placement: ObstaclePlacement.LEFT,
+    },
+];
 
 export const ENVIRONMENT_SET_TEMPLATES = [
     [
