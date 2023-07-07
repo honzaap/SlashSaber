@@ -16,6 +16,7 @@ export default class EnvironmentManager {
     private nextActiveSet : EnvironmentSet;
 
     private pointLightPool : PoolLight[] = [];
+    private readonly maxPointLights = 10; // TODO : Graphics settings
 
     private lastTransitionDistance = 0;
 
@@ -35,7 +36,7 @@ export default class EnvironmentManager {
         this.gameState.addLogicHandler(this.update);
 
         // Generate pool of point lights that can be used for lamps 
-        for(let i = 0; i < 10; i++) {
+        for(let i = 0; i < this.maxPointLights; i++) {
             const pointLight = new THREE.PointLight(0xffffff, 0, 0, 2);
             pointLight.castShadow = false;
             this.pointLightPool.push(new PoolLight(pointLight, 5.2));
@@ -78,7 +79,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 30) { // TODO : change for some variable
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 130) { // TODO : change for some variable
             this.makeTransition();
             const end = Math.abs(this.transition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;

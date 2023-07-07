@@ -34,6 +34,7 @@ export const OBSTACLE_TEMPLTES = [
     },
 ];
 
+// TODO : add cast/receive shadow prop
 export const ENVIRONMENT_SET_TEMPLATES = [
     [
         {
@@ -53,7 +54,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
         },
         {
             asset: "roof.glb",
-            maxNumber: 20,
+            maxNumber: 18,
             offset: 0,
         },
         {

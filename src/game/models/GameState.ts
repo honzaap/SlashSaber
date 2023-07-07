@@ -23,7 +23,10 @@ export default class GameState {
     private clock = new THREE.Clock();
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
+    private readonly maxMovingSpeed = 4.5;
 
+    private moving = false;
+    
     // Array of functions that are called in every frame
     private logicHandlers : ((delta : number) => void)[];
 
@@ -46,7 +49,7 @@ export default class GameState {
     }
 
     public startGame() {
-        this.movingSpeed = 4.5;
+        this.moving = true;
         this.halted = false;
         this.started = true;
         this.clock.start();
@@ -54,7 +57,6 @@ export default class GameState {
     }
 
     public haltGame() {
-        this.movingSpeed = 0;
         this.halted = true;
         this.clock.running  = false;
         this.onAfterHalt();
@@ -94,7 +96,12 @@ export default class GameState {
         for(const handler of this.logicHandlers) {
             handler(delta);
         }
+
         this.distanceTravelled += this.movingSpeed * delta;
+        if(this.movingSpeed < this.maxMovingSpeed && this.moving) {
+            console.log("add");
+            this.movingSpeed = Math.min(this.movingSpeed + delta * (this.maxMovingSpeed - this.movingSpeed + 1), this.maxMovingSpeed);
+        }
     }
 
     public loadGLTF(path : string, callback : (model : GLTF) => void) {

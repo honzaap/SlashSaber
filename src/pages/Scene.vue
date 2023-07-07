@@ -12,8 +12,8 @@
  */
 
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { BLOOM_LAYER } from "../constants";
+//import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+//import { BLOOM_LAYER } from "../constants";
 import * as postprocessing from "postprocessing";
 import GUIManager from "../game/utils/GUIManager.ts";
 import Sword from "../game/models/Sword.ts";
@@ -63,19 +63,21 @@ async function createScene() {
         requestAnimationFrame(animate);
         //console.log("before");
         if(gameState.halted) return;
+        renderer.info.reset();
         //console.log("after");
         if(Date.now() >= timeTarget){
             gameState.update();
 
             GUIManager.updateStats();
 
-            render(composer, bloomComposer);
+            render(composer); //, bloomComposer);
 
             timeTarget += dt;
             if(Date.now() >= timeTarget){
                 timeTarget = Date.now();
             }
         }
+        //console.log(renderer.info.render.calls);
     }
     animate();
 
@@ -113,6 +115,20 @@ function createControls(camera : THREE.Camera) {
         controlCamera(e, camera);
         sword.move(e);
     };
+
+    // Minimal camea sway
+    const initialPosition = camera.position.y;
+    const swayAmount = 0.03;
+    const swaySpeed = 0.02;
+    let swayDir = -1;
+
+    gameState.addLogicHandler((delta) => {
+        camera.position.y += swayDir * delta * swaySpeed;
+        if(camera.position.y >= initialPosition + swayAmount || camera.position.y <= initialPosition - swayAmount) {
+            camera.position.y = initialPosition + swayAmount * swayDir;
+            swayDir *= -1;
+        }
+    });
 }
 
 // Take mouse event and camera as input and handle controls for the camera
@@ -136,13 +152,13 @@ function controlCamera(e : MouseEvent, camera : THREE.Camera) {
 }
 
 // Render the scene
-function render(composer : postprocessing.EffectComposer, bloomComposer : EffectComposer) {
-    const materials : { [name : string] : THREE.Material } = {};
-    const bloomLayer = new THREE.Layers();
-    bloomLayer.set(BLOOM_LAYER);
-    const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
+function render(composer : postprocessing.EffectComposer) {//, bloomComposer : EffectComposer) {
+    //const materials : { [name : string] : THREE.Material } = {};
+    //const bloomLayer = new THREE.Layers();
+    //bloomLayer.set(BLOOM_LAYER);
+    //const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
 
-    function darkenNonBloomed(obj : THREE.Object3D) {
+    /*function darkenNonBloomed(obj : THREE.Object3D) {
         if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
             materials[obj.uuid] = obj.material;
             obj.material = darkMaterial;
@@ -154,11 +170,11 @@ function render(composer : postprocessing.EffectComposer, bloomComposer : Effect
             obj.material = materials[ obj.uuid ];
             delete materials[obj.uuid];
         }
-    }
+    }*/
 
-    gameState.sceneTraverse(darkenNonBloomed);
-    bloomComposer.render();
-    gameState.sceneTraverse(restoreMaterial);
+    //gameState.sceneTraverse(darkenNonBloomed);
+    //bloomComposer.render();
+    //gameState.sceneTraverse(restoreMaterial);
     composer.render();
 }
 

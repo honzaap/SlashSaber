@@ -81,9 +81,9 @@ export default class EnvironmentSet {
     // Looks through given object and its children, then modifies it however necessary
     private modifyModel(obj : THREE.Object3D) {
         obj.receiveShadow = true;
-        obj.castShadow = true;
+        obj.castShadow =  true;
         if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-            // Good for performace, doesn't look really good
+            // TODO : Graphics settings
             //obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 0 });
             if(obj.material?.opacity < 1) { 
                 // Make objects visible, but still able to pass light and godrays
@@ -119,7 +119,6 @@ class EnvironmentPiece{
         this.spawnLight = spawnLight;
         const box3 = new THREE.Box3().setFromObject(model);
         box3.getSize(this.size);
-
 
         // Populate piece pool with instances 
         for(let i = 0; i < this.maxNumber; i++) {

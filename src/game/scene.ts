@@ -27,8 +27,9 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     resizeRenderer(renderer);
 
     renderer.render(gameState.getScene(), camera);
+    // TODO : Enable with shadow settings
     renderer.shadowMap.enabled = true; // TODO: Causes LAG?
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : Graphics settings
     renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.LinearToneMapping;
@@ -36,6 +37,7 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
+    renderer.info.autoReset = false;
 
     return renderer;
 }
@@ -111,7 +113,7 @@ export function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebG
     const renderPass = new postprocessing.RenderPass(gameState.getScene(), camera);
 
     composer.addPass(renderPass);
-    composer.addPass(mixPass);
+    //composer.addPass(mixPass);
     composer.addPass(godraysPass);
     composer.addPass(new postprocessing.EffectPass(camera));
 

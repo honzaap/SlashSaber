@@ -3,12 +3,14 @@ import GameState from "./GameState";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import * as CANNON from "cannon-es";
+import { ObstaclePlacement } from "../enums/ObstaclePlacement";
 
 export class Obstacle {
     
     private model = new THREE.Object3D();
     private obstacleModel = new THREE.Mesh();
     private boundingBox = new THREE.Box3();
+    private placement : ObstaclePlacement;
 
     private gameState : GameState;
 
@@ -17,9 +19,12 @@ export class Obstacle {
 
     private readonly despawnPosition = 3;
 
-    constructor(model : THREE.Object3D) {
+    private slashed = false;
+
+    constructor(model : THREE.Object3D, placement : ObstaclePlacement) {
         this.gameState = GameState.getInstance();
         this.model = model;
+        this.placement = placement;
         model.traverse(obj => {
             if(obj.name === "Obstacle"){
                 this.obstacleModel = obj as THREE.Mesh;
@@ -44,19 +49,31 @@ export class Obstacle {
         return this.model.position;
     }
 
-    public updateBoundingBox() : void {
+    public updateBoundingBox() : void { // TODO : rename
         this.model.updateMatrix();
         this.model.updateMatrixWorld();
         this.obstacleModel.updateMatrix();
         this.obstacleModel.updateMatrixWorld();
         const bb = this.obstacleModel.geometry.boundingBox;
         this.boundingBox.copy(bb ?? new THREE.Box3()).applyMatrix4(this.obstacleModel.matrixWorld);
+
+        if(this.slashed) { // TODO : make prettier
+            if(this.placement === ObstaclePlacement.RIGHT) {
+                this.model.position.x += 0.02;
+            }
+            else if(this.placement === ObstaclePlacement.LEFT) {
+                this.model.position.x -= 0.02;
+            }
+            else {
+                this.model.position.y -= 0.02;
+            }
+        }
     }
 
     // Test collisions against sword bounding box
     // Returns initial collision point, if collision with this object ended just now
     public swordCollide(swordBB : OBB, contactPoint : THREE.Object3D) : THREE.Vector3 | null {
-        if(this.model.position.z >= -1) return null;
+        if(this.model.position.z >= -1.5) return null;
         if(swordBB.intersectsBox3(this.boundingBox) && !this.swordCollided) { // Collision occured
             const worldPos = new THREE.Vector3();
             contactPoint.getWorldPosition(worldPos);
@@ -75,13 +92,20 @@ export class Obstacle {
         const localPos = this.obstacleModel.position;
         this.obstacleModel.matrix.copy(this.obstacleModel.matrixWorld);
 
+        const csgSP = CSG.fromMesh(this.obstacleModel);
+        const csgPlane = CSG.fromMesh(slicePlane);
+        const csgPlaneFlipped = CSG.fromMesh(slicePlaneFlipped);
+
+        const slicedPiece = csgSP.subtract(csgPlane).toMesh(this.obstacleModel.matrix, this.obstacleModel.material);
+        const slicedObstacle = csgSP.subtract(csgPlaneFlipped).toMesh(this.obstacleModel.matrix, this.obstacleModel.material);
+
         // The piece that gets sliced off
-        const slicedPiece = CSG.subtract(this.obstacleModel, slicePlane);
+        //const slicedPiece = CSG.subtract(this.obstacleModel, slicePlane);
         slicedPiece.updateMatrix();
         slicedPiece.updateMatrixWorld();
 
         // Rest of the obstacle mesh without the piece that got sliced off 
-        const slicedObstacle = CSG.subtract(this.obstacleModel, slicePlaneFlipped);
+        //const slicedObstacle = CSG.subtract(this.obstacleModel, slicePlaneFlipped);
         slicedObstacle.updateMatrix();
         slicedObstacle.updateMatrixWorld();
 
@@ -128,6 +152,13 @@ export class Obstacle {
         this.model.add(this.obstacleModel);
 
         this.obstacleModel.position.copy(localPos);
+
+        if(!this.slashed) {
+            setTimeout(() => {
+                this.slashed = true;
+            }, 300);
+        }
+
         return new SlicedPiece(slicedPiece, slicedPieceBody);
     }
 }

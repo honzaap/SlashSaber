@@ -94,7 +94,7 @@ export default class ObstacleManager {
                 const template = this.getNewTemplate();
                 const newInstance = template.model.clone(true);
                 newInstance.position.z = newPosition;
-                this.obstacles.push(new Obstacle(newInstance));
+                this.obstacles.push(new Obstacle(newInstance, template.placement));
                 this.gameState.sceneAdd(newInstance);
             }
         }
