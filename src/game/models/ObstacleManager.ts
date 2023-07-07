@@ -9,6 +9,7 @@ type ObstacleTemplate = {
     asset : string,
     placement : ObstaclePlacement,
     model : THREE.Object3D,
+    animation: THREE.AnimationClip,
 }
 
 export default class ObstacleManager {
@@ -39,7 +40,8 @@ export default class ObstacleManager {
         for(const template of OBSTACLE_TEMPLTES) {
             this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
-                this.obstacleTemplates.push({...template, model});
+                
+                this.obstacleTemplates.push({...template, model, animation: gltf.animations[0]});
                 loadedObstacles++;
                 if(loadedObstacles === OBSTACLE_TEMPLTES.length) {
                     this.gameState.addLogicHandler(this.update);
@@ -82,7 +84,7 @@ export default class ObstacleManager {
 
     private update = (delta : number) : void => {
         for(const obstacle of this.obstacles) {
-            obstacle.updateBoundingBox();
+            obstacle.update(delta);
             if(obstacle.moveBy(this.gameState.movingSpeed * delta)) {
                 this.obstacles.splice(this.obstacles.findIndex(o => o === obstacle), 1);
             }
@@ -113,7 +115,7 @@ export default class ObstacleManager {
                 const template = this.getNewTemplate();
                 const newInstance = template.model.clone(true);
                 newInstance.position.z = newPosition;
-                this.obstacles.push(new Obstacle(newInstance, template.placement));
+                this.obstacles.push(new Obstacle(newInstance, template.placement, template.animation));
                 this.gameState.sceneAdd(newInstance);
             }
         }

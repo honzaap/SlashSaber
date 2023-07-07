@@ -1,5 +1,5 @@
 <template>
-    <div class="page" :class="{overlay: props.overlay}">
+    <div class="page" :class="{overlay: props.overlay, hide: hide}">
         <nav class="navbar">
             <img class="nav-logo" src="/logo_white.svg" alt="Slash Saber logo">
         </nav>
@@ -7,7 +7,7 @@
             <h1>Slash Saber</h1>
             <p class="motto">Lorem ipsum dolor sit amet</p>
             <div class="btn-container">
-                <ButtonSlash text="Enter game" @click="$emit('switch', 'scene')" />
+                <ButtonSlash text="Enter game" @click="enterGame" />
             </div>
             <div class="how-play">
                 <h2>How to play</h2>
@@ -47,11 +47,27 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import ButtonSlash from "../components/ButtonSlash.vue";
 import LeaderBoard from "../components/LeaderBoard.vue";
-defineEmits(["switch"]);
+const emit = defineEmits(["switch"]);
 
 const props = defineProps(["overlay"]);
+
+const hide = ref(false);
+
+function enterGame() {
+    if(props.overlay) {
+        hide.value = true;
+        setTimeout(() => {
+            emit("switch", "scene");
+            hide.value = false;
+        }, 300);
+    }
+    else {
+        emit("switch", "scene");
+    }
+}
 
 </script>
 
@@ -76,6 +92,11 @@ const props = defineProps(["overlay"]);
         transform: translateY(-100%);
         animation: overlay-down 300ms ease forwards;
     }
+
+    &.hide {
+        transform: translateY(0);
+        animation: overlay-up 300ms ease forwards;
+    }
 }
 
 @keyframes overlay-down {
@@ -84,6 +105,15 @@ const props = defineProps(["overlay"]);
     }
     100% {
         transform: translateY(0);
+    }
+}
+
+@keyframes overlay-up {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-100%);
     }
 }
 

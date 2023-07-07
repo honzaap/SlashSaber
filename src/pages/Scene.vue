@@ -1,8 +1,11 @@
 <template>
     <div class="container">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :currentScore="currentScore" :hidden="hideOverlay" @switch="switchPage" @start="startGame" :paused="paused" @reset="resetRun"/>
-        <canvas ref="canvas" id="canvas"></canvas>
+        <SceneOverlay :muted="muted" :fullscreen="fullscreen" :cursor="cursor" 
+            :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
+            @switch="switchPage" @start="startGame" @reset="resetRun" 
+            @toggleMute="toggleMute" @toggleFullscreen="toggleFullscreen" @toggleCursor="toggleCursor"/>
+        <canvas :class="{'no-cursor' : !cursor}" ref="canvas" id="canvas"></canvas>
     </div>
 </template>
 
@@ -30,6 +33,9 @@ const loading = ref(true);
 const paused = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
+const muted = ref(false);
+const fullscreen = ref(false);
+const cursor = ref(false);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
@@ -189,7 +195,7 @@ onMounted(() => {
         }
     });
 
-    document.addEventListener("keyup", (e : KeyboardEvent) => {
+    window.addEventListener("keyup", (e : KeyboardEvent) => {
         if(e.key === "Escape") {
             if(gameState.started && gameState.halted) { // Resume game from pause
                 gameState.startGame();
@@ -199,6 +205,9 @@ onMounted(() => {
                 gameState.haltGame();
                 hideOverlay.value = false;
             }
+        }
+        else if(e.key === "F11") {
+            fullscreen.value = !fullscreen.value;
         }
     });
 
@@ -241,6 +250,24 @@ function updateScore() {
     currentScore.value = gameState.distanceTravelled;
 }
 
+function toggleMute() {
+    muted.value = !muted.value;
+}
+
+function toggleFullscreen() {
+    fullscreen.value = !fullscreen.value;
+    if(fullscreen.value) {
+        document.body.requestFullscreen();
+    }
+    else {
+        document.exitFullscreen();
+    }
+}
+
+function toggleCursor() {
+    cursor.value = !cursor.value;
+}
+
 </script>
 
 <style scoped lang="scss">
@@ -248,5 +275,8 @@ function updateScore() {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+}
+.no-cursor {
+    cursor: none;
 }
 </style>

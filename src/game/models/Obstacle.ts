@@ -21,10 +21,20 @@ export class Obstacle {
 
     private slashed = false;
 
-    constructor(model : THREE.Object3D, placement : ObstaclePlacement) {
+    private mixer : THREE.AnimationMixer | null = null;
+    private animationAction : THREE.AnimationAction | null = null;
+
+    constructor(model : THREE.Object3D, placement : ObstaclePlacement, animation : THREE.AnimationClip | null = null) {
         this.gameState = GameState.getInstance();
         this.model = model;
         this.placement = placement;
+        if(animation) {
+            this.mixer = new THREE.AnimationMixer(this.model);
+            this.mixer.timeScale = 1.5;
+            this.animationAction = this.mixer.clipAction(animation);
+            this.animationAction.setLoop(THREE.LoopOnce, 1);
+            this.animationAction.clampWhenFinished = true;
+        }
         model.traverse(obj => {
             if(obj.name === "Obstacle"){
                 this.obstacleModel = obj as THREE.Mesh;
@@ -49,7 +59,7 @@ export class Obstacle {
         return this.model.position;
     }
 
-    public updateBoundingBox() : void { // TODO : rename
+    public update(delta : number) : void {
         this.model.updateMatrix();
         this.model.updateMatrixWorld();
         this.obstacleModel.updateMatrix();
@@ -67,6 +77,12 @@ export class Obstacle {
             else {
                 this.model.position.y -= 0.02;
             }
+        }
+
+        // Play obstacle animation once it gets close enough
+        this.mixer?.update(delta);
+        if(this.animationAction && this.model.position.z >= -10) {
+            this.animationAction.play();
         }
     }
 
@@ -156,6 +172,12 @@ export class Obstacle {
         if(!this.slashed) {
             setTimeout(() => {
                 this.slashed = true; // TODO : rename to hide?
+                if(this.animationAction && this.mixer) {
+                    this.animationAction.timeScale = -1.5;
+                    this.animationAction.play();
+                    this.animationAction.paused = false;
+                    this.animationAction.setLoop(THREE.LoopOnce, 1);  
+                }
             }, 300);
         }
 

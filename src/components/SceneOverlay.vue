@@ -33,19 +33,22 @@
                         </div>
                     </div>
                 </v-menu>
-                <v-tooltip text="Enable volume" location="top">
+                <v-tooltip :text="muted ? 'Enable volume' : 'Disable volume'" location="top">
                     <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" density="comfortable" icon="mdi-volume-off" />
+                        <v-btn @click="$emit('toggleMute')" v-bind="props" density="comfortable"
+                        :icon="muted ? 'mdi-volume-off' : 'mdi-volume-high'" />
                     </template>
                 </v-tooltip>
-                <v-tooltip text="Go fullscreen" location="top">
+                <v-tooltip :text="fullscreen ? 'Minimize' : 'Go fullscreen'" location="top">
                     <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" density="comfortable" icon="mdi-fullscreen" />
+                        <v-btn @click="$emit('toggleFullscreen')" v-bind="props" density="comfortable" 
+                        :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" />
                     </template>
                 </v-tooltip>
-                <v-tooltip text="Show cursor in-game" location="bottom left">
+                <v-tooltip :text="cursor ? 'Hide cursor in-game' : 'Show cursor in-game'" location="bottom left">
                     <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" density="comfortable" icon="mdi-cursor-default-outline" />
+                        <v-btn @click="$emit('toggleCursor')" v-bind="props" density="comfortable" 
+                        :icon="cursor ? 'mdi-cursor-default-outline' : 'mdi-sword'" />
                     </template>
                 </v-tooltip>
             </div>
@@ -71,8 +74,8 @@ import LeaderBoard from "./LeaderBoard.vue";
 import SwordMenu from "./SwordMenu.vue";
 import { ref } from "vue";
 
-defineEmits(["switch", "start", "reset"]);
-const props = defineProps(["hidden", "paused", "currentScore"]);
+defineEmits(["switch", "start", "reset", "toggleMute", "toggleFullscreen", "toggleCursor"]);
+const props = defineProps(["hidden", "paused", "currentScore", "muted", "fullscreen", "cursor"]);
 
 const overlayState = ref(-1);
 
