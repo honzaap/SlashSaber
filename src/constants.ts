@@ -54,7 +54,7 @@ export const ENVIRONMENT_SET_TEMPLATES = [
         },
         {
             asset: "roof.glb",
-            maxNumber: 18,
+            maxNumber: 19,
             offset: 0,
         },
         {

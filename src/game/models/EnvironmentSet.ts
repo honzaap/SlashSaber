@@ -55,6 +55,15 @@ export default class EnvironmentSet {
         this.isActive = true;
     }
 
+    public reset() {
+        this.isActive = false;
+        for(const piece of this.environmentPieces) {
+            piece.instancePool.map(i => i.visible = false);
+            piece.initialPosition = null;
+            piece.initialPosition = new THREE.Vector3(0, 0, 0);
+        }
+    }
+
     private setupMovingPieces(piece : EnvironmentPiece) : void {
         const despawnPosition = 10;
 
@@ -170,7 +179,7 @@ class EnvironmentPiece{
 
     private getFurthestActiveInstance() {
         let furthest = this.instancePool[0];
-        for(const instance of this.instancePool) {
+        for(const instance of this.instancePool.filter(i => i.visible)) {
             if(instance.position.z < furthest.position.z) {
                 furthest = instance;
             }

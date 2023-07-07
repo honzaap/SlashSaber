@@ -30,8 +30,7 @@ export default class EnvironmentManager {
         this.activeSet = this.environmentSets[0];
         this.nextActiveSet = this.environmentSets[1];
 
-        this.activeSet.isActive = true;
-        this.nextActiveSet.isActive = false;
+        this.setupInitialSet();
 
         this.gameState.addLogicHandler(this.update);
 
@@ -54,6 +53,15 @@ export default class EnvironmentManager {
     // Get first available light in the pool
     public getAvailableLight() : PoolLight | undefined {
         return this.pointLightPool.find(l => l.isActive !== true);
+    }
+
+    public reset() {
+        for(const set of this.environmentSets) {
+            set.reset();
+        }
+        this.setupInitialSet();
+        this.lastTransitionDistance = 0;
+        this.transition?.reset();
     }
 
     private update = (delta : number) => {
@@ -79,7 +87,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 130) { // TODO : change for some variable
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 30) { // TODO : change for some variable
             this.makeTransition();
             const end = Math.abs(this.transition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;
@@ -98,6 +106,14 @@ export default class EnvironmentManager {
         this.gameState.loadGLTF(`/assets/${ROOM_TRANSITION_ASSET}`, (gltf) => {
             this.transition = new Transition(gltf.scene, gltf.animations);
         });
+    }
+
+    private setupInitialSet() {
+        this.activeSet = this.environmentSets[0]; // TODO : choose randomly
+        this.nextActiveSet = this.environmentSets[1]; // TODO : choose randomly
+
+        this.activeSet.isActive = true;
+        this.nextActiveSet.isActive = false;
     }
 }
 
@@ -143,7 +159,6 @@ class Transition {
 
     private bounds = new THREE.Box3();
     private size = new THREE.Vector3();
-
 
     constructor(model : THREE.Object3D, animations : THREE.AnimationClip[]) {
         this.gameState = GameState.getInstance();
@@ -208,6 +223,11 @@ class Transition {
             this.isActive = false;
             this.model.visible = false;
         }
+    }
+
+    public reset() {
+        this.isActive = false;
+        this.model.visible = false;
     }
 }
 

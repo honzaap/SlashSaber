@@ -155,11 +155,15 @@ export class Obstacle {
 
         if(!this.slashed) {
             setTimeout(() => {
-                this.slashed = true;
+                this.slashed = true; // TODO : rename to hide?
             }, 300);
         }
 
         return new SlicedPiece(slicedPiece, slicedPieceBody);
+    }
+
+    public remove() {
+        this.gameState.sceneRemove(this.model);
     }
 }
 

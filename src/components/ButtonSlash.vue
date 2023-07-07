@@ -1,7 +1,7 @@
 <template>
-     <button @click="$emit('click')" :class="['btn-slash', hasMouseDown ? 'click' : '']" @mousedown="mouseDown" @mouseup="mouseUp" @mouseenter="mouseEnter">
+     <button @click="$emit('click')" :class="['btn-slash', hasMouseDown ? 'click' : '', alt ? 'alt' : '']" @mousedown="mouseDown" @mouseup="mouseUp" @mouseenter="mouseEnter">
         <div class="bg"></div>
-        <span :class="['slash', showSlash ? 'anim' : '']"></span>
+        <span v-if="!alt" :class="['slash', showSlash ? 'anim' : '']"></span>
         {{ text }}
     </button>
 </template>
@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-defineProps<{ text: string }>();
+defineProps(["text", "alt"]);
 defineEmits(["click"]);
 
 const hasMouseDown = ref(false);
@@ -80,6 +80,20 @@ function mouseEnter() {
     .bg::after {
         top: 50%;
         bottom: 0;
+    }
+
+    &.alt {
+        color: #aaa;
+        box-shadow: inset 0 0 0 3px #aaa;
+        transition: background-color 150ms ease-out;
+
+        .bg::before,  .bg::after {
+            display: none;
+        }
+
+        &:hover {
+            background-color: rgba(#fff, 0.1);
+        }
     }
 
     &:hover {

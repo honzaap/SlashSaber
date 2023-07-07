@@ -147,6 +147,12 @@ export default class Sword {
         }
     };
 
+    public reset() {
+        this.mouse.set(0, 0);
+        this.mouseDirection.set(0, 0);
+        this.model.rotation.set(0, 0, 0 );
+    }
+
     // Create sword trail
     private createSwordTrail() {
         const speedToShowTrail = 7000;

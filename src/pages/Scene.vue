@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :hidden="hideOverlay" @switch="switchPage" @start="startGame"/>
+        <SceneOverlay :currentScore="currentScore" :hidden="hideOverlay" @switch="switchPage" @start="startGame" :paused="paused" @reset="resetRun"/>
         <canvas ref="canvas" id="canvas"></canvas>
     </div>
 </template>
@@ -14,11 +14,10 @@
 import * as THREE from "three";
 //import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 //import { BLOOM_LAYER } from "../constants";
-import * as postprocessing from "postprocessing";
+//import * as postprocessing from "postprocessing";
 import GUIManager from "../game/utils/GUIManager.ts";
 import Sword from "../game/models/Sword.ts";
 import GameState from "../game/models/GameState.ts";
-
 import { onMounted, ref } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment, setupPostProcessing } from "../game/scene";
 import LoadingScreen from "../components/LoadingScreen.vue";
@@ -28,17 +27,19 @@ const emit = defineEmits(["switch"]);
 
 const canvas = ref(null);
 const loading = ref(true);
-const paused = ref(true);
+const paused = ref(false);
 const hideOverlay = ref(false);
+const currentScore = ref(0);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
+let camera : THREE.PerspectiveCamera;
 
 async function createScene() {
     if(canvas.value == null) return;
 
     // Create scene
-    const camera = createCamera();
+    camera = createCamera();
     const renderer = createRenderer(camera, canvas.value as HTMLCanvasElement);
 
     setupLighting();
@@ -61,23 +62,21 @@ async function createScene() {
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
-        //console.log("before");
         if(gameState.halted) return;
         renderer.info.reset();
-        //console.log("after");
         if(Date.now() >= timeTarget){
             gameState.update();
 
             GUIManager.updateStats();
 
-            render(composer); //, bloomComposer);
+            //render(composer); //, bloomComposer);
+            composer.render();
 
             timeTarget += dt;
             if(Date.now() >= timeTarget){
                 timeTarget = Date.now();
             }
         }
-        //console.log(renderer.info.render.calls);
     }
     animate();
 
@@ -152,31 +151,31 @@ function controlCamera(e : MouseEvent, camera : THREE.Camera) {
 }
 
 // Render the scene
-function render(composer : postprocessing.EffectComposer) {//, bloomComposer : EffectComposer) {
+/*function render(composer : postprocessing.EffectComposer) {//, bloomComposer : EffectComposer) {
     //const materials : { [name : string] : THREE.Material } = {};
     //const bloomLayer = new THREE.Layers();
     //bloomLayer.set(BLOOM_LAYER);
     //const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
 
-    /*function darkenNonBloomed(obj : THREE.Object3D) {
-        if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
-            materials[obj.uuid] = obj.material;
-            obj.material = darkMaterial;
-        }
-    }
+    //function darkenNonBloomed(obj : THREE.Object3D) {
+    //    if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
+    //        materials[obj.uuid] = obj.material;
+    //        obj.material = darkMaterial;
+    //    }
+    //}
 
-    function restoreMaterial(obj : THREE.Object3D) {
-        if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
-            obj.material = materials[ obj.uuid ];
-            delete materials[obj.uuid];
-        }
-    }*/
+    //function restoreMaterial(obj : THREE.Object3D) {
+    //    if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
+    //        obj.material = materials[ obj.uuid ];
+    //        delete materials[obj.uuid];
+    //    }
+    //}
 
     //gameState.sceneTraverse(darkenNonBloomed);
     //bloomComposer.render();
     //gameState.sceneTraverse(restoreMaterial);
     composer.render();
-}
+}*/
 
 onMounted(() => {
     setTimeout(() => { 
@@ -192,16 +191,18 @@ onMounted(() => {
 
     document.addEventListener("keyup", (e : KeyboardEvent) => {
         if(e.key === "Escape") {
-            if(gameState.started && gameState.halted) {
+            if(gameState.started && gameState.halted) { // Resume game from pause
                 gameState.startGame();
                 hideOverlay.value = true;
             }
-            else if(gameState.started && !gameState.halted) {
+            else if(gameState.started && !gameState.halted) { // Pause game
                 gameState.haltGame();
                 hideOverlay.value = false;
             }
         }
     });
+
+    let scoreInterval : number | null;
 
     gameState.onAfterLoad = () => {
         loading.value = false;
@@ -209,10 +210,14 @@ onMounted(() => {
 
     gameState.onAfterStart = () => {
         paused.value = false;
+        scoreInterval = setInterval(updateScore, 100);
     };
 
     gameState.onAfterHalt = () => {
         paused.value = true;
+        if(scoreInterval) {
+            clearInterval(scoreInterval);
+        }
     };
 });
 
@@ -223,6 +228,17 @@ function startGame() {
 
 function switchPage() {
     emit("switch", "landingPage");
+}
+
+function resetRun() {
+    gameState.reset();
+    sword.reset();
+    camera.lookAt(0, 0.5, -5);
+    paused.value = false;
+}
+
+function updateScore() {
+    currentScore.value = gameState.distanceTravelled;
 }
 
 </script>

@@ -1,4 +1,8 @@
 <template>
+    <span class="current-score" :class="{show: hidden, offset: !hidden && paused}">
+        <span class="text">Your current score: </span>
+        {{ prettifyScore(currentScore) }} pts
+    </span>
     <div class="overlay-container" :class="{fade: overlayState === 1, hide: overlayState === 2}">
         <v-toolbar class="navbar" height="72">
             <button class="btn-logo" @click="$emit('switch')">
@@ -46,8 +50,9 @@
                 </v-tooltip>
             </div>
         </v-toolbar>
-        <div class="start-btn">
-            <ButtonSlash text="Start Slashing" @click="$emit('start')"/>
+        <div class="buttons">
+            <ButtonSlash :text="paused ? 'Resume Game' : 'Start Slashing'" @click="$emit('start')"/>
+            <ButtonSlash v-if="paused" :alt="true" text="Reset Run" @click="$emit('reset')"/>
         </div>
         <div class="your-sword">
             <SwordMenu />
@@ -55,6 +60,7 @@
         <div class="leaderboard">
             <LeaderBoard compact="true" />
         </div>
+        <p v-if="paused" class="paused-text">Paused</p>
     </div>
 </template>
 
@@ -65,8 +71,8 @@ import LeaderBoard from "./LeaderBoard.vue";
 import SwordMenu from "./SwordMenu.vue";
 import { ref } from "vue";
 
-defineEmits(["switch", "start"]);
-const props = defineProps(["hidden"]);
+defineEmits(["switch", "start", "reset"]);
+const props = defineProps(["hidden", "paused", "currentScore"]);
 
 const overlayState = ref(-1);
 
@@ -87,9 +93,53 @@ watch(() => props.hidden, () => {
     }
 });
 
+function prettifyScore(score : number) {
+    return Math.floor(score).toLocaleString("en-US");
+}
+
 </script>
 
 <style scoped lang="scss">
+.current-score {
+    display: flex;
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    z-index: 5;
+    transition: top 300ms ease;
+    font-size: 25px;
+    font-weight: 400;
+    font-family: "Bree serif";
+    text-shadow: 0 4px rgba(#000, 0.25);
+
+    .text {
+        display: block;
+        width: 0;
+        transition: width 350ms ease, opacity 200ms ease;
+        overflow: hidden;
+        white-space: nowrap;
+        opacity: 0;
+    }
+
+    &.show {
+        top: 10px;
+    }
+
+    &.offset {
+        top: 80px;
+        font-size: 22px;
+
+        .text {
+            width: 200px;
+            opacity: 1;
+        }
+    }
+}
+
 .overlay-container {
     position: absolute;
     left: 0;
@@ -146,10 +196,13 @@ watch(() => props.hidden, () => {
     }
 }
 
-.start-btn {
+.buttons {
+    display: flex;
     position: absolute;
     left: 50%;
     top: 50%;
+    flex-direction: column;
+    gap: 50px;
     transform: translateX(-50%);
 }
 
@@ -220,6 +273,22 @@ watch(() => props.hidden, () => {
             }
         }
     }
+}
+
+.paused-text {
+    position: absolute;
+    left: 50%;
+    top: 25%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-size: 168px;
+    font-family: "Bree serif";
+    font-weight: 400;
+    color: rgba(#fff, 0.05);
+    letter-spacing: 5px;
+    user-select: none;
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
 }
 
 </style>

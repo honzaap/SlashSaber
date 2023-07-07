@@ -61,6 +61,25 @@ export default class ObstacleManager {
         return this.obstacles;
     }
 
+    public reset() {
+        this.lastPlacement = ObstaclePlacement.LEFT;
+        for(const key of Object.keys(ObstaclePlacement)) {
+            this.lastPlacementUsage[key] = 0;
+        }
+
+        for(const obstacle of this.obstacles) {
+            obstacle.remove();
+        }
+
+        for(const slicedPiece of this.slicedPieces) {
+            this.gameState.sceneRemove(slicedPiece.model);
+            this.gameState.worldRemove(slicedPiece.body);
+        }
+
+        this.slicedPieces = [];
+        this.obstacles = [];
+    }
+
     private update = (delta : number) : void => {
         for(const obstacle of this.obstacles) {
             obstacle.updateBoundingBox();

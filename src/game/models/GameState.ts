@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader, GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import ObstacleManager from "./ObstacleManager";
+import EnvironmentManager from "./EnvironmentManager";
 
 // Singleton class
 export default class GameState {
@@ -62,6 +64,18 @@ export default class GameState {
         this.onAfterHalt();
     }
 
+    // Reset the current run
+    public reset() {
+        this.moving = false;
+        this.movingSpeed = 0;
+        this.distanceTravelled = 0;
+        this.started = false;
+        this.halted = false;
+        this.mouse.set(-1, -1);
+        ObstacleManager.getInstance().reset();
+        EnvironmentManager.getInstance().reset();
+    }
+
     public sceneAdd(object : THREE.Object3D) : void {
         this.scene.add(object);
     }
@@ -99,7 +113,6 @@ export default class GameState {
 
         this.distanceTravelled += this.movingSpeed * delta;
         if(this.movingSpeed < this.maxMovingSpeed && this.moving) {
-            console.log("add");
             this.movingSpeed = Math.min(this.movingSpeed + delta * (this.maxMovingSpeed - this.movingSpeed + 1), this.maxMovingSpeed);
         }
     }
