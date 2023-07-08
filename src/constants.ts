@@ -1,6 +1,6 @@
 import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
 
-export const GUI_ENABLED = true;
+export const GUI_ENABLED = false;
 
 export const BLOOM_LAYER = 2;
 
@@ -38,6 +38,34 @@ export const OBSTACLE_TEMPLTES = [
 export const ENVIRONMENT_SET_TEMPLATES = [
     [
         {
+            asset: "floor_2.glb",
+            maxNumber: 10,
+            offset: 0,
+        },
+        {
+            asset: "right_wall_2.glb",
+            maxNumber: 7,
+            offset: 0,
+        },
+        {
+            asset: "left_wall_2.glb",
+            maxNumber: 7,
+            offset: -0.05,
+        },
+        {
+            asset: "roof_2.glb",
+            maxNumber: 19,
+            offset: 0,
+        },
+        {
+            asset: "lamp_2.glb",
+            maxNumber: 10,
+            offset: 7,
+            spawnLight: true,
+        },
+    ],
+    [
+        {
             asset: "floor.glb",
             maxNumber: 10,
             offset: 0,
@@ -69,39 +97,8 @@ export const ENVIRONMENT_SET_TEMPLATES = [
             spawnLight: true,
         },
     ],
-    [
-        {
-            asset: "floor_test.glb",
-            maxNumber: 10,
-            offset: 0,
-        },
-        {
-            asset: "right_wall_test.glb",
-            maxNumber: 7,
-            offset: 0,
-        },
-        {
-            asset: "left_wall_test.glb",
-            maxNumber: 7,
-            offset: -0.05,
-        },
-        {
-            asset: "roof.glb",
-            maxNumber: 20,
-            offset: 0,
-        },
-        {
-            asset: "wall_upper_test.glb",
-            maxNumber: 7,
-            offset: 0,
-        },
-        {
-            asset: "lamp_test.glb",
-            maxNumber: 10,
-            offset: 7,
-            spawnLight: true,
-        },
-    ],
+   
+    
 ];
 
 // Shaders

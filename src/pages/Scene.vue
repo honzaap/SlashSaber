@@ -197,6 +197,7 @@ onMounted(() => {
 
     window.addEventListener("keyup", (e : KeyboardEvent) => {
         if(e.key === "Escape") {
+            fullscreen.value = false;
             if(gameState.started && gameState.halted) { // Resume game from pause
                 gameState.startGame();
                 hideOverlay.value = true;

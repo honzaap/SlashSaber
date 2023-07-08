@@ -64,6 +64,14 @@
             <LeaderBoard compact="true" />
         </div>
         <p v-if="paused" class="paused-text">Paused</p>
+        <div class="bottom">
+            <v-tooltip text="Slash Saber is open-source!" location="top left">
+                <template v-slot:activator="{ props }">
+                    <v-btn href="https://github.com/honzaap/SlashSaber" target="_blank" @click="$emit('toggleCursor')" v-bind="props" density="compact" 
+                    icon="mdi-github" color="rgba(0, 0, 0, 0)" />
+                </template>
+            </v-tooltip>
+        </div>
     </div>
 </template>
 
@@ -292,6 +300,17 @@ function prettifyScore(score : number) {
     user-select: none;
     -webkit-user-drag: none;
     -moz-user-drag: none;
+}
+
+.bottom {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    color: #fff;
+
+    .v-btn {
+        color: #fff;
+    }
 }
 
 </style>
