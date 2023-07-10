@@ -27,8 +27,9 @@ export default class Sword {
     constructor() {
         this.gameState = GameState.getInstance();
         this.obstacleManager = ObstacleManager.getInstance();
+        const textureLoader = new THREE.TextureLoader();
 
-        this.gameState.loadGLTF("./assets/katana.glb", (obj) => {
+        this.gameState.loadGLTF("./assets/katana_test.glb", (obj) => {
             this.model = obj.scene;
             this.model.position.set(0, 0.65, -0.80);
             this.model.up = new THREE.Vector3(0, 0, 1);
@@ -38,6 +39,7 @@ export default class Sword {
                     // Set bloom to blade mesh
                     for(const mesh of obj.children) {
                         mesh.layers.toggle(BLOOM_LAYER);
+                        
                     }
 
                     // Get blade mesh and size
@@ -48,6 +50,13 @@ export default class Sword {
 
                     this.bladeMesh = obj;
                     this.boundingBox = new OBB(new THREE.Vector3(), this.bladeSize);
+                }
+                if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
+                    // Do not ask me under any circumstances why is this image the envmap for the blade
+                    const texture = textureLoader.load("./assets/blade_envmap.jpeg");
+                    texture.mapping = THREE.EquirectangularReflectionMapping;
+                    obj.material.envMap = texture;
+
                 }
             });
 
@@ -88,11 +97,20 @@ export default class Sword {
     }
 
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
-    public move(e : MouseEvent) {
+    public move(e : MouseEvent | TouchEvent) {
         const prevMouse = new THREE.Vector2();
         prevMouse.copy(this.mouse);
-        this.mouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
-        this.mouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
+
+        if(e instanceof MouseEvent) {
+            this.mouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
+        }
+        else if(e instanceof TouchEvent) {
+            const touch = e.targetTouches[0];
+            this.mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+        }
+
         const deltaI = new THREE.Vector2(this.mouse.x - prevMouse.x, this.mouse.y - prevMouse.y);
         this.mouseDirection.x = Math.max(Math.min(this.mouseDirection.x + deltaI.x * 3.5, 1), -1);
         this.mouseDirection.y = Math.max(Math.min(this.mouseDirection.y + deltaI.y * 3.5, 1), -1);

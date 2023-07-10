@@ -14,7 +14,7 @@
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
                             <v-item v-for="set in sets" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    <img src="/img/placeholder.png" :alt="set">
+                                    <img src="/swords/set_default.png" :alt="set">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -23,7 +23,7 @@
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
                             <v-item v-for="blade in blades" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    {{ blade }}
+                                    <img src="/swords/blade_default.png" :alt="blade">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -32,7 +32,7 @@
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
                             <v-item v-for="guard in guards" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    {{ guard }}
+                                    <img src="/swords/guard_default.png" :alt="guard">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -41,7 +41,7 @@
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
                             <v-item v-for="hilt in hilts" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    {{ hilt }}
+                                    <img src="/swords/hilt_default.png" :alt="hilt">
                                 </v-card>
                             </v-item>
                         </v-item-group>

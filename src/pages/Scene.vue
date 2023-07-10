@@ -121,6 +121,10 @@ function createControls(camera : THREE.Camera) {
         sword.move(e);
     };
 
+    (canvas.value as HTMLCanvasElement).ontouchmove = (e) => {
+        sword.move(e);
+    };
+
     // Minimal camea sway
     const initialPosition = camera.position.y;
     const swayAmount = 0.03;

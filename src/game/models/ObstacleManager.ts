@@ -38,6 +38,7 @@ export default class ObstacleManager {
         let loadedObstacles = 0;
 
         for(const template of OBSTACLE_TEMPLTES) {
+            break;
             this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
                 

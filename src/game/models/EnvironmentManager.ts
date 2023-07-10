@@ -87,7 +87,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 30) { // TODO : change for some variable
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 10) { // TODO : change for some variable
             this.makeTransition();
             const end = Math.abs(this.transition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;
