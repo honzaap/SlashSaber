@@ -19,6 +19,7 @@ export class Obstacle {
 
     private readonly despawnPosition = 3;
 
+    private hide = false;
     private slashed = false;
 
     private mixer : THREE.AnimationMixer | null = null;
@@ -67,7 +68,7 @@ export class Obstacle {
         const bb = this.obstacleModel.geometry.boundingBox;
         this.boundingBox.copy(bb ?? new THREE.Box3()).applyMatrix4(this.obstacleModel.matrixWorld);
 
-        if(this.slashed) { // TODO : make prettier
+        if(this.hide) { // TODO : make prettier
             if(this.placement === ObstaclePlacement.RIGHT) {
                 this.model.position.x += 0.02;
             }
@@ -83,6 +84,12 @@ export class Obstacle {
         this.mixer?.update(delta);
         if(this.animationAction && this.model.position.z >= -10) {
             this.animationAction.play();
+        }
+
+        if(this.model.position.z >= -0.5 && !this.slashed) {
+            this.gameState.gotHit();
+            this.slashed = true;
+            this.hide = true;
         }
     }
 
@@ -105,6 +112,8 @@ export class Obstacle {
     }
 
     public sliceObstacle(slicePlane : THREE.Mesh, slicePlaneFlipped : THREE.Mesh, sliceDirection : THREE.Vector3, sliceForce = 1) {
+        this.slashed = true;
+
         const localPos = this.obstacleModel.position;
         this.obstacleModel.matrix.copy(this.obstacleModel.matrixWorld);
 
@@ -169,9 +178,9 @@ export class Obstacle {
 
         this.obstacleModel.position.copy(localPos);
 
-        if(!this.slashed) {
+        if(!this.hide) {
             setTimeout(() => {
-                this.slashed = true; // TODO : rename to hide?
+                this.hide = true; // TODO : rename to hide?
                 if(this.animationAction && this.mixer) {
                     this.animationAction.timeScale = -1.5;
                     this.animationAction.play();

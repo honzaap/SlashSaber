@@ -12,10 +12,12 @@ export default class GameState {
     public distanceTravelled = 0;
     public halted = false; // The render process and clock stopped completely
     public started = false;
+    public lives = 3;
 
     public onAfterLoad = () => {};
     public onAfterStart = () => {};
     public onAfterHalt = () => {};
+    public onAfterHit = () => {};
 
     private static instance : GameState;
     private scene : THREE.Scene;
@@ -74,6 +76,14 @@ export default class GameState {
         this.mouse.set(-1, -1);
         ObstacleManager.getInstance().reset();
         EnvironmentManager.getInstance().reset();
+    }
+
+    public gotHit() {
+        this.lives--;
+        this.onAfterHit();
+        if(this.lives <= 0) {
+            console.log("you died");
+        }
     }
 
     public sceneAdd(object : THREE.Object3D) : void {

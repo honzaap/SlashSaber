@@ -6,6 +6,7 @@
             @switch="switchPage" @start="startGame" @reset="resetRun" 
             @toggleMute="toggleMute" @toggleFullscreen="toggleFullscreen" @toggleCursor="toggleCursor"/>
         <canvas :class="{'no-cursor' : !cursor}" ref="canvas" id="canvas"></canvas>
+        <div :class="{anim: hitAnim}" class="hit-marker"></div>
     </div>
 </template>
 
@@ -36,6 +37,7 @@ const currentScore = ref(0);
 const muted = ref(false);
 const fullscreen = ref(false);
 const cursor = ref(false);
+const hitAnim = ref(false);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
@@ -125,19 +127,50 @@ function createControls(camera : THREE.Camera) {
         sword.move(e);
     };
 
-    // Minimal camea sway
-    const initialPosition = camera.position.y;
+    // Minimal camera sway // TODO : make this prettier or move somewhere out of here
+    const initialPos = new THREE.Vector3();
+    initialPos.copy(camera.position);
     const swayAmount = 0.03;
     const swaySpeed = 0.02;
     let swayDir = -1;
 
+    const shakePos = new THREE.Vector3();
+    shakePos.copy(camera.position);
+    shakePos.z += 0.55;
+    let shaking = true;
+    let shakeDir = 1;
+
     gameState.addLogicHandler((delta) => {
         camera.position.y += swayDir * delta * swaySpeed;
-        if(camera.position.y >= initialPosition + swayAmount || camera.position.y <= initialPosition - swayAmount) {
-            camera.position.y = initialPosition + swayAmount * swayDir;
+        if(camera.position.y >= initialPos.y + swayAmount || camera.position.y <= initialPos.y - swayAmount) {
+            camera.position.y = initialPos.y + swayAmount * swayDir;
             swayDir *= -1;
         }
+
+        if(shaking) {
+            if(shakeDir === 1) {
+                camera.position.lerp(shakePos, 0.25);
+                if(camera.position.z >= shakePos.z - 0.05) {
+                    shakeDir *= -1;
+                }
+            }
+            else {
+                camera.position.lerp(initialPos, 0.2);
+                if(camera.position.z <= initialPos.z + 0.05) {
+                    shakeDir *= -1;
+                    shaking = false;
+                }
+            }
+        }
     });
+
+    gameState.onAfterHit = () => {
+        shaking = true;
+        hitAnim.value = true;
+        setTimeout(() => {
+            hitAnim.value = false;
+        }, 400);
+    };
 }
 
 // Take mouse event and camera as input and handle controls for the camera
@@ -280,8 +313,37 @@ function toggleCursor() {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    position: relative;
 }
+
 .no-cursor {
     cursor: none;
+}
+
+.hit-marker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(#e84631, 0.12);
+    opacity: 0;
+    pointer-events: none;
+
+    &.anim {
+        animation: hit-marker 350ms ease forwards;
+    }
+}
+
+@keyframes hit-marker {
+    0% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
 }
 </style>
