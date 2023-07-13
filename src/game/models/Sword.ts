@@ -9,7 +9,10 @@ import { BLOOM_LAYER } from "../../constants.ts";
 export default class Sword {
 
     private mouse = new THREE.Vector2();
+    private lastMouse = new THREE.Vector2(0, 0);
     private mouseDirection = new THREE.Vector2();
+    private deltaI = new THREE.Vector2();   
+    private prevMouse = new THREE.Vector2();
 
     private gameState : GameState;
     private obstacleManager : ObstacleManager;
@@ -98,8 +101,9 @@ export default class Sword {
 
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
     public move(e : MouseEvent | TouchEvent) {
-        const prevMouse = new THREE.Vector2();
-        prevMouse.copy(this.mouse);
+        const sensitivity = 1.0;
+
+        this.prevMouse.copy(this.mouse);
 
         if(e instanceof MouseEvent) {
             this.mouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
@@ -111,9 +115,9 @@ export default class Sword {
             this.mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
         }
 
-        const deltaI = new THREE.Vector2(this.mouse.x - prevMouse.x, this.mouse.y - prevMouse.y);
-        this.mouseDirection.x = Math.max(Math.min(this.mouseDirection.x + deltaI.x * 3.5, 1), -1);
-        this.mouseDirection.y = Math.max(Math.min(this.mouseDirection.y + deltaI.y * 3.5, 1), -1);
+        this.deltaI.set(this.mouse.x - this.prevMouse.x, this.mouse.y - this.prevMouse.y);
+        this.mouseDirection.x = Math.max(Math.min(this.mouseDirection.x + this.deltaI.x * 5.5, 1), -1);
+        this.mouseDirection.y = Math.max(Math.min(this.mouseDirection.y + this.deltaI.y * 5.5, 1), -1);
 
         // Calculate which way the blade is facing
         const p = this.mouseDirection.x / Math.sqrt(Math.pow(this.mouseDirection.x, 2) + Math.pow(this.mouseDirection.y, 2));
@@ -123,9 +127,11 @@ export default class Sword {
 
         this.model.position.x = 0;
         this.model.position.y = 0.7;
-        this.model.rotation.x = THREE.MathUtils.degToRad(this.mouse.y * 70);
-        this.model.rotation.y = THREE.MathUtils.degToRad(this.mouse.x * -90);
+        this.model.rotation.x = THREE.MathUtils.degToRad((this.lastMouse.y - this.deltaI.y * sensitivity) * -70);
+        this.model.rotation.y = THREE.MathUtils.degToRad((this.lastMouse.x - this.deltaI.x * sensitivity) * 90);
         this.model.rotation.z = THREE.MathUtils.degToRad(alpha); 
+
+        this.lastMouse.set(this.lastMouse.x - this.deltaI.x * sensitivity, this.lastMouse.y - this.deltaI.y * sensitivity);
     }
 
     // Update bounding boxes, handle collisions with sword and other objects
