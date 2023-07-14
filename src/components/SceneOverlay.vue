@@ -32,9 +32,10 @@
                                 v-model="settings.sensitivity" label="Sensitivity"
                                 color="#70A480" track-color="#fff"
                                 step="0.1"
-                                min="0.5" max="2.0"
+                                min="1.0" max="2.0"
                                 style="margin: 0; margin-right: 20px;"
                             ></v-slider>
+                            <span class="sensitivity-value">{{  settings.sensitivity }}</span>
                         </div>
                         <div class="form-group">
                             <div style="flex-grow: 1;">
@@ -117,6 +118,10 @@ const overlayState = ref(-1);
 const settings = reactive(props.settings);
 
 const graphicsOptions = Object.values(GraphicsPreset);
+
+watch(() => props.settings, () => {
+    settings.replace(props.settings);
+});
 
 watch(settings, () => {
     emit("updateSettings", settings);
@@ -351,6 +356,11 @@ function prettifyScore(score : number) {
 .disabled-helper {
     font-size: 12px;
     color: rgba(#fff, 0.5);
+}
+
+.sensitivity-value {
+    flex-basis: 25px;
+    text-align: right;
 }
 
 </style>

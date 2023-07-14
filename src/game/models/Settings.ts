@@ -8,4 +8,14 @@ export class Settings {
     public graphicsPreset = GraphicsPreset.HIGH;
     public enableShadows = true;
     public sensitivity = 1.0;
+
+    public replace(settings : Settings) {
+        this.name = settings.name;
+        this.showCursor = settings.showCursor;
+        this.muteSound = settings.muteSound;
+        this.lockFps = settings.lockFps;
+        this.graphicsPreset = settings.graphicsPreset;
+        this.enableShadows = settings.enableShadows;
+        this.sensitivity = settings.sensitivity;
+    }
 }

@@ -19,7 +19,7 @@ import * as THREE from "three";
 import GUIManager from "../game/utils/GUIManager.ts";
 import Sword from "../game/models/Sword.ts";
 import GameState from "../game/models/GameState.ts";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, reactive } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment } from "../game/scene";
 import LoadingScreen from "../components/LoadingScreen.vue";
 import SceneOverlay from "../components/SceneOverlay.vue";
@@ -33,7 +33,7 @@ const loading = ref(true);
 const paused = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
-const settings = ref(new Settings());
+const settings = reactive(new Settings());
 const fullscreen = ref(false);
 const hitAnim = ref(false);
 
@@ -60,7 +60,7 @@ async function createScene() {
 
     setupObstacles();
 
-    const dt = 1000 / 300;
+    let dt = gameState.settings.lockFps ? 1000 / 60 : 1000 / 144;
     let timeTarget = 0;
 
     const scene = gameState.getScene();
@@ -70,18 +70,17 @@ async function createScene() {
         requestAnimationFrame(animate);
         if(gameState.halted) return;
         renderer.info.reset();
-        //if(Date.now() >= timeTarget){
-        gameState.update();
-
-        GUIManager.updateStats();
-
-        renderer.render(scene, camera);
-
-        timeTarget += dt;
         if(Date.now() >= timeTarget){
-            timeTarget = Date.now();
+            gameState.update();
+
+            GUIManager.updateStats();
+
+            renderer.render(scene, camera);
+            timeTarget += dt;
+            if(Date.now() >= timeTarget){
+                timeTarget = Date.now();
+            }
         }
-        //}
     }
     animate();
 
@@ -91,6 +90,10 @@ async function createScene() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
     };
+
+    gameState.addEventListener(EVENTS.settingsChanged, () => {
+        dt = gameState.settings.lockFps ? 1000 / 60 : 1000 / 144; // Lock FPS to 144 even when "uncapped"
+    });
 }
 
 // Create and cofigure camera and return it
@@ -268,8 +271,11 @@ function toggleFullscreen() {
     }
 }
 
+// Update settings in GameState and save them to localStorage
 function updateSettings(newSettings : Settings) {
     gameState.updateSettings(newSettings);
+
+    localStorage.setItem("slash_saber_settings", JSON.stringify(gameState.settings));
 }
 
 // Load settings from localStorage 
@@ -277,9 +283,11 @@ function loadSettings() {
     const settingsJson = localStorage.getItem("slash_saber_settings");
     if(!settingsJson) return;
 
-    const settings = JSON.parse(settingsJson) as Settings;
+    const loadedSettings = JSON.parse(settingsJson) as Settings;
 
-    gameState.updateSettings(settings);
+    gameState.updateSettings(loadedSettings);
+
+    settings.replace(loadedSettings);
 }
 
 </script>

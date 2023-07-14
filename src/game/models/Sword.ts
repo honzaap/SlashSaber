@@ -4,7 +4,7 @@ import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
-import { BLOOM_LAYER } from "../../constants.ts";
+import { BLOOM_LAYER, EVENTS } from "../../constants.ts";
 
 export default class Sword {
 
@@ -26,11 +26,14 @@ export default class Sword {
     private contactPointHilt = new THREE.Object3D();
     private trailPoint = new THREE.Object3D();
 
+    private sensitivity : number;
+
     // Create sword model, bounding box and helper
     constructor() {
         this.gameState = GameState.getInstance();
         this.obstacleManager = ObstacleManager.getInstance();
         const textureLoader = new THREE.TextureLoader();
+        this.sensitivity = this.gameState.settings.sensitivity;
 
         this.gameState.loadGLTF("./assets/katana_test.glb", (obj) => {
             this.model = obj.scene;
@@ -97,12 +100,14 @@ export default class Sword {
             this.setTrailPointVisibility(false);
             this.setTrailPointVisibility(false);
         });
+
+        this.gameState.addEventListener(EVENTS.settingsChanged, () => {
+            this.sensitivity = this.gameState.settings.sensitivity;
+        });
     }
 
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
     public move(e : MouseEvent | TouchEvent) {
-        const sensitivity = 1.0;
-
         this.prevMouse.copy(this.mouse);
 
         if(e instanceof MouseEvent) {
@@ -127,11 +132,11 @@ export default class Sword {
 
         this.model.position.x = 0;
         this.model.position.y = 0.7;
-        this.model.rotation.x = THREE.MathUtils.degToRad((this.lastMouse.y - this.deltaI.y * sensitivity) * -70);
-        this.model.rotation.y = THREE.MathUtils.degToRad((this.lastMouse.x - this.deltaI.x * sensitivity) * 90);
+        this.model.rotation.x = THREE.MathUtils.degToRad((this.lastMouse.y - this.deltaI.y * this.sensitivity) * -70);
+        this.model.rotation.y = THREE.MathUtils.degToRad((this.lastMouse.x - this.deltaI.x * this.sensitivity) * 90);
         this.model.rotation.z = THREE.MathUtils.degToRad(alpha); 
 
-        this.lastMouse.set(this.lastMouse.x - this.deltaI.x * sensitivity, this.lastMouse.y - this.deltaI.y * sensitivity);
+        this.lastMouse.set(this.lastMouse.x - this.deltaI.x * this.sensitivity, this.lastMouse.y - this.deltaI.y * this.sensitivity);
     }
 
     // Update bounding boxes, handle collisions with sword and other objects

@@ -197,10 +197,12 @@ class EnvironmentPiece{
                 obj.userData.origMaterial = obj.material;
                 obj.userData.hasLowMaterial = true;
                 obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 1.0 });
+                obj.material.needsUpdate = true;
             }
             else if(this.gameState.settings.graphicsPreset === GraphicsPreset.HIGH && obj.userData.hasLowMaterial) {
                 obj.userData.hasLowMaterial = false;
                 obj.material = obj.userData.origMaterial;
+                obj.material.needsUpdate = true;
             }
             if(obj.material?.opacity < 1) { 
                 // Make objects visible, but still able to pass light and godrays
@@ -208,7 +210,7 @@ class EnvironmentPiece{
                 obj.receiveShadow = false;
                 obj.material.emissive = new THREE.Color(0xbeb979);
                 obj.material.emissiveIntensity = 0.8;
-                obj.material.opacity = 1;
+                obj.material.opacity = 0.99;
                 obj.material.depthWrite = false;
                 obj.material.transparent = false;
             }

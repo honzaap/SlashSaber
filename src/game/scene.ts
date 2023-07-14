@@ -26,14 +26,29 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     // TODO : Enable with shadow settings
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : keep at basic if not necessary
-    renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     //renderer.toneMapping = THREE.LinearToneMapping;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     //renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
-    renderer.info.autoReset = false;
+
+    const updateShadows = () => {
+        renderer.shadowMap.enabled = gameState.settings.enableShadows;
+        gameState.sceneTraverse(obj => {
+            if(obj instanceof THREE.DirectionalLight || obj instanceof THREE.PointLight) {
+                obj.shadow.map?.dispose();
+                //obj.shadow.map = null;
+                obj.shadow.needsUpdate = true;
+            }
+            else if(obj instanceof THREE.Mesh && obj.material) {
+                obj.material.needsUpdate = true;
+            }
+        });
+    };
+
+    gameState.addEventListener(EVENTS.settingsChanged, updateShadows);
+    gameState.addEventListener(EVENTS.load, updateShadows);
 
     return renderer;
 }
