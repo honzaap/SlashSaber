@@ -1,3 +1,4 @@
+import { GraphicsPreset } from "../enums/GraphicsPresset";
 import EnvironmentManager from "./EnvironmentManager";
 import GameState from "./GameState";
 import * as THREE from "three";
@@ -26,7 +27,6 @@ export default class EnvironmentSet {
         for(const pieceTemplate of environmentSetTemplate) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
                 const model = gltf.scene;
-                this.modifyModel(model);
                 const piece = new EnvironmentPiece(model, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
                 this.environmentPieces.push(piece);
                 this.setupMovingPieces(piece);
@@ -63,6 +63,12 @@ export default class EnvironmentSet {
             piece.initialPosition = new THREE.Vector3(0, 0, 0);
         }
     }
+    
+    public updateSettings() {
+        for(const piece of this.environmentPieces) {
+            piece.updateSettings();
+        }
+    }
 
     private setupMovingPieces(piece : EnvironmentPiece) : void {
         const despawnPosition = 10;
@@ -86,31 +92,6 @@ export default class EnvironmentSet {
 
         this.logicHandlers.push(updateLoop);
     }
-
-    // Looks through given object and its children, then modifies it however necessary
-    private modifyModel(obj : THREE.Object3D) {
-        obj.receiveShadow = true;
-        obj.castShadow =  true;
-        if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial) {
-            // TODO : Graphics settings
-            //obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 0 });
-            if(obj.material?.opacity < 1) { 
-                // Make objects visible, but still able to pass light and godrays
-                obj.castShadow = false;
-                obj.receiveShadow = false;
-                obj.material.emissive = new THREE.Color(0xbeb979);
-                obj.material.emissiveIntensity = 0.8;
-                obj.material.opacity = 1;
-                obj.material.depthWrite = false;
-                obj.material.transparent = false;
-            }
-        }
-        if (obj?.children != null) {
-            for (const child of obj.children) {
-                this.modifyModel(child);
-            }
-        }
-    }
 }
 
 class EnvironmentPiece{
@@ -120,23 +101,21 @@ class EnvironmentPiece{
     public size = new THREE.Vector3();
     public initialPosition : THREE.Vector3 | null = null;
     public instancePool : THREE.Object3D[] = [];
+    
+    private model : THREE.Object3D;
+    private gameState : GameState;
 
     public constructor(model : THREE.Object3D, maxNumber : number, offset : number, spawnLight = false) {
-        const gameState = GameState.getInstance();
+        this.gameState = GameState.getInstance();
+        this.model = model;
         this.maxNumber = maxNumber;
         this.offset = offset;
         this.spawnLight = spawnLight;
         const box3 = new THREE.Box3().setFromObject(model);
         box3.getSize(this.size);
+        this.modifyModel(this.model);
 
-        // Populate piece pool with instances 
-        for(let i = 0; i < this.maxNumber; i++) {
-            const instance = model.clone(true);
-            instance.visible = false;
-            instance.position.set(0, 0, 7);
-            gameState.sceneAdd(instance);
-            this.instancePool.push(instance);
-        }
+        this.populateInstacePool();
     }
 
     public activateNewInstance() {
@@ -169,12 +148,33 @@ class EnvironmentPiece{
         }
     }
 
-    private getAvailableInstance() {
-        return this.instancePool.find(i => !i.visible);
-    }
-
     public activeInstances() {
         return this.instancePool.filter(i => i.visible).length;
+    }
+
+    public updateSettings() {
+        this.modifyModel(this.model);
+        for(const instance of this.instancePool) {
+            this.gameState.sceneRemove(instance);
+        }
+
+        this.populateInstacePool();
+    }
+
+    // Populate piece pool with instances 
+    private populateInstacePool() {
+        this.instancePool = [];
+        for(let i = 0; i < this.maxNumber; i++) {
+            const instance = this.model.clone(true);
+            instance.visible = false;
+            instance.position.set(0, 0, 7);
+            this.gameState.sceneAdd(instance);
+            this.instancePool.push(instance);
+        }
+    }
+
+    private getAvailableInstance() {
+        return this.instancePool.find(i => !i.visible);
     }
 
     private getFurthestActiveInstance() {
@@ -186,5 +186,37 @@ class EnvironmentPiece{
         }
 
         return furthest;
+    }
+
+    // Looks through given object and its children, then modifies it however necessary
+    private modifyModel(obj : THREE.Object3D) {
+        obj.receiveShadow = true;
+        obj.castShadow =  true;
+        if(obj instanceof THREE.Mesh && (obj.material instanceof THREE.MeshStandardMaterial || obj.material instanceof THREE.MeshLambertMaterial)) {
+            if(this.gameState.settings.graphicsPreset === GraphicsPreset.LOW && obj.userData.hasLowMaterial !== true) {
+                obj.userData.origMaterial = obj.material;
+                obj.userData.hasLowMaterial = true;
+                obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 1.0 });
+            }
+            else if(this.gameState.settings.graphicsPreset === GraphicsPreset.HIGH && obj.userData.hasLowMaterial) {
+                obj.userData.hasLowMaterial = false;
+                obj.material = obj.userData.origMaterial;
+            }
+            if(obj.material?.opacity < 1) { 
+                // Make objects visible, but still able to pass light and godrays
+                obj.castShadow = false;
+                obj.receiveShadow = false;
+                obj.material.emissive = new THREE.Color(0xbeb979);
+                obj.material.emissiveIntensity = 0.8;
+                obj.material.opacity = 1;
+                obj.material.depthWrite = false;
+                obj.material.transparent = false;
+            }
+        }
+        if (obj?.children != null) {
+            for (const child of obj.children) {
+                this.modifyModel(child);
+            }
+        }
     }
 }

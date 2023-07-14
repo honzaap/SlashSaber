@@ -3,6 +3,10 @@ import * as CANNON from "cannon-es";
 import { GLTFLoader, GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import ObstacleManager from "./ObstacleManager";
 import EnvironmentManager from "./EnvironmentManager";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { Settings } from "./Settings";
+import { GraphicsPreset } from "../enums/GraphicsPresset";
+import { EVENTS } from "../../constants";
 
 // Singleton class
 export default class GameState {
@@ -13,11 +17,7 @@ export default class GameState {
     public halted = false; // The render process and clock stopped completely
     public started = false;
     public lives = 3;
-
-    public onAfterLoad = () => {};
-    public onAfterStart = () => {};
-    public onAfterHalt = () => {};
-    public onAfterHit = () => {};
+    public settings = new Settings();
 
     private static instance : GameState;
     private scene : THREE.Scene;
@@ -30,9 +30,12 @@ export default class GameState {
     private readonly maxMovingSpeed = 4.5;
 
     private moving = false;
-    
+
     // Array of functions that are called in every frame
     private logicHandlers : ((delta : number) => void)[];
+
+    // Dictionary with string key and list of callback functions
+    private events : { [key: string] : (() => void)[] } = {};
 
     private constructor() {
         this.scene = new THREE.Scene();
@@ -41,10 +44,15 @@ export default class GameState {
         this.logicHandlers = [];
 
         const loadingManager = new THREE.LoadingManager(() => {
-            this.onAfterLoad();
+            this.dispatchEvent(EVENTS.load);
         });
 
         this.loader = new GLTFLoader(loadingManager);
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath("/libs/draco/");
+        this.loader.setDRACOLoader(dracoLoader);
+
     }
 
     public static getInstance() {
@@ -57,13 +65,13 @@ export default class GameState {
         this.halted = false;
         this.started = true;
         this.clock.start();
-        this.onAfterStart();
+        this.dispatchEvent(EVENTS.start);
     }
 
     public haltGame() {
         this.halted = true;
         this.clock.running  = false;
-        this.onAfterHalt();
+        this.dispatchEvent(EVENTS.halt);
     }
 
     // Reset the current run
@@ -80,7 +88,7 @@ export default class GameState {
 
     public gotHit() {
         this.lives--;
-        this.onAfterHit();
+        this.dispatchEvent(EVENTS.hit);
         if(this.lives <= 0) {
             console.log("you died");
         }
@@ -129,5 +137,30 @@ export default class GameState {
 
     public loadGLTF(path : string, callback : (model : GLTF) => void) {
         this.loader.load(path, callback);
+    }
+
+    public updateSettings(settings : Settings) {
+        this.settings.enableShadows = settings.enableShadows ?? true;
+        this.settings.graphicsPreset = settings.graphicsPreset ?? GraphicsPreset.HIGH;
+        this.settings.lockFps = settings.lockFps ?? false;
+        this.settings.muteSound = settings.muteSound ?? false;
+        this.settings.name = settings.name;
+        this.settings.sensitivity = settings.sensitivity ?? 1;
+        this.settings.showCursor = settings.showCursor ?? false;
+
+        this.dispatchEvent(EVENTS.settingsChanged);
+    }
+
+    public addEventListener(event : string, callback : (() => void)) {
+        this.events[event] = this.events[event] ? [...this.events[event], callback] : [callback];
+    }
+
+    private dispatchEvent(event : string) {
+        const callbacks = this.events[event];
+        if(!callbacks) return;
+
+        for(const callback of callbacks) {
+            callback();
+        }
     }
 }

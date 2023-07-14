@@ -18,25 +18,50 @@
                         <v-btn density="comfortable" icon="mdi-cog" v-bind="props"/>
                     </template>
                     <div class="menu-options">
-                        <p class="title">Graphics</p>
+                        <p class="title">Settings</p>
                         <div class="form-group">
-                            <label for="test1">Lorem ipsum</label>
-                            <input id="test1" class="checkbox" type="checkbox">
+                            <v-text-field
+                                v-model="settings.name"
+                                label="Username"
+                                hide-details="auto"
+                                color="rgb(182, 227, 196)"
+                                ></v-text-field>
                         </div>
                         <div class="form-group">
-                            <label for="test2">Dolor</label>
-                            <input id="test2" class="checkbox" type="checkbox">
+                            <v-slider
+                                v-model="settings.sensitivity" label="Sensitivity"
+                                color="#70A480" track-color="#fff"
+                                step="0.1"
+                                min="0.5" max="2.0"
+                                style="margin: 0; margin-right: 20px;"
+                            ></v-slider>
                         </div>
                         <div class="form-group">
-                            <label for="test3">Sit amet</label>
-                            <input id="test2" class="checkbox" type="checkbox">
+                            <div style="flex-grow: 1;">
+                                <v-select
+                                    v-model="settings.graphicsPreset"
+                                    label="Graphics"
+                                    color="rgb(182, 227, 196)"
+                                    :items="graphicsOptions"
+                                    :disabled="paused"
+                                    ></v-select>
+                                <span v-if="paused" class="disabled-helper">Disabled while in-game</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="shadows">Enable shadows</label>
+                            <input v-model="settings.enableShadows" id="shadows" class="checkbox" type="checkbox">
+                        </div>
+                        <div class="form-group">
+                            <label for="shadows">Lock FPS to 60</label>
+                            <input v-model="settings.lockFps" id="shadows" class="checkbox" type="checkbox">
                         </div>
                     </div>
                 </v-menu>
-                <v-tooltip :text="muted ? 'Enable volume' : 'Disable volume'" location="top">
+                <v-tooltip :text="settings.muteSound ? 'Enable volume' : 'Disable volume'" location="top">
                     <template v-slot:activator="{ props }">
-                        <v-btn @click="$emit('toggleMute')" v-bind="props" density="comfortable"
-                        :icon="muted ? 'mdi-volume-off' : 'mdi-volume-high'" />
+                        <v-btn v-bind="props" density="comfortable" @click="settings.muteSound = !settings.muteSound"
+                        :icon="settings.muteSound ? 'mdi-volume-off' : 'mdi-volume-high'" />
                     </template>
                 </v-tooltip>
                 <v-tooltip :text="fullscreen ? 'Minimize' : 'Go fullscreen'" location="top">
@@ -45,10 +70,10 @@
                         :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" />
                     </template>
                 </v-tooltip>
-                <v-tooltip :text="cursor ? 'Hide cursor in-game' : 'Show cursor in-game'" location="bottom left">
+                <v-tooltip :text="props.settings.showCursor ? 'Hide cursor in-game' : 'Show cursor in-game'" location="bottom left">
                     <template v-slot:activator="{ props }">
-                        <v-btn @click="$emit('toggleCursor')" v-bind="props" density="comfortable" 
-                        :icon="cursor ? 'mdi-cursor-default-outline' : 'mdi-sword'" />
+                        <v-btn v-bind="props" density="comfortable"  @click="settings.showCursor = !settings.showCursor"
+                        :icon="settings.showCursor ? 'mdi-cursor-default-outline' : 'mdi-sword'" />
                     </template>
                 </v-tooltip>
             </div>
@@ -81,11 +106,21 @@ import ButtonSlash from "./ButtonSlash.vue";
 import LeaderBoard from "./LeaderBoard.vue";
 import SwordMenu from "./SwordMenu.vue";
 import { ref } from "vue";
+import { GraphicsPreset } from "../game/enums/GraphicsPresset";
+import { Settings } from "../game/models/Settings";
+import { reactive } from "vue";
 
-defineEmits(["switch", "start", "reset", "toggleMute", "toggleFullscreen", "toggleCursor"]);
-const props = defineProps(["hidden", "paused", "currentScore", "muted", "fullscreen", "cursor"]);
+const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings"]);
+const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number, fullscreen : boolean, settings : Settings}>();
 
 const overlayState = ref(-1);
+const settings = reactive(props.settings);
+
+const graphicsOptions = Object.values(GraphicsPreset);
+
+watch(settings, () => {
+    emit("updateSettings", settings);
+});
 
 watch(() => props.hidden, () => {
     if(props.hidden) {
@@ -249,7 +284,7 @@ function prettifyScore(score : number) {
         width: 100%;
         justify-content: space-between;
         padding: 0 10px;
-        margin: 12px 0;
+        margin: 20px 0;
 
         label {
             display: flex;
@@ -258,7 +293,7 @@ function prettifyScore(score : number) {
         }
 
         .v-input {
-            flex-grow: 0;
+            flex-grow: 1;
         }
 
         .checkbox {
@@ -311,6 +346,11 @@ function prettifyScore(score : number) {
     .v-btn {
         color: #fff;
     }
+}
+
+.disabled-helper {
+    font-size: 12px;
+    color: rgba(#fff, 0.5);
 }
 
 </style>

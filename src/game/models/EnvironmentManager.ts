@@ -1,7 +1,9 @@
 import GameState from "./GameState";
 import EnvironmentSet from "./EnvironmentSet";
-import { ENVIRONMENT_SET_TEMPLATES, ROOM_TRANSITION_ASSET } from "../../constants";
+import { ENVIRONMENT_SET_TEMPLATES, EVENTS, ROOM_TRANSITION_ASSET } from "../../constants";
 import * as THREE from "three";
+import { GraphicsPreset } from "../enums/GraphicsPresset";
+import { Settings } from "./Settings";
 
 export default class EnvironmentManager {
 
@@ -16,12 +18,14 @@ export default class EnvironmentManager {
     private nextActiveSet : EnvironmentSet;
 
     private pointLightPool : PoolLight[] = [];
-    private readonly maxPointLights = 10; // TODO : Graphics settings
+    private maxPointLights = 10; // TODO : Graphics settings
 
     private lastTransitionDistance = 0;
 
     private constructor() {
         this.gameState = GameState.getInstance();
+        let prevSettings = {...this.gameState.settings} as Settings;
+
         for(const template of ENVIRONMENT_SET_TEMPLATES) {
             const environmentSet = new EnvironmentSet(template);
             this.environmentSets.push(environmentSet);
@@ -43,6 +47,18 @@ export default class EnvironmentManager {
         }
 
         this.setupTransition();
+
+        this.gameState.addEventListener(EVENTS.settingsChanged, () => {
+            if(this.gameState.settings.graphicsPreset !== prevSettings.graphicsPreset) {
+                prevSettings = {...this.gameState.settings} as Settings;
+                this.updateSettings();
+                for(const set of this.environmentSets) {
+                    set.updateSettings();
+                }
+
+                this.gameState.reset();
+            }
+        });
     }
 
     public static getInstance() : EnvironmentManager {
@@ -114,6 +130,15 @@ export default class EnvironmentManager {
 
         this.activeSet.isActive = true;
         this.nextActiveSet.isActive = false;
+    }
+
+    private updateSettings() {
+        if(this.gameState.settings.graphicsPreset === GraphicsPreset.LOW) {
+            this.maxPointLights = 6;
+        }
+        else {
+            this.maxPointLights = 10;
+        }
     }
 }
 

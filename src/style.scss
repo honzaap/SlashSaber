@@ -42,8 +42,8 @@ body {
     justify-content: space-between;
 }
 
-.v-card, .v-tab {
-    border-radius: 0;
+.v-card, .v-tab, .v-field__overlay, .v-select__content {
+    border-radius: 0 !important;
 }
 
 .v-input__details {
@@ -52,4 +52,8 @@ body {
 
 .v-selection-control__input {
     font-size: 1.25em;
+}
+
+.v-label {
+    opacity: 1;
 }

@@ -1,11 +1,11 @@
 <template>
     <div class="container">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :muted="muted" :fullscreen="fullscreen" :cursor="cursor" 
+        <SceneOverlay :fullscreen="fullscreen" :settings="settings" 
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
             @switch="switchPage" @start="startGame" @reset="resetRun" 
-            @toggleMute="toggleMute" @toggleFullscreen="toggleFullscreen" @toggleCursor="toggleCursor"/>
-        <canvas :class="{'no-cursor' : !cursor}" ref="canvas" id="canvas"></canvas>
+            @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
+        <canvas :class="{'no-cursor' : !settings.showCursor}" ref="canvas" id="canvas"></canvas>
         <div :class="{anim: hitAnim}" class="hit-marker"></div>
     </div>
 </template>
@@ -16,16 +16,15 @@
  */
 
 import * as THREE from "three";
-//import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-//import { BLOOM_LAYER } from "../constants";
-//import * as postprocessing from "postprocessing";
 import GUIManager from "../game/utils/GUIManager.ts";
 import Sword from "../game/models/Sword.ts";
 import GameState from "../game/models/GameState.ts";
 import { onMounted, ref } from "vue";
-import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment, setupPostProcessing } from "../game/scene";
+import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment } from "../game/scene";
 import LoadingScreen from "../components/LoadingScreen.vue";
 import SceneOverlay from "../components/SceneOverlay.vue";
+import { Settings } from "../game/models/Settings";
+import { EVENTS } from "../constants";
 
 const emit = defineEmits(["switch"]);
 
@@ -34,9 +33,8 @@ const loading = ref(true);
 const paused = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
-const muted = ref(false);
+const settings = ref(new Settings());
 const fullscreen = ref(false);
-const cursor = ref(false);
 const hitAnim = ref(false);
 
 const gameState = GameState.getInstance();
@@ -62,37 +60,34 @@ async function createScene() {
 
     setupObstacles();
 
-    const { composer, bloomComposer } = setupPostProcessing(camera, renderer);
-
     const dt = 1000 / 300;
     let timeTarget = 0;
+
+    const scene = gameState.getScene();
 
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
         if(gameState.halted) return;
         renderer.info.reset();
+        //if(Date.now() >= timeTarget){
+        gameState.update();
+
+        GUIManager.updateStats();
+
+        renderer.render(scene, camera);
+
+        timeTarget += dt;
         if(Date.now() >= timeTarget){
-            gameState.update();
-
-            GUIManager.updateStats();
-
-            //render(composer); //, bloomComposer);
-            composer.render();
-
-            timeTarget += dt;
-            if(Date.now() >= timeTarget){
-                timeTarget = Date.now();
-            }
+            timeTarget = Date.now();
         }
+        //}
     }
     animate();
 
     // Resize renderer when window size changes
     window.onresize = () => {
         resizeRenderer(renderer);
-        composer.setSize(window.innerWidth, window.innerHeight);
-        bloomComposer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
     };
@@ -164,13 +159,13 @@ function createControls(camera : THREE.Camera) {
         }
     });
 
-    gameState.onAfterHit = () => {
+    gameState.addEventListener(EVENTS.hit, () => {
         shaking = true;
         hitAnim.value = true;
         setTimeout(() => {
             hitAnim.value = false;
         }, 400);
-    };
+    });
 }
 
 // Take mouse event and camera as input and handle controls for the camera
@@ -193,34 +188,8 @@ function controlCamera(e : MouseEvent, camera : THREE.Camera) {
     camera.rotation.x += delta.y / 5000;
 }
 
-// Render the scene
-/*function render(composer : postprocessing.EffectComposer) {//, bloomComposer : EffectComposer) {
-    //const materials : { [name : string] : THREE.Material } = {};
-    //const bloomLayer = new THREE.Layers();
-    //bloomLayer.set(BLOOM_LAYER);
-    //const darkMaterial = new THREE.MeshBasicMaterial({ color: "black" });
-
-    //function darkenNonBloomed(obj : THREE.Object3D) {
-    //    if (obj instanceof THREE.Mesh  && bloomLayer.test(obj.layers) === false) {
-    //        materials[obj.uuid] = obj.material;
-    //        obj.material = darkMaterial;
-    //    }
-    //}
-
-    //function restoreMaterial(obj : THREE.Object3D) {
-    //    if (obj instanceof THREE.Mesh && materials[obj.uuid]) {
-    //        obj.material = materials[ obj.uuid ];
-    //        delete materials[obj.uuid];
-    //    }
-    //}
-
-    //gameState.sceneTraverse(darkenNonBloomed);
-    //bloomComposer.render();
-    //gameState.sceneTraverse(restoreMaterial);
-    composer.render();
-}*/
-
 onMounted(() => {
+    loadSettings();
     setTimeout(() => { 
         createScene();
     }, 100);
@@ -251,21 +220,22 @@ onMounted(() => {
 
     let scoreInterval : number | null;
 
-    gameState.onAfterLoad = () => {
+    gameState.addEventListener(EVENTS.load, () => {
         loading.value = false;
-    };
+    });
 
-    gameState.onAfterStart = () => {
+    gameState.addEventListener(EVENTS.start, () => {
         paused.value = false;
         scoreInterval = setInterval(updateScore, 100);
-    };
+    });
 
-    gameState.onAfterHalt = () => {
+    gameState.addEventListener(EVENTS.halt, () => {
+        if(!gameState.started) return;
         paused.value = true;
         if(scoreInterval) {
             clearInterval(scoreInterval);
         }
-    };
+    });
 });
 
 function startGame() {
@@ -288,10 +258,6 @@ function updateScore() {
     currentScore.value = gameState.distanceTravelled;
 }
 
-function toggleMute() {
-    muted.value = !muted.value;
-}
-
 function toggleFullscreen() {
     fullscreen.value = !fullscreen.value;
     if(fullscreen.value) {
@@ -302,8 +268,18 @@ function toggleFullscreen() {
     }
 }
 
-function toggleCursor() {
-    cursor.value = !cursor.value;
+function updateSettings(newSettings : Settings) {
+    gameState.updateSettings(newSettings);
+}
+
+// Load settings from localStorage 
+function loadSettings() {
+    const settingsJson = localStorage.getItem("slash_saber_settings");
+    if(!settingsJson) return;
+
+    const settings = JSON.parse(settingsJson) as Settings;
+
+    gameState.updateSettings(settings);
 }
 
 </script>

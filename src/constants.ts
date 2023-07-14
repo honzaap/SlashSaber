@@ -6,6 +6,13 @@ export const BLOOM_LAYER = 2;
 
 export const ROOM_TRANSITION_ASSET = "room_transition.glb";
 
+export const EVENTS = {
+    load: "onAfterLoad",
+    start: "onAfterStart",
+    halt: "onAfterHalt",
+    hit: "onAfterHit",
+    settingsChanged: "onAfterSettingsChanged",
+};
 
 export const OBSTACLE_TEMPLTES = [
     {

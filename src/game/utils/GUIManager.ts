@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import GameState from "../models/GameState";
 import Sword from "../models/Sword";
 import { GUI_ENABLED } from "../../constants";
@@ -28,16 +27,6 @@ export default class GUIManager {
 
     public static updateStats() {
         GUIManager.stats?.update();
-    }
-
-    public static registerPostprocessing(bloomPass : UnrealBloomPass) : void {
-        const g = GUIManager.getGUI();
-        if(!g) return;
-        const gui = g.addFolder("Bloom Effect");
-        gui.close();
-        gui.add(bloomPass, "threshold", 0, 2);
-        gui.add(bloomPass, "strength", 0, 2);
-        gui.add(bloomPass, "radius", 0.0, 2);
     }
 
     public static registerLighting(hemiLight : THREE.HemisphereLight) : void {

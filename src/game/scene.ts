@@ -1,15 +1,11 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { MIX_FRAGMENT_SHADER, MIX_VERTEX_SHADER } from "../constants";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import * as postprocessing from "postprocessing";
-import { GodraysPass } from "../game/libs/GoodGodRays";
 import GUIManager from "../game/utils/GUIManager.ts";
 import * as CANNON from "cannon-es";
 import GameState from "../game/models/GameState.ts";
 import ObstacleManager from "../game/models/ObstacleManager.ts";
 import EnvironmentManager from "../game/models/EnvironmentManager.ts";
+import { EVENTS } from "../constants.ts";
+import { GraphicsPreset } from "./enums/GraphicsPresset.ts";
 
 const gameState = GameState.getInstance();
 
@@ -17,7 +13,7 @@ const gameState = GameState.getInstance();
 export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
-        antialias: false,
+        antialias: true,
         depth: true,
         canvas: canvas,
     });
@@ -28,13 +24,13 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
 
     renderer.render(gameState.getScene(), camera);
     // TODO : Enable with shadow settings
-    renderer.shadowMap.enabled = true; // TODO: Causes LAG?
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : Graphics settings
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : keep at basic if not necessary
     renderer.shadowMap.autoUpdate = true; // ?
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.LinearToneMapping;
+    //renderer.toneMapping = THREE.LinearToneMapping;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
-    renderer.toneMappingExposure = 1.16;
+    //renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
     renderer.info.autoReset = false;
@@ -46,80 +42,6 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
 export function resizeRenderer(renderer : THREE.WebGLRenderer) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-// Configure postprocessing and return composer
-export function setupPostProcessing(camera : THREE.Camera, renderer : THREE.WebGLRenderer) {
-    const renderScene = new RenderPass(gameState.getScene(), camera);
-    renderScene.clearColor = new THREE.Color(0, 0, 0);
-    renderScene.clearAlpha = 1;
-
-    // Bloom
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0.25;
-    bloomPass.strength = 0.5;
-    bloomPass.radius = 1.2;
-
-    const bloomComposer = new EffectComposer(renderer);
-    bloomComposer.renderToScreen = false;
-    bloomComposer.addPass(renderScene);
-    bloomComposer.addPass(bloomPass);
-
-    const composer = new postprocessing.EffectComposer(renderer, {multisampling: 8}); // TODO: Causes LAG?
-
-    // God rays
-    const grLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    grLight.castShadow = true;
-    grLight.shadow.mapSize.width = 1024;
-    grLight.shadow.mapSize.height = 1024;
-    grLight.shadow.camera.updateProjectionMatrix();
-    grLight.shadow.autoUpdate = true;
-    grLight.position.set(-18, 9, -10);
-    grLight.target.position.set(20, -5, 6);
-    grLight.target.updateMatrixWorld();
-    grLight.shadow.camera.near = 0.1;
-    grLight.shadow.camera.far = 35;
-    grLight.shadow.camera.left = -38;
-    grLight.shadow.camera.right = 5;
-    grLight.shadow.camera.top = 5;
-    grLight.shadow.camera.bottom = -8;
-    //gameState.sceneAdd(grLight.target);
-    //gameState.sceneAdd(grLight);
-
-    const godraysPass = new GodraysPass(grLight, camera as THREE.PerspectiveCamera, {
-        density: 0.03,
-        maxDensity: 0.1,
-        distanceAttenuation: 2,
-        color: new THREE.Color(0xffffff),
-        edgeStrength: 2,
-        edgeRadius: 2,
-        raymarchSteps: 60,
-        blur: { variance: 0.1, kernelSize: postprocessing.KernelSize.SMALL },
-    });
-
-    const mixPass = new postprocessing.ShaderPass(
-        new THREE.ShaderMaterial({
-            uniforms: {
-                baseTexture: { value: null },
-                bloomTexture: { value: bloomComposer.renderTarget2.texture }
-            },
-            vertexShader: MIX_VERTEX_SHADER,
-            fragmentShader: MIX_FRAGMENT_SHADER,
-            defines: {}
-        }), "baseTexture"
-    );
-    mixPass.needsSwap = true;
-
-    const renderPass = new postprocessing.RenderPass(gameState.getScene(), camera);
-
-    composer.addPass(renderPass);
-    //composer.addPass(mixPass);
-    composer.addPass(godraysPass);
-    composer.addPass(new postprocessing.EffectPass(camera));
-
-    GUIManager.registerPostprocessing(bloomPass);
-
-    return {composer, bloomComposer};
 }
 
 // Create and configure lighting in the scene
@@ -142,6 +64,15 @@ export function setupLighting() {
     dirLight.shadow.camera.top = 5;
     dirLight.shadow.camera.bottom = -8;
     gameState.sceneAdd(dirLight);
+
+    gameState.addEventListener(EVENTS.settingsChanged, () => {
+        if(gameState.settings.graphicsPreset === GraphicsPreset.LOW) {
+            hemiLight.intensity = 2.25;
+        }
+        else {
+            hemiLight.intensity = 1.25;
+        }
+    });
 
     GUIManager.registerLighting(hemiLight);
 }
