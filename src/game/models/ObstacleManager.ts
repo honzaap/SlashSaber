@@ -4,12 +4,14 @@ import GameState from "./GameState";
 import EnvironmentManager from "./EnvironmentManager";
 import { ObstaclePlacement } from "../enums/ObstaclePlacement";
 import { OBSTACLE_TEMPLTES } from "../../constants";
+import { SliceDirection } from "../enums/SliceDirection";
 
 type ObstacleTemplate = {
     asset : string,
     placement : ObstaclePlacement,
     model : THREE.Object3D,
     animation: THREE.AnimationClip,
+    sliceDirection : THREE.Vector2 | undefined,
 }
 
 export default class ObstacleManager {
@@ -41,7 +43,8 @@ export default class ObstacleManager {
             this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
                 
-                this.obstacleTemplates.push({...template, model, animation: gltf.animations[0]});
+                this.obstacleTemplates.push({...template, sliceDirection : template.sliceDirection ?? SliceDirection.ANY,
+                    model, animation: gltf.animations[0]});
                 loadedObstacles++;
                 if(loadedObstacles === OBSTACLE_TEMPLTES.length) {
                     this.gameState.addLogicHandler(this.update);
@@ -115,7 +118,7 @@ export default class ObstacleManager {
                 const template = this.getNewTemplate();
                 const newInstance = template.model.clone(true);
                 newInstance.position.z = newPosition;
-                this.obstacles.push(new Obstacle(newInstance, template.placement, template.animation));
+                this.obstacles.push(new Obstacle(newInstance, template.placement, template.sliceDirection ?? SliceDirection.ANY, template.animation));
                 this.gameState.sceneAdd(newInstance);
             }
         }

@@ -62,7 +62,6 @@ export default class Sword {
                     const texture = textureLoader.load("./assets/blade_envmap.jpeg");
                     texture.mapping = THREE.EquirectangularReflectionMapping;
                     obj.material.envMap = texture;
-
                 }
             });
 
@@ -165,6 +164,12 @@ export default class Sword {
                 col1.copy(collisionPoint);
                 this.contactPointBlade.getWorldPosition(col2);
                 const sliceDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
+               
+                // Check, whether the obstacle can be sliced from this direction
+                if(!obstacle.canSlice(sliceDirection)) {
+                    console.log("CANT SLICE");
+                    return;
+                }
 
                 // Use contact points as coplanar points
                 const points : THREE.Vector3[] = [collisionPoint, new THREE.Vector3(), new THREE.Vector3()];

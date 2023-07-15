@@ -1,4 +1,5 @@
 import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
+import { SliceDirection } from "./game/enums/SliceDirection";
 
 export const GUI_ENABLED = false;
 
@@ -38,6 +39,36 @@ export const OBSTACLE_TEMPLTES = [
     {
         asset: "bamboo_left_3.glb",
         placement: ObstaclePlacement.LEFT,
+    },
+    {
+        asset: "bamboo_protectedT_left_3.glb",
+        placement: ObstaclePlacement.LEFT,
+        sliceDirection: SliceDirection.TOP,
+    },
+    {
+        asset: "bamboo_protectedT_right_3.glb",
+        placement: ObstaclePlacement.RIGHT,
+        sliceDirection: SliceDirection.TOP,
+    },
+    {
+        asset: "bamboo_protectedL_mid_3.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.LEFT,
+    },
+    {
+        asset: "bamboo_protectedL_mid_5.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.LEFT,
+    },
+    {
+        asset: "bamboo_protectedR_mid_3.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.RIGHT,
+    },
+    {
+        asset: "bamboo_protectedR_mid_5.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.RIGHT,
     },
 ];
 

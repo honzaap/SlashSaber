@@ -4,6 +4,7 @@ import { OBB } from "three/examples/jsm/math/OBB.js";
 import { CSG } from "three-csg-ts";
 import * as CANNON from "cannon-es";
 import { ObstaclePlacement } from "../enums/ObstaclePlacement";
+import { SliceDirection } from "../enums/SliceDirection";
 
 export class Obstacle {
     
@@ -11,6 +12,7 @@ export class Obstacle {
     private obstacleModel = new THREE.Mesh();
     private boundingBox = new THREE.Box3();
     private placement : ObstaclePlacement;
+    private sliceDirection : THREE.Vector2;
 
     private gameState : GameState;
 
@@ -25,10 +27,12 @@ export class Obstacle {
     private mixer : THREE.AnimationMixer | null = null;
     private animationAction : THREE.AnimationAction | null = null;
 
-    constructor(model : THREE.Object3D, placement : ObstaclePlacement, animation : THREE.AnimationClip | null = null) {
+    constructor(model : THREE.Object3D, placement : ObstaclePlacement, sliceDirection : THREE.Vector2, animation : THREE.AnimationClip | null = null) {
         this.gameState = GameState.getInstance();
         this.model = model;
         this.placement = placement;
+        this.sliceDirection = sliceDirection;
+        
         if(animation) {
             this.mixer = new THREE.AnimationMixer(this.model);
             this.mixer.timeScale = 1.5;
@@ -37,7 +41,7 @@ export class Obstacle {
             this.animationAction.clampWhenFinished = true;
         }
         model.traverse(obj => {
-            if(obj.name === "Obstacle"){
+            if(obj.name.startsWith("Obstacle")){
                 this.obstacleModel = obj as THREE.Mesh;
                 this.boundingBox.setFromObject(this.obstacleModel);
             }
@@ -191,6 +195,14 @@ export class Obstacle {
         }
 
         return new SlicedPiece(slicedPiece, slicedPieceBody);
+    }
+
+    public canSlice(sliceVector : THREE.Vector3) {
+        if(this.sliceDirection === SliceDirection.ANY) return true;
+
+        const result = new THREE.Vector2(sliceVector.x * this.sliceDirection.x, sliceVector.y * this.sliceDirection.y);
+
+        return result.x >= 0 && result.y >= 0;
     }
 
     public remove() {
