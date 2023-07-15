@@ -42,10 +42,9 @@ export default class Sword {
 
             this.model.traverse((obj : THREE.Object3D) => {
                 if(obj.name === "Blade") {
-                    // Set bloom to blade mesh
+                    // Set bloom to blade mesh // TODO : Remove
                     for(const mesh of obj.children) {
                         mesh.layers.toggle(BLOOM_LAYER);
-                        
                     }
 
                     // Get blade mesh and size

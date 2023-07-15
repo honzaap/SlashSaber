@@ -5,6 +5,7 @@ import EnvironmentManager from "./EnvironmentManager";
 import { ObstaclePlacement } from "../enums/ObstaclePlacement";
 import { OBSTACLE_TEMPLTES } from "../../constants";
 import { SliceDirection } from "../enums/SliceDirection";
+import { Rarity } from "../enums/Rarity";
 
 type ObstacleTemplate = {
     asset : string,
@@ -12,6 +13,7 @@ type ObstacleTemplate = {
     model : THREE.Object3D,
     animation: THREE.AnimationClip,
     sliceDirection : THREE.Vector2 | undefined,
+    rarity : Rarity,
 }
 
 export default class ObstacleManager {
@@ -29,10 +31,12 @@ export default class ObstacleManager {
     private readonly maxObstacles = 15;
     private readonly minObstacleDistance = 3;
     private readonly maxObstacleDistance = 5;
+    private readonly rarities : string[] = [];
     private lastPlacement = ObstaclePlacement.LEFT;
 
     // How long was a given obstacle placement NOT used
     private lastPlacementUsage : { [placement: string]: number } = { };
+
 
     private constructor() { 
         this.gameState = GameState.getInstance();
@@ -43,8 +47,8 @@ export default class ObstacleManager {
             this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
                 
-                this.obstacleTemplates.push({...template, sliceDirection : template.sliceDirection ?? SliceDirection.ANY,
-                    model, animation: gltf.animations[0]});
+                this.obstacleTemplates.push({...template, sliceDirection: template.sliceDirection ?? SliceDirection.ANY,
+                    rarity: template.rarity ?? Rarity.COMMON, model, animation: gltf.animations[0]});
                 loadedObstacles++;
                 if(loadedObstacles === OBSTACLE_TEMPLTES.length) {
                     this.gameState.addLogicHandler(this.update);
@@ -54,6 +58,10 @@ export default class ObstacleManager {
 
         for(const key of Object.keys(ObstaclePlacement)) {
             this.lastPlacementUsage[key] = 0;
+        }
+
+        for(const key of Object.keys(Rarity).filter(k => Number.isNaN(parseFloat(k)))) {
+            this.rarities.push(key);
         }
     }
 
@@ -183,15 +191,24 @@ export default class ObstacleManager {
 
     // Get new obstacle template to spawn
     private getNewTemplate() : ObstacleTemplate {
-        const filtered = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
+        let filtered = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
         // Make sure that every placement is frequently used
+        const random = Math.random();
+
+        for(const key of this.rarities) {
+            const rarity = Rarity[key as keyof typeof Rarity]; // I Fucking hate TypeScript
+            if(random <= rarity) {
+                const rarityFiltered = filtered.filter(t => t.rarity === rarity);
+                if(rarityFiltered.length > 0) filtered = rarityFiltered;
+            }
+        }
+
         const underUsed = filtered.find(t => this.lastPlacementUsage[t.placement] >= 5);
         const result = underUsed ?? filtered[Math.floor(Math.random() * filtered.length)];
         this.lastPlacement = result.placement;
         this.updateLastPlacements();
 
         return result;
-
     }
 
     private updateLastPlacements() {

@@ -1,4 +1,5 @@
 import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
+import { Rarity } from "./game/enums/Rarity";
 import { SliceDirection } from "./game/enums/SliceDirection";
 
 export const GUI_ENABLED = false;
@@ -31,6 +32,7 @@ export const OBSTACLE_TEMPLTES = [
     {
         asset: "bamboo_mid_7.glb",
         placement: ObstaclePlacement.BOTTOM,
+        rarity: Rarity.RARE,
     },
     {
         asset: "bamboo_right_3.glb",
@@ -44,31 +46,37 @@ export const OBSTACLE_TEMPLTES = [
         asset: "bamboo_protectedT_left_3.glb",
         placement: ObstaclePlacement.LEFT,
         sliceDirection: SliceDirection.TOP,
+        rarity: Rarity.UNCOMMON,
     },
     {
         asset: "bamboo_protectedT_right_3.glb",
         placement: ObstaclePlacement.RIGHT,
         sliceDirection: SliceDirection.TOP,
+        rarity: Rarity.UNCOMMON,
     },
     {
         asset: "bamboo_protectedL_mid_3.glb",
         placement: ObstaclePlacement.BOTTOM,
         sliceDirection : SliceDirection.LEFT,
+        rarity: Rarity.RARE,
     },
     {
         asset: "bamboo_protectedL_mid_5.glb",
         placement: ObstaclePlacement.BOTTOM,
         sliceDirection : SliceDirection.LEFT,
+        rarity: Rarity.RARE,
     },
     {
         asset: "bamboo_protectedR_mid_3.glb",
         placement: ObstaclePlacement.BOTTOM,
         sliceDirection : SliceDirection.RIGHT,
+        rarity: Rarity.RARE,
     },
     {
         asset: "bamboo_protectedR_mid_5.glb",
         placement: ObstaclePlacement.BOTTOM,
         sliceDirection : SliceDirection.RIGHT,
+        rarity: Rarity.RARE,
     },
 ];
 
