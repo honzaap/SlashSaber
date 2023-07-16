@@ -16,6 +16,8 @@ export const EVENTS = {
     settingsChanged: "onAfterSettingsChanged",
 };
 
+export const SPARK_ASSET = "spark_texture.png";
+
 export const OBSTACLE_TEMPLTES = [
     {
         asset: "bamboo_mid_1.glb",
@@ -41,6 +43,42 @@ export const OBSTACLE_TEMPLTES = [
     {
         asset: "bamboo_left_3.glb",
         placement: ObstaclePlacement.LEFT,
+    },
+    {
+        asset: "bamboo_protectedT_left_3.glb",
+        placement: ObstaclePlacement.LEFT,
+        sliceDirection: SliceDirection.TOP,
+        rarity: Rarity.UNCOMMON,
+    },
+    {
+        asset: "bamboo_protectedT_right_3.glb",
+        placement: ObstaclePlacement.RIGHT,
+        sliceDirection: SliceDirection.TOP,
+        rarity: Rarity.UNCOMMON,
+    },
+    {
+        asset: "bamboo_protectedL_mid_3.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.LEFT,
+        rarity: Rarity.RARE,
+    },
+    {
+        asset: "bamboo_protectedL_mid_5.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.LEFT,
+        rarity: Rarity.RARE,
+    },
+    {
+        asset: "bamboo_protectedR_mid_3.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.RIGHT,
+        rarity: Rarity.RARE,
+    },
+    {
+        asset: "bamboo_protectedR_mid_5.glb",
+        placement: ObstaclePlacement.BOTTOM,
+        sliceDirection : SliceDirection.RIGHT,
+        rarity: Rarity.RARE,
     },
     {
         asset: "bamboo_protectedT_left_3.glb",

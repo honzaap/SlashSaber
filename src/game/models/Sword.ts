@@ -5,6 +5,7 @@ import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
 import { BLOOM_LAYER, EVENTS } from "../../constants.ts";
+import { ObstaclePlacement } from "../enums/ObstaclePlacement.ts";
 
 export default class Sword {
 
@@ -166,7 +167,19 @@ export default class Sword {
                
                 // Check, whether the obstacle can be sliced from this direction
                 if(!obstacle.canSlice(sliceDirection)) {
-                    console.log("CANT SLICE");
+                    const sparkPosition = obstacle.getCenter();
+                    /*const sparkPosition = new THREE.Vector3();
+                    const bladePosition = new THREE.Vector3();
+                    sparkPosition.copy(obstacle.getPosition());
+                    this.contactPointBlade.getWorldPosition(bladePosition);
+                    if(obstacle.getPlacement() === ObstaclePlacement.BOTTOM) {
+                        sparkPosition.y = bladePosition.y;
+                    }
+                    else {
+                        sparkPosition.x = bladePosition.x;
+                    }*/
+
+                    this.obstacleManager.playParticles(sparkPosition, sliceDirection);
                     return;
                 }
 
@@ -189,9 +202,9 @@ export default class Sword {
     // Create sword trail
     private createSwordTrail() {
         const speedToShowTrail = 7000;
-        const fadeOutFactor = 1;
-        const fadeInFactor = 2;
-        const maxOpacity = 0.2;
+        const fadeOutFactor = 1.2;
+        const fadeInFactor = 2.5;
+        const maxOpacity = 0.35;
 
         const headGeometry = [];
         headGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3));
@@ -200,8 +213,12 @@ export default class Sword {
 
         const material = TrailRenderer.createBaseMaterial();
 
-        material.uniforms.headColor.value.set(0.84, 0.85,1, 0.2);
+        material.uniforms.headColor.value.set(0.84, 0.85, 1, 0.0);
         material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
+
+        material.uniforms.headColor.value.w = 0;
+        material.uniforms.tailColor.value.w = 0;
+
 
         const trailLength = 20;
 
@@ -229,7 +246,7 @@ export default class Sword {
                 const distance = Math.sqrt(Math.pow(prevMouse.x - this.gameState.mouse.x, 2) + Math.pow(prevMouse.y - this.gameState.mouse.y, 2));
                 const speed = distance / delta;
 
-                if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < 0.2) {
+                if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < maxOpacity) {
                     opacityGoingUp = true;
                 }
 

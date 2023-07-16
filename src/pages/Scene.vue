@@ -70,17 +70,17 @@ async function createScene() {
         requestAnimationFrame(animate);
         if(gameState.halted) return;
         renderer.info.reset();
-        //if(Date.now() >= timeTarget){
-        gameState.update();
-
-        GUIManager.updateStats();
-
-        renderer.render(scene, camera);
-        timeTarget += dt;
         if(Date.now() >= timeTarget){
-            timeTarget = Date.now();
+            gameState.update();
+
+            GUIManager.updateStats();
+
+            renderer.render(scene, camera);
+            timeTarget += dt;
+            if(Date.now() >= timeTarget){
+                timeTarget = Date.now();
+            }
         }
-        //}
     }
     animate();
 

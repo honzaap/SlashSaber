@@ -3,9 +3,10 @@ import { Obstacle, SlicedPiece } from "./Obstacle";
 import GameState from "./GameState";
 import EnvironmentManager from "./EnvironmentManager";
 import { ObstaclePlacement } from "../enums/ObstaclePlacement";
-import { OBSTACLE_TEMPLTES } from "../../constants";
+import { OBSTACLE_TEMPLTES, SPARK_ASSET } from "../../constants";
 import { SliceDirection } from "../enums/SliceDirection";
 import { Rarity } from "../enums/Rarity";
+import ParticleSystem, { Alpha, Body, Color, Emitter, Gravity, Life, Mass, Position, RadialVelocity, RandomDrift, Rate, Scale, Span, SphereZone, SpriteRenderer, Vector3D, ease } from "three-nebula";
 
 type ObstacleTemplate = {
     asset : string,
@@ -29,14 +30,17 @@ export default class ObstacleManager {
     private obstacleTemplates : ObstacleTemplate[] = []; 
 
     private readonly maxObstacles = 15;
-    private readonly minObstacleDistance = 3;
-    private readonly maxObstacleDistance = 5;
+    private readonly minObstacleDistance = 4;
+    private readonly maxObstacleDistance = 4;//5;
     private readonly rarities : string[] = [];
     private lastPlacement = ObstaclePlacement.LEFT;
 
     // How long was a given obstacle placement NOT used
     private lastPlacementUsage : { [placement: string]: number } = { };
 
+    private particleSystem = new ParticleSystem();
+    private particleSprite = new THREE.Sprite();
+    private readonly particleHooks = { onStart : () => {}, onUpdate : () => {}, onEnd : () => {} };
 
     private constructor() { 
         this.gameState = GameState.getInstance();
@@ -63,6 +67,8 @@ export default class ObstacleManager {
         for(const key of Object.keys(Rarity).filter(k => Number.isNaN(parseFloat(k)))) {
             this.rarities.push(key);
         }
+        
+        this.initParticles();
     }
 
     public static getInstance() {
@@ -189,12 +195,53 @@ export default class ObstacleManager {
         }, 2000);
     }
 
+    public playParticles(position : THREE.Vector3, sliceDirection : THREE.Vector3) {
+        sliceDirection.negate();
+        sliceDirection.z = 2;
+        const emitter = new Emitter();
+        position.z += 0.2;
+        emitter.setRate(new Rate(new Span(2, 3), new Span(0.0, 0.0)))
+            .addInitializers([
+                new Body(this.particleSprite),
+                new Mass(4),
+                new Life(0.4, 0.5),
+                new Position(new SphereZone(0, 0, 0, 0.7)),
+                new RadialVelocity(8, new Vector3D(sliceDirection.x * 30, sliceDirection.y * 30, sliceDirection.z * 30), 1),
+            ])
+            .addBehaviours([
+                new RandomDrift(8, 8, 12, .06),
+                new Gravity(1.0),
+                new Color(new THREE.Color(0xff241c), new THREE.Color(0xffac1c), Infinity, ease.easeOutSine),
+                new Alpha(1, 0.4),
+                new Scale(0.1, 0.07),
+            ])
+            .setPosition(position).emit(0.15, 0.15);
+
+        this.particleSystem.addEmitter(emitter).emit(this.particleHooks);
+    }
+
+    private initParticles() {
+        const map = new THREE.TextureLoader().load(`./assets/${SPARK_ASSET}`);
+        const material = new THREE.SpriteMaterial({
+            map,
+            color: 0xff0000,
+            blending: THREE.AdditiveBlending,
+            fog: true,
+        });
+        this.particleSprite = new THREE.Sprite(material);
+
+        this.particleSystem.addRenderer(new SpriteRenderer(this.gameState.getScene(), THREE));
+            
+        this.gameState.addLogicHandler((d) => {
+            if(this.particleSystem.canUpdate) this.particleSystem.update(d);
+        });
+    }
+
     // Get new obstacle template to spawn
     private getNewTemplate() : ObstacleTemplate {
         let filtered = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
-        // Make sure that every placement is frequently used
         const random = Math.random();
-
+        
         for(const key of this.rarities) {
             const rarity = Rarity[key as keyof typeof Rarity]; // I Fucking hate TypeScript
             if(random <= rarity) {
@@ -202,7 +249,8 @@ export default class ObstacleManager {
                 if(rarityFiltered.length > 0) filtered = rarityFiltered;
             }
         }
-
+        
+        // Make sure that every placement is frequently used
         const underUsed = filtered.find(t => this.lastPlacementUsage[t.placement] >= 5);
         const result = underUsed ?? filtered[Math.floor(Math.random() * filtered.length)];
         this.lastPlacement = result.placement;

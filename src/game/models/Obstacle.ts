@@ -57,11 +57,22 @@ export class Obstacle {
             return true;
         }
 
+
         return false;
     }
 
     public getPosition() : THREE.Vector3 {
         return this.model.position;
+    }
+
+    public getPlacement() {
+        return this.placement;
+    }
+
+    public getCenter() {
+        const result = new THREE.Vector3();
+        this.boundingBox.getCenter(result);
+        return result;
     }
 
     public update(delta : number) : void {
