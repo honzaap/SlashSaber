@@ -1,10 +1,11 @@
 <template>
     <div class="container">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :fullscreen="fullscreen" :settings="settings" 
+        <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lives="lives"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
             @switch="switchPage" @start="startGame" @reset="resetRun" 
             @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
+        <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun"/>
         <canvas :class="{'no-cursor' : !settings.showCursor}" ref="canvas" id="canvas"></canvas>
         <div :class="{anim: hitAnim}" class="hit-marker"></div>
     </div>
@@ -23,6 +24,7 @@ import { onMounted, ref, reactive } from "vue";
 import { createRenderer, resizeRenderer, setupEnvironment, setupLighting, setupObstacles, setupPhysicsEnvironment } from "../game/scene";
 import LoadingScreen from "../components/LoadingScreen.vue";
 import SceneOverlay from "../components/SceneOverlay.vue";
+import GameOverScreen from "../components/GameOverScreen.vue";
 import { Settings } from "../game/models/Settings";
 import { EVENTS } from "../constants";
 
@@ -31,8 +33,10 @@ const emit = defineEmits(["switch"]);
 const canvas = ref(null);
 const loading = ref(true);
 const paused = ref(false);
+const died = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
+const lives = ref(3);
 const settings = reactive(new Settings());
 const fullscreen = ref(false);
 const hitAnim = ref(false);
@@ -165,6 +169,7 @@ function createControls(camera : THREE.Camera) {
     gameState.addEventListener(EVENTS.hit, () => {
         shaking = true;
         hitAnim.value = true;
+        lives.value--;
         setTimeout(() => {
             hitAnim.value = false;
         }, 400);
@@ -200,6 +205,9 @@ onMounted(() => {
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState !== "visible"){
             gameState.haltGame();
+            if(died.value) {
+                return;
+            }
             hideOverlay.value = false;
         }
     });
@@ -207,6 +215,9 @@ onMounted(() => {
     window.addEventListener("keyup", (e : KeyboardEvent) => {
         if(e.key === "Escape") {
             fullscreen.value = false;
+            if(died.value) {
+                return;
+            }
             if(gameState.started && gameState.halted) { // Resume game from pause
                 gameState.startGame();
                 hideOverlay.value = true;
@@ -239,6 +250,13 @@ onMounted(() => {
             clearInterval(scoreInterval);
         }
     });
+
+    gameState.addEventListener(EVENTS.died, () => {
+        died.value = true;
+        setTimeout(() => {
+            gameState.haltGame();
+        }, 700);
+    });
 });
 
 function startGame() {
@@ -254,7 +272,10 @@ function resetRun() {
     gameState.reset();
     sword.reset();
     camera.lookAt(0, 0.5, -5);
+    lives.value = 3;
     paused.value = false;
+    died.value = false;
+    hideOverlay.value = false;
 }
 
 function updateScore() {

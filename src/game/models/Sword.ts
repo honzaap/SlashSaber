@@ -5,7 +5,6 @@ import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
 import { BLOOM_LAYER, EVENTS } from "../../constants.ts";
-import { ObstaclePlacement } from "../enums/ObstaclePlacement.ts";
 
 export default class Sword {
 
@@ -165,21 +164,16 @@ export default class Sword {
                 this.contactPointBlade.getWorldPosition(col2);
                 const sliceDirection = new THREE.Vector3(col2.x - col1.x, col2.y - col1.y, col2.z - col1.z);
                
-                // Check, whether the obstacle can be sliced from this direction
+                // Check, whether the obstacle can be sliced from this direction, if not, generate particle sparks
                 if(!obstacle.canSlice(sliceDirection)) {
                     const sparkPosition = obstacle.getCenter();
-                    /*const sparkPosition = new THREE.Vector3();
-                    const bladePosition = new THREE.Vector3();
-                    sparkPosition.copy(obstacle.getPosition());
-                    this.contactPointBlade.getWorldPosition(bladePosition);
-                    if(obstacle.getPlacement() === ObstaclePlacement.BOTTOM) {
-                        sparkPosition.y = bladePosition.y;
-                    }
-                    else {
-                        sparkPosition.x = bladePosition.x;
-                    }*/
-
                     this.obstacleManager.playParticles(sparkPosition, sliceDirection);
+                    if(!obstacle.slashed) {
+                        this.gameState.gotHit();
+                    }
+                    setTimeout(() => {
+                        obstacle.hideObstacle();
+                    }, 300);
                     return;
                 }
 
@@ -197,6 +191,9 @@ export default class Sword {
         this.mouse.set(0, 0);
         this.mouseDirection.set(0, 0);
         this.model.rotation.set(0, 0, 0 );
+        this.lastMouse.set(0, 0);
+        this.prevMouse.set(0, 0);
+        this.deltaI.set(0, 0);
     }
 
     // Create sword trail

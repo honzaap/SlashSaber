@@ -82,6 +82,7 @@ export default class GameState {
         this.started = false;
         this.halted = false;
         this.mouse.set(-1, -1);
+        this.lives = 3;
         ObstacleManager.getInstance().reset();
         EnvironmentManager.getInstance().reset();
     }
@@ -90,7 +91,9 @@ export default class GameState {
         this.lives--;
         this.dispatchEvent(EVENTS.hit);
         if(this.lives <= 0) {
-            console.log("you died");
+            this.moving = false;
+            this.movingSpeed = 0;
+            this.dispatchEvent(EVENTS.died);
         }
     }
 
@@ -155,7 +158,7 @@ export default class GameState {
         this.events[event] = this.events[event] ? [...this.events[event], callback] : [callback];
     }
 
-    private dispatchEvent(event : string) {
+    public dispatchEvent(event : string) {
         const callbacks = this.events[event];
         if(!callbacks) return;
 

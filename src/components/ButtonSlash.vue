@@ -1,5 +1,5 @@
 <template>
-     <button @click="$emit('click')" :class="['btn-slash', hasMouseDown ? 'click' : '', alt ? 'alt' : '']" @mousedown="mouseDown" @mouseup="mouseUp" @mouseenter="mouseEnter">
+     <button :disabled="disable" @click="$emit('click')" :class="['btn-slash', hasMouseDown ? 'click' : '', alt ? 'alt' : '']" @mousedown="mouseDown" @mouseup="mouseUp" @mouseenter="mouseEnter">
         <div class="bg"></div>
         <span v-if="!alt" :class="['slash', showSlash ? 'anim' : '']"></span>
         {{ text }}
@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-defineProps(["text", "alt"]);
+defineProps(["text", "alt", "disable"]);
 defineEmits(["click"]);
 
 const hasMouseDown = ref(false);

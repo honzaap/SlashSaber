@@ -13,6 +13,7 @@ export const EVENTS = {
     start: "onAfterStart",
     halt: "onAfterHalt",
     hit: "onAfterHit",
+    died: "onAfterDeath",
     settingsChanged: "onAfterSettingsChanged",
 };
 

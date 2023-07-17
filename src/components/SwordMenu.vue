@@ -2,7 +2,7 @@
     <h2>Your sword</h2>
     <div class="menu-container">
         <v-card class="sword-menu">
-            <v-tabs :hide-slider="true" v-model="tab" bg-color="#fff" color="#70A480" :grow="true" selected-class="tab-active">
+            <v-tabs :show-arrows="false" :hide-slider="true" v-model="tab" bg-color="#fff" color="#70A480" :grow="true" selected-class="tab-active">
                 <v-tab size="large" variant="flat" value="sets">Sets</v-tab>
                 <v-tab size="large" variant="flat" value="blade">Blade</v-tab>
                 <v-tab size="large" variant="flat" value="guard">Guard</v-tab>

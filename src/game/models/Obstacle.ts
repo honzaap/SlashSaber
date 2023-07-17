@@ -22,7 +22,7 @@ export class Obstacle {
     private readonly despawnPosition = 3;
 
     private hide = false;
-    private slashed = false;
+    public slashed = false;
 
     private mixer : THREE.AnimationMixer | null = null;
     private animationAction : THREE.AnimationAction | null = null;
@@ -195,17 +195,22 @@ export class Obstacle {
 
         if(!this.hide) {
             setTimeout(() => {
-                this.hide = true; // TODO : rename to hide?
-                if(this.animationAction && this.mixer) {
-                    this.animationAction.timeScale = -1.5;
-                    this.animationAction.play();
-                    this.animationAction.paused = false;
-                    this.animationAction.setLoop(THREE.LoopOnce, 1);  
-                }
+                this.hideObstacle();
             }, 300);
         }
 
         return new SlicedPiece(slicedPiece, slicedPieceBody);
+    }
+
+    public hideObstacle() {
+        this.hide = true;
+        this.slashed = true;
+        if(this.animationAction && this.mixer) {
+            this.animationAction.timeScale = -1.5;
+            this.animationAction.play();
+            this.animationAction.paused = false;
+            this.animationAction.setLoop(THREE.LoopOnce, 1);  
+        }
     }
 
     public canSlice(sliceVector : THREE.Vector3) {

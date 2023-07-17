@@ -1,8 +1,13 @@
 <template>
-    <span class="current-score" :class="{show: hidden, offset: !hidden && paused}">
+    <span class="current-score" :class="{show: hidden, offset: !hidden && paused, died: lives <= 0}">
         <span class="text">Your current score: </span>
         {{ prettifyScore(currentScore) }} pts
     </span>
+    <div class="lives" :class="{show: hidden, died: lives <= 0}">
+        <img :class="{hide: lives <= 0}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+        <img :class="{hide: lives <= 1}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+        <img :class="{hide: lives <= 2}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+    </div>
     <div class="overlay-container" :class="{fade: overlayState === 1, hide: overlayState === 2}">
         <v-toolbar class="navbar" height="72">
             <button class="btn-logo" @click="$emit('switch')">
@@ -110,9 +115,10 @@ import { ref } from "vue";
 import { GraphicsPreset } from "../game/enums/GraphicsPresset";
 import { Settings } from "../game/models/Settings";
 import { reactive } from "vue";
+import { prettifyScore } from "../helpers";
 
 const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings"]);
-const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number, fullscreen : boolean, settings : Settings}>();
+const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number, fullscreen : boolean, settings : Settings, lives : number}>();
 
 const overlayState = ref(-1);
 const settings = reactive(props.settings);
@@ -144,13 +150,56 @@ watch(() => props.hidden, () => {
     }
 });
 
-function prettifyScore(score : number) {
-    return Math.floor(score).toLocaleString("en-US");
-}
-
 </script>
 
 <style scoped lang="scss">
+.lives {
+    position: absolute;
+    display: flex;
+    top: -65px;
+    left: 10px;
+    transition: top 450ms ease;
+    z-index: 5;
+
+    img {
+        &:nth-child(2) {
+            margin-top: 6px;
+        }
+
+        &.hide {
+            animation: lives-hide 750ms ease forwards;
+        }
+    }
+
+    &.show {
+        top: 10px;
+    }
+
+    &.died {
+        top: -65px;
+    }
+}
+
+@keyframes lives-hide {
+    0% {
+        filter: saturate(1) hue-rotate(0);
+        transform: scale(1);
+    }
+    30% {
+        transform: scale(1.3);
+    }
+    50% {
+        filter: hue-rotate(237deg) saturate(2);
+    }
+    60% {
+        transform: scale(0.8);
+    }
+    100% {
+        filter: saturate(0) hue-rotate(0);
+        transform: scale(1);
+    }
+}
+
 .current-score {
     display: flex;
     position: absolute;
@@ -188,6 +237,10 @@ function prettifyScore(score : number) {
             width: 200px;
             opacity: 1;
         }
+    }
+
+    &.died {
+        top: -60px;
     }
 }
 
