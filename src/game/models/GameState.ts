@@ -14,6 +14,7 @@ export default class GameState {
     public movingSpeed = 0;
     public mouse = new THREE.Vector2(-1, -1);
     public distanceTravelled = 0;
+    public score = 0;
     public halted = false; // The render process and clock stopped completely
     public started = false;
     public lives = 3;
@@ -97,6 +98,10 @@ export default class GameState {
         }
     }
 
+    public addScore(amount : number) {
+        this.score += amount;
+    }
+
     public sceneAdd(object : THREE.Object3D) : void {
         this.scene.add(object);
     }
@@ -133,6 +138,7 @@ export default class GameState {
         }
 
         this.distanceTravelled += this.movingSpeed * delta;
+        this.score += this.movingSpeed * delta;
         if(this.movingSpeed < this.maxMovingSpeed && this.moving) {
             this.movingSpeed = Math.min(this.movingSpeed + delta * (this.maxMovingSpeed - this.movingSpeed + 1), this.maxMovingSpeed);
         }

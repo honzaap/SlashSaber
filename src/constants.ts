@@ -119,9 +119,7 @@ export const OBSTACLE_TEMPLTES = [
     },
 ];
 
-// TODO : add cast/receive shadow prop
 export const ENVIRONMENT_SET_TEMPLATES = [
-   
     [
         {
             asset: "floor.glb",
@@ -183,7 +181,19 @@ export const ENVIRONMENT_SET_TEMPLATES = [
             spawnLight: true,
         },
     ],
-    
+];
+
+export const SWORD_PRESETS = [
+    {
+        name: "Default",
+        color1: "rgb(214, 215, 255)",
+        color2: "rgb(163, 165, 255)",
+    },
+    {
+        name: "Thunder",
+        color1: "rgb(252, 186, 3)",
+        color2: "rgb(255, 167, 79)",
+    }
 ];
 
 // Shaders

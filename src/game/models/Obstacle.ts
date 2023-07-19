@@ -204,6 +204,8 @@ export class Obstacle {
         this.gameState.sceneAdd(slicedPiece);
         this.model.add(this.obstacleModel);
 
+        this.gameState.addScore(5);
+
         this.obstacleModel.position.copy(localPos);
 
         if(!this.hide) {

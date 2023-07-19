@@ -12,36 +12,40 @@
                 <v-window v-model="tab">
                     <v-window-item value="sets">
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="set in sets" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    <img src="/swords/set_default.png" :alt="set">
+                                    <span class="title">{{ set.name }}</span>
+                                    <img :src="`/swords/set_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="blade">
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="blade in blades" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    <img src="/swords/blade_default.png" :alt="blade">
+                                    <span class="title">{{ set.name }}</span>
+                                    <img :src="`/swords/blade_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="guard">
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="guard in guards" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    <img src="/swords/guard_default.png" :alt="guard">
+                                    <span class="title">{{ set.name }}</span>
+                                    <img :src="`/swords/guard_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="hilt">
                         <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="hilt in hilts" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
-                                    <img src="/swords/hilt_default.png" :alt="hilt">
+                                    <span class="title">{{ set.name }}</span>
+                                    <img :src="`/swords/hilt_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -59,13 +63,9 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { SWORD_PRESETS } from "../constants";
 
 const tab = ref("sets");
-
-const sets = ["Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1", "Set #1"];
-const blades = ["Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1", "Blade #1"];
-const guards = ["Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1", "Guard #1"];
-const hilts = ["Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1", "Hilt #1"];
 
 </script>
 
@@ -230,5 +230,12 @@ h2 {
             object-fit: contain;
         }
     }
+}
+
+.title {
+    position: absolute;
+    top: 0;
+    color: #fff;
+    text-shadow: -1px 0px 5px #000;
 }
 </style>

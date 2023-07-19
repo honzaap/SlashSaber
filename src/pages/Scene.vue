@@ -279,7 +279,7 @@ function resetRun() {
 }
 
 function updateScore() {
-    currentScore.value = gameState.distanceTravelled;
+    currentScore.value = gameState.score;
 }
 
 function toggleFullscreen() {
