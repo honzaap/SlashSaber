@@ -28,6 +28,8 @@ export default class Sword {
 
     private sensitivity : number;
 
+    //private sliceSounds : HTMLMediaElement[] = [];
+
     // Create sword model, bounding box and helper
     constructor() {
         this.gameState = GameState.getInstance();
@@ -102,6 +104,23 @@ export default class Sword {
         this.gameState.addEventListener(EVENTS.settingsChanged, () => {
             this.sensitivity = this.gameState.settings.sensitivity;
         });
+        
+        for(let i = 0; i < 8; i++) {
+            /*const context = new AudioContext();
+            const audio = new Audio("/sounds/slice8.mp3");
+            audio.volume = 0.6;
+            const source = context.createMediaElementSource(audio);
+            const filter = context.createBiquadFilter();
+            filter.connect(context.destination);
+            source.connect(context.destination);
+            source.connect(filter);
+            filter.frequency.value = 4000 + (i + 1) * 750;
+            audio.playbackRate = 0.94 + 0.02 * i;
+            this.sliceSounds.push(audio);
+            setTimeout(() => { // Todo : context in GS, resume on gamestart
+                context.resume();
+            }, 3900);*/
+        }
     }
 
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
@@ -168,6 +187,9 @@ export default class Sword {
                 if(!obstacle.canSlice(sliceDirection)) {
                     const sparkPosition = obstacle.getCenter();
                     this.obstacleManager.playParticles(sparkPosition, sliceDirection);
+                    //const test = new Audio("/sounds/metal_hit.wav");
+                    //test.volume = 0.7;
+                    //test.play();
                     if(!obstacle.slashed) {
                         this.gameState.gotHit();
                     }
@@ -177,6 +199,9 @@ export default class Sword {
                     return;
                 }
 
+                // Play sound
+                //this.sliceSounds[this.normalizeSliceDirection(sliceDirection)].play();
+                
                 // Use contact points as coplanar points
                 const points : THREE.Vector3[] = [collisionPoint, new THREE.Vector3(), new THREE.Vector3()];
                 this.contactPointHilt.getWorldPosition(points[1]);
@@ -195,6 +220,12 @@ export default class Sword {
         this.prevMouse.set(0, 0);
         this.deltaI.set(0, 0);
     }
+
+    /*private normalizeSliceDirection(sliceDirection : THREE.Vector3) {
+        const normalized = new THREE.Vector2(sliceDirection.x, sliceDirection.y);
+        normalized.normalize();
+        return (Math.round(8 * normalized.angle() / (2 * Math.PI) + 8 ) % 8);
+    }*/
 
     // Create sword trail
     private createSwordTrail() {

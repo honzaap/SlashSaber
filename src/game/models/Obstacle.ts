@@ -117,6 +117,9 @@ export class Obstacle {
             contactPoint.getWorldPosition(worldPos);
             this.swordCollisionPoint = worldPos;
             this.swordCollided = true;
+            //const test = new Audio("/sounds/slice_init.wav");
+            //test.volume = 0.6;
+            //test.play();
         }
         else if(!swordBB.intersectsBox3(this.boundingBox) && this.swordCollided === true) { // Stopped colliding
             this.swordCollided = false;
@@ -177,6 +180,16 @@ export class Obstacle {
             shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
             position: new CANNON.Vec3(middle.x, middle.y, middle.z),
         });
+
+        /*let played = false;
+        slicedPieceBody.addEventListener("collide", () => {
+            if(!played) {
+                played = true;
+                const test = new Audio(`/sounds/bamboo_collide_${Math.floor(Math.random() * 3 + 1)}.ogg`);
+                test.volume = 0.1;
+                test.play();
+            }
+        });*/
 
         this.gameState.worldAdd(slicedPieceBody);
 

@@ -29,9 +29,9 @@ export default class ObstacleManager {
 
     private obstacleTemplates : ObstacleTemplate[] = []; 
 
-    private readonly maxObstacles = 15;
-    private readonly minObstacleDistance = 3;
-    private readonly maxObstacleDistance = 5;
+    private readonly maxObstacles = 17;
+    private readonly minObstacleDistance = 2.3;
+    private readonly maxObstacleDistance = 2.80;
     private readonly rarities : string[] = [];
     private lastPlacement = ObstaclePlacement.LEFT;
 

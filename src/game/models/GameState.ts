@@ -27,7 +27,7 @@ export default class GameState {
     private clock = new THREE.Clock();
 
     private readonly fixedTimeStep = 1.0 / 60.0; 
-    private readonly maxMovingSpeed = 5.0;
+    private readonly maxMovingSpeed = 5.35;
 
     private moving = false;
 
