@@ -10,11 +10,13 @@ export const ROOM_TRANSITION_ASSET = "room_transition.glb";
 
 export const EVENTS = {
     load: "onAfterLoad",
+    ready: "onAfterReady",
     start: "onAfterStart",
     halt: "onAfterHalt",
     hit: "onAfterHit",
     died: "onAfterDeath",
     settingsChanged: "onAfterSettingsChanged",
+    swordChanged: "onAfterSwordChanged",
 };
 
 export const SPARK_ASSET = "spark_texture.png";
@@ -186,14 +188,61 @@ export const ENVIRONMENT_SET_TEMPLATES = [
 export const SWORD_PRESETS = [
     {
         name: "Default",
-        color1: "rgb(214, 215, 255)",
-        color2: "rgb(163, 165, 255)",
+        color1: "rgb(157, 208, 227)",
+        color2: "rgb(207, 221, 227)",
     },
     {
         name: "Thunder",
-        color1: "rgb(252, 186, 3)",
-        color2: "rgb(255, 167, 79)",
-    }
+        color1: "#E6B748", 
+        color2: "#76EEF5",
+    },
+    {
+        name: "Beast",
+        color1: "#84DBF2",
+        color2: "#F0F5F5",
+        hideGuard: true,
+    },
+    {
+        name: "Mist",
+        color1: "rgb(167, 219, 215)",
+        color2: "rgb(121, 165, 181)",
+    },
+    {
+        name: "Water",
+        color1: "#26C1FC",
+        color2: "#A6F6F8",
+    },
+    {
+        name: "Flame",
+        color1: "#EB502D",
+        color2: "#FDEA00",
+    },
+    {
+        name: "Wind",
+        color1: "#9ACA9E",
+        color2: "#FFFFFF",
+    },
+    /*
+    {
+        name: "Love",
+        color1: "#E15A9A",
+        color2: "#89CFFF",
+    },
+    {
+        name: "Serpent",
+        color1: "#2BA086",
+        color2: "#F5E061",
+    },
+    {
+        name: "Insect",
+        color1: "#E99B97",
+        color2: "#8D60D5",
+    },
+    {
+        name: "Demon",
+        color1: "#b04fff",
+        color2: "#08d18e",
+    },*/
 ];
 
 // Shaders

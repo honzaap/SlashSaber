@@ -10,9 +10,10 @@
             </v-tabs>
             <v-card-text>
                 <v-window v-model="tab">
+                    <small class="disabled-text" v-if="paused">Disabled while in-game</small>
                     <v-window-item value="sets">
-                        <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                        <v-item-group :disabled="paused" @update:model-value="updateSet" v-model="swordSet" class="items-list" :class="{disabled: paused}" selected-class="item-selected">
+                            <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
                                     <img :src="`/swords/set_${set.name.toLowerCase()}.png`" :alt="set.name">
@@ -21,8 +22,8 @@
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="blade">
-                        <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                        <v-item-group :disabled="paused" v-model="settings.bladeModel" mandatory="force" class="items-list" :class="{disabled: paused}" selected-class="item-selected">
+                            <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
                                     <img :src="`/swords/blade_${set.name.toLowerCase()}.png`" :alt="set.name">
@@ -31,8 +32,8 @@
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="guard">
-                        <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                        <v-item-group :disabled="paused" v-model="settings.guardModel" mandatory="force" class="items-list" :class="{disabled: paused}" selected-class="item-selected">
+                            <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
                                     <img :src="`/swords/guard_${set.name.toLowerCase()}.png`" :alt="set.name">
@@ -41,8 +42,8 @@
                         </v-item-group>
                     </v-window-item>
                     <v-window-item value="hilt">
-                        <v-item-group mandatory="force" class="items-list" selected-class="item-selected">
-                            <v-item v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
+                        <v-item-group :disabled="paused" v-model="settings.hiltModel" mandatory="force" class="items-list" :class="{disabled: paused}" selected-class="item-selected">
+                            <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
                                     <img :src="`/swords/hilt_${set.name.toLowerCase()}.png`" :alt="set.name">
@@ -64,12 +65,47 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { SWORD_PRESETS } from "../constants";
+import { Settings } from "../game/models/Settings";
+import { watch } from "vue";
+import { reactive } from "vue";
+import { computed } from "vue";
+
+const isFullSet = computed(() => {
+    return props.settings.bladeModel === props.settings.guardModel && props.settings.bladeModel === props.settings.hiltModel;
+});
+
+const props = defineProps<{settings : Settings, paused : boolean}>();
 
 const tab = ref("sets");
+const swordSet = ref(isFullSet.value ? props.settings.bladeModel : null);
+
+const settings = reactive(props.settings);
+
+watch(() => props.settings, () => {
+    settings.replace(props.settings);
+});
+
+watch(settings, () => {
+    swordSet.value = isFullSet.value ? props.settings.bladeModel : null;
+});
+
+const updateSet = (e : string) => {
+    settings.bladeModel = e;
+    settings.guardModel = e;
+    settings.hiltModel = e;
+};
 
 </script>
 
 <style scoped lang="scss">
+.disabled-text {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(#000, 0.6);
+}
+
 h2 {
     font-family: "Bree serif";
     font-size: 30px;
@@ -184,6 +220,12 @@ h2 {
                 border-color: var(--primary);
             }
         }
+
+        &.disabled {
+            pointer-events: none;
+            filter: saturate(0.5);
+            opacity: 0.8;
+        }
         
         &::-webkit-scrollbar {
             width: 0;
@@ -235,7 +277,9 @@ h2 {
 .title {
     position: absolute;
     top: 0;
-    color: #fff;
-    text-shadow: -1px 0px 5px #000;
+    color: #000;
+    font-weight: 400;
+    text-shadow: 0px 0px 2px #fff;
+    z-index: 2;
 }
 </style>

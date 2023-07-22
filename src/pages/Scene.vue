@@ -86,7 +86,7 @@ async function createScene() {
             }
         }
     }
-    animate();
+    requestAnimationFrame(animate);
 
     // Resize renderer when window size changes
     window.onresize = () => {
@@ -96,7 +96,22 @@ async function createScene() {
     };
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
-        dt = gameState.settings.lockFps ? 1000 / 60 : 1000 / 144; // Lock FPS to 144 even when "uncapped"
+        dt = gameState.settings.lockFps ? 1000 / 60 : 1;
+    });
+
+    // Cache every object in the scene by forcibly rendering it
+    gameState.addEventListener(EVENTS.ready, () => {
+        function setAllCulled(obj : THREE.Object3D, culled : boolean) {
+            obj.frustumCulled = culled;
+            obj.children.forEach(child => setAllCulled(child, culled));
+        }
+
+        setAllCulled(scene, false);
+        renderer.render(scene, camera);
+        setAllCulled(scene, true);
+        renderer.compile(scene, camera);
+
+        gameState.dispatchEvent(EVENTS.load);
     });
 }
 
@@ -305,7 +320,6 @@ function loadSettings() {
     if(!settingsJson) return;
 
     const loadedSettings = JSON.parse(settingsJson) as Settings;
-
     gameState.updateSettings(loadedSettings);
 
     settings.replace(loadedSettings);

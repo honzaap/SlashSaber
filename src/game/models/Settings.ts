@@ -8,6 +8,9 @@ export class Settings {
     public graphicsPreset = GraphicsPreset.HIGH;
     public enableShadows = true;
     public sensitivity = 1.0;
+    public bladeModel = "Default";
+    public guardModel = "Default";
+    public hiltModel = "Default";
 
     public replace(settings : Settings) {
         this.name = settings.name;
@@ -17,5 +20,8 @@ export class Settings {
         this.graphicsPreset = settings.graphicsPreset;
         this.enableShadows = settings.enableShadows;
         this.sensitivity = settings.sensitivity;
+        this.bladeModel = settings.bladeModel;
+        this.guardModel = settings.guardModel;
+        this.hiltModel = settings.hiltModel;
     }
 }

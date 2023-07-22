@@ -89,7 +89,7 @@
             <ButtonSlash v-if="paused" :alt="true" text="Reset Run" @click="$emit('reset')"/>
         </div>
         <div class="your-sword">
-            <SwordMenu />
+            <SwordMenu :settings="settings" :paused="paused"/>
         </div>
         <div class="leaderboard">
             <LeaderBoard compact="true" />

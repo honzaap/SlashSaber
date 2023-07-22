@@ -4,7 +4,7 @@ import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import HelperManager from "../utils/HelperManager.ts";
 import ObstacleManager from "./ObstacleManager.ts";
-import { BLOOM_LAYER, EVENTS } from "../../constants.ts";
+import { EVENTS, SWORD_PRESETS } from "../../constants.ts";
 
 export default class Sword {
 
@@ -26,6 +26,8 @@ export default class Sword {
     private contactPointHilt = new THREE.Object3D();
     private trailPoint = new THREE.Object3D();
 
+    private trail : TrailRenderer | undefined;
+
     private sensitivity : number;
 
     //private sliceSounds : HTMLMediaElement[] = [];
@@ -34,75 +36,18 @@ export default class Sword {
     constructor() {
         this.gameState = GameState.getInstance();
         this.obstacleManager = ObstacleManager.getInstance();
-        const textureLoader = new THREE.TextureLoader();
         this.sensitivity = this.gameState.settings.sensitivity;
-
-        this.gameState.loadGLTF("./assets/katana_test.glb", (obj) => {
-            this.model = obj.scene;
-            this.model.position.set(0, 0.65, -0.80);
-            this.model.up = new THREE.Vector3(0, 0, 1);
-
-            this.model.traverse((obj : THREE.Object3D) => {
-                if(obj.name === "Blade") {
-                    // Set bloom to blade mesh // TODO : Remove
-                    for(const mesh of obj.children) {
-                        mesh.layers.toggle(BLOOM_LAYER);
-                    }
-
-                    // Get blade mesh and size
-                    const bounds = new THREE.Box3();
-                    bounds.setFromObject(obj);
-                    bounds.getSize(this.bladeSize);
-                    this.bladeSize.multiplyScalar(0.5);
-
-                    this.bladeMesh = obj;
-                    this.boundingBox = new OBB(new THREE.Vector3(), this.bladeSize);
-                }
-                if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
-                    // Do not ask me under any circumstances why is this image the envmap for the blade
-                    const texture = textureLoader.load("./assets/blade_envmap.jpeg");
-                    texture.mapping = THREE.EquirectangularReflectionMapping;
-                    obj.material.envMap = texture;
-                }
-            });
-
-            // Get model size
-            const box3 = new THREE.Box3().setFromObject(this.model);
-            const size = new THREE.Vector3();
-            box3.getSize(size);
-            size.x /= 2.5;
-            size.y /= 2.5;
-
-            // Setup contact points
-            const cpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-            this.contactPointBlade = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0xff00ff}));
-            this.contactPointBlade.position.set(0, size.y / 2, size.z * -1);
-            this.contactPointHilt = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0x000000}));
-            this.contactPointHilt.position.set(0, size.y / 2, 0);
-
-            // Setup a point for the trail to follow
-            const tpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-            this.trailPoint = new THREE.Mesh(tpGeo, new THREE.MeshStandardMaterial({color: 0xffff00}));
-            this.trailPoint.position.set(0, size.y + 0.1, -size.z + 0.2);
-
-            this.model.add(this.contactPointBlade);
-            this.model.add(this.contactPointHilt);
-            this.model.add(this.trailPoint);
-
-            this.gameState.sceneAdd(this.model);
-            this.gameState.addLogicHandler(this.handleCollisions);
-
-            this.createSwordTrail();
-
-            const helperManager = new HelperManager();
-            helperManager.createSwordHelper(this, this.boundingBox);
-
-            this.setTrailPointVisibility(false);
-            this.setTrailPointVisibility(false);
-        });
+        this.model.position.set(0, 0.65, -0.80);
+        this.model.up = new THREE.Vector3(0, 0, 1);
+        this.gameState.sceneAdd(this.model);
+        this.gameState.addLogicHandler(this.handleCollisions);
 
         this.gameState.addEventListener(EVENTS.settingsChanged, () => {
             this.sensitivity = this.gameState.settings.sensitivity;
+        });
+
+        this.gameState.addEventListener(EVENTS.swordChanged, () => {
+            this.loadModel();
         });
         
         for(let i = 0; i < 8; i++) {
@@ -120,6 +65,95 @@ export default class Sword {
             setTimeout(() => { // Todo : context in GS, resume on gamestart
                 context.resume();
             }, 3900);*/
+        }
+
+        this.loadModel();
+    }
+
+    public loadModel() {
+        console.log("load new sword model");
+        const textureLoader = new THREE.TextureLoader(); // TODO : loader in GS
+
+        // Clear model
+        while (this.model.children.length > 0) {
+            const object = this.model.children.pop();
+            if(object) object.parent = null;
+        }
+        this.model.clear();
+
+        const hideGuard = SWORD_PRESETS.find(p => p.name === this.gameState.settings.guardModel)?.hideGuard;
+
+        const components = [
+            { name: "blade", value: this.gameState.settings.bladeModel },
+            ... hideGuard ? [] : [{ name: "guard", value: this.gameState.settings.guardModel }],
+            { name: "hilt", value: this.gameState.settings.hiltModel },
+        ];
+        let loadedComponents = 0;
+
+        for(const component of components) {
+            this.gameState.loadGLTF(`./assets/swords/${component.name}_${component.value.toLowerCase()}.glb`, (gltf) => {
+                gltf.scene.traverse((obj : THREE.Object3D) => {
+                    if(obj.name === "Blade") {
+                        // Get blade mesh and size
+                        const bounds = new THREE.Box3();
+                        bounds.setFromObject(obj);
+                        bounds.getSize(this.bladeSize);
+                        this.bladeSize.multiplyScalar(0.5);
+                        
+                        this.bladeMesh = obj;
+                        this.boundingBox = new OBB(new THREE.Vector3(), this.bladeSize);
+                    }
+                    
+                    if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
+                        // Do not ask me under any circumstances why is this image the envmap for the blade
+                        const texture = textureLoader.load("./assets/blade_envmap.jpeg");
+                        texture.mapping = THREE.EquirectangularReflectionMapping;
+                        obj.material.envMap = texture;
+                    }
+                });
+                    
+                this.model.add(gltf.scene);
+                loadedComponents++;
+
+                if(loadedComponents === components.length) {
+                    // Get model size
+                    const box3 = new THREE.Box3().setFromObject(this.model);
+                    const size = new THREE.Vector3();
+                    box3.getSize(size);
+                    size.x /= 2.5;
+                    size.y /= 2.5;
+        
+                    // Setup contact points
+                    const cpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
+                    this.contactPointBlade = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0xff00ff}));
+                    this.contactPointBlade.position.set(0, size.y / 2, size.z * -1);
+                    this.contactPointHilt = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0x000000}));
+                    this.contactPointHilt.position.set(0, size.y / 2, 0);
+        
+                    // Setup a point for the trail to follow
+                    const tpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
+                    this.trailPoint = this.trailPoint ?? new THREE.Mesh(tpGeo, new THREE.MeshStandardMaterial({color: 0xffff00}));
+                    this.trailPoint.position.set(0, size.y + 0.1, -size.z + 0.2);
+        
+                    this.model.add(this.contactPointBlade);
+                    this.model.add(this.contactPointHilt);
+                    this.model.add(this.trailPoint);
+        
+                    //this.gameState.sceneAdd(this.model);
+        
+                    if(!this.trail?.isActive) {
+                        this.createSwordTrail();
+                    }
+                    else {
+                        this.updateSwordTrail();
+                    }
+        
+                    const helperManager = new HelperManager();
+                    helperManager.createSwordHelper(this, this.boundingBox);
+        
+                    this.setTrailPointVisibility(false);
+                }
+            });
         }
     }
 
@@ -193,9 +227,13 @@ export default class Sword {
                     if(!obstacle.slashed) {
                         this.gameState.gotHit();
                     }
+
+                    obstacle.slashed = true;
+
                     setTimeout(() => {
                         obstacle.hideObstacle();
                     }, 300);
+                    
                     return;
                 }
 
@@ -227,46 +265,64 @@ export default class Sword {
         return (Math.round(8 * normalized.angle() / (2 * Math.PI) + 8 ) % 8);
     }*/
 
+    private updateSwordTrail() {
+        if(this.trail == null) return;
+
+        const preset = SWORD_PRESETS.find(p => p.name === this.gameState.settings.bladeModel);
+        if(!preset) return;
+
+        // Convert preset color to Vector3 
+        const color1 = new THREE.Color(preset.color1);
+        const color2 = new THREE.Color(preset.color2);
+
+        const material = this.trail.material;
+
+        material.uniforms.headColor.value.set(color1.r, color1.g, color1.b, 0);
+        material.uniforms.tailColor.value.set(color2.r, color2.g, color2.b, 0);
+    }
+
     // Create sword trail
     private createSwordTrail() {
         const speedToShowTrail = 7000;
-        const fadeOutFactor = 1.2;
+        const fadeOutFactor = 1.0;
         const fadeInFactor = 2.5;
         const maxOpacity = 0.35;
-
-        const headGeometry = [];
-        headGeometry.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3));
-
-        const trail = new TrailRenderer(this.gameState.getScene(), false);
-
-        const material = TrailRenderer.createBaseMaterial();
-
-        material.uniforms.headColor.value.set(0.84, 0.85, 1, 0.0);
-        material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
-
-        material.uniforms.headColor.value.w = 0;
-        material.uniforms.tailColor.value.w = 0;
-
-
-        const trailLength = 20;
-
-        trail.initialize(material, trailLength, false, 0, headGeometry, this.trailPoint);
-        trail.activate();
-        trail.advance();
 
         let lastUpdate = performance.now();
         let opacityGoingUp = false;
         const prevMouse = new THREE.Vector2(-1, -1);
 
+        this.trail = new TrailRenderer(this.gameState.getScene(), false);
+
+        const material = TrailRenderer.createBaseMaterial();
+
+        //material.uniforms.headColor.value.set(0.84, 0.85, 1, 0.0);
+        //material.uniforms.tailColor.value.set(0.64, 0.65, 1, 0.0);
+
+        //material.uniforms.headColor.value.w = 0;
+        //material.uniforms.tailColor.value.w = 0;
+        
+        const trailLength = 20;
+        
+        const headGeometry = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -0.205, 2.3)];
+        headGeometry.push();
+        
+        this.trail.initialize(material, trailLength, false, 0, headGeometry, this.trailPoint);
+        this.updateSwordTrail();
+        this.trail.activate();
+        this.trail.advance();
+        
         const updateTrail = (delta : number) => {
+            if(this.trail == null || !this.trail.isActive) return;
+
             // Update trail mesh
             const time = performance.now();
             if (time - lastUpdate > 10) {
-                trail.advance();
+                this.trail.advance();
                 lastUpdate = time;
             } 
             else {
-                trail.updateHead();
+                this.trail.updateHead();
             }
 
             // Update trail opacity
@@ -274,18 +330,18 @@ export default class Sword {
                 const distance = Math.sqrt(Math.pow(prevMouse.x - this.gameState.mouse.x, 2) + Math.pow(prevMouse.y - this.gameState.mouse.y, 2));
                 const speed = distance / delta;
 
-                if(speed > speedToShowTrail && trail.material.uniforms.headColor.value.w < maxOpacity) {
+                if(speed > speedToShowTrail && this.trail.material.uniforms.headColor.value.w < maxOpacity) {
                     opacityGoingUp = true;
                 }
 
                 if(opacityGoingUp) {
-                    trail.material.uniforms.headColor.value.w += fadeInFactor * delta; 
-                    if(trail.material.uniforms.headColor.value.w >= maxOpacity) {
+                    this.trail.material.uniforms.headColor.value.w += fadeInFactor * delta; 
+                    if(this.trail.material.uniforms.headColor.value.w >= maxOpacity) {
                         opacityGoingUp = false;
                     }
                 }
                 else { 
-                    trail.material.uniforms.headColor.value.w = Math.max(trail.material.uniforms.headColor.value.w - fadeOutFactor * delta, 0);
+                    this.trail.material.uniforms.headColor.value.w = Math.max(this.trail.material.uniforms.headColor.value.w - fadeOutFactor * delta, 0);
                 }
             }
 

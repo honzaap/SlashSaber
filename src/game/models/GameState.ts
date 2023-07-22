@@ -43,17 +43,20 @@ export default class GameState {
         this.world = new CANNON.World();
         this.world.gravity.set(0, -9.82, 0);
         this.logicHandlers = [];
+        let loaded = false;
 
         const loadingManager = new THREE.LoadingManager(() => {
-            this.dispatchEvent(EVENTS.load);
+            if(!loaded) {
+                this.dispatchEvent(EVENTS.ready);
+                loaded = true;
+            }
         });
-
+ 
         this.loader = new GLTFLoader(loadingManager);
 
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath("/libs/draco/");
         this.loader.setDRACOLoader(dracoLoader);
-
     }
 
     public static getInstance() {
@@ -156,6 +159,18 @@ export default class GameState {
         this.settings.name = settings.name;
         this.settings.sensitivity = settings.sensitivity ?? 1;
         this.settings.showCursor = settings.showCursor ?? false;
+
+        const swordChanged = this.settings.bladeModel !== settings.bladeModel 
+            || this.settings.guardModel !== settings.guardModel
+            || this.settings.hiltModel !== settings.hiltModel;
+
+        this.settings.bladeModel = settings.bladeModel ?? "Default";
+        this.settings.guardModel = settings.guardModel ?? "Default";
+        this.settings.hiltModel = settings.hiltModel ?? "Default";
+
+        if(swordChanged) {
+            this.dispatchEvent(EVENTS.swordChanged);
+        }
 
         this.dispatchEvent(EVENTS.settingsChanged);
     }

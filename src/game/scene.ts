@@ -23,7 +23,6 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     resizeRenderer(renderer);
 
     renderer.render(gameState.getScene(), camera);
-    // TODO : Enable with shadow settings
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : keep at basic if not necessary
     renderer.outputColorSpace = THREE.SRGBColorSpace;

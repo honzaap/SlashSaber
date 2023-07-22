@@ -203,9 +203,10 @@ class Transition {
         this.model = model;
 
         this.gameState.sceneAdd(this.model);
-        setTimeout(() => {
-            model.visible = false;
-        }, 20);
+        this.gameState.addEventListener(EVENTS.load, () => {
+            console.log("invisible");
+            this.model.visible = false;
+        });
 
         this.bounds.setFromObject(model);
         this.bounds.getSize(this.size);
