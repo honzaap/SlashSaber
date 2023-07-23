@@ -222,22 +222,23 @@ export const SWORD_PRESETS = [
         color1: "#9ACA9E",
         color2: "#FFFFFF",
     },
-    /*
+    
     {
         name: "Love",
         color1: "#E15A9A",
         color2: "#89CFFF",
     },
     {
+        name: "Insect",
+        color1: "#E99B97",
+        color2: "#8D60D5",
+    },/*
+    {
         name: "Serpent",
         color1: "#2BA086",
         color2: "#F5E061",
     },
-    {
-        name: "Insect",
-        color1: "#E99B97",
-        color2: "#8D60D5",
-    },
+   
     {
         name: "Demon",
         color1: "#b04fff",

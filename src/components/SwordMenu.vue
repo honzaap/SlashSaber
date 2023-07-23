@@ -55,9 +55,15 @@
             </v-card-text>
         </v-card>
         <div class="selected-items">
-            <div class="item"></div>
-            <div class="item"></div>
-            <div class="item"></div>
+            <div class="item">
+                <img :src="`/swords/blade_${settings.bladeModel.toLowerCase()}.png`" alt="Blade" />
+            </div>
+            <div class="item">
+                <img :src="`/swords/guard_${settings.guardModel.toLowerCase()}.png`" alt="Guard" />
+            </div>
+            <div class="item">
+                <img :src="`/swords/hilt_${settings.hiltModel.toLowerCase()}.png`" alt="Hilt" />
+            </div>
         </div>
     </div>
 </template>
@@ -263,13 +269,17 @@ h2 {
         width: 70px;
         height: 70px;
         border: 3px solid var(--primary);
-        background-color: rgba(#fff, 0.22);
+        background-color: rgb(255 255 255 / 43%);
         backdrop-filter: blur(3px);
+        padding: 3px;
 
         img {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            user-select: none;
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
         }
     }
 }

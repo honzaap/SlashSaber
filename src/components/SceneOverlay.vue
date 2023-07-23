@@ -10,9 +10,17 @@
     </div>
     <div class="overlay-container" :class="{fade: overlayState === 1, hide: overlayState === 2}">
         <v-toolbar class="navbar" height="72">
-            <button class="btn-logo" @click="$emit('switch')">
-                <img src="/logo_white.svg" alt="Slash Saber logo" class="logo">
-            </button>
+            <div class="nav-brand">
+                <button class="btn-logo" @click="$emit('switch')">
+                    <img src="/logo_white.svg" alt="Slash Saber logo" class="logo">
+                </button>
+                <v-tooltip text="Slash Saber is open-source!" location="top">
+                    <template v-slot:activator="{ props }">
+                        <v-btn href="https://github.com/honzaap/SlashSaber" target="_blank" @click="$emit('toggleCursor')" v-bind="props" density="compact" 
+                        icon="mdi-github" />
+                    </template>
+                </v-tooltip>
+            </div>
             <div class="score">
                 <p>Your highest score: <span class="highlight">7,500 pts</span></p>
                 <p>Your last score: <span class="highlight">4,200 pts</span></p>
@@ -95,14 +103,6 @@
             <LeaderBoard compact="true" />
         </div>
         <p v-if="paused" class="paused-text">Paused</p>
-        <div class="bottom">
-            <v-tooltip text="Slash Saber is open-source!" location="top left">
-                <template v-slot:activator="{ props }">
-                    <v-btn href="https://github.com/honzaap/SlashSaber" target="_blank" @click="$emit('toggleCursor')" v-bind="props" density="compact" 
-                    icon="mdi-github" color="rgba(0, 0, 0, 0)" />
-                </template>
-            </v-tooltip>
-        </div>
     </div>
 </template>
 
@@ -153,6 +153,22 @@ watch(() => props.hidden, () => {
 </script>
 
 <style scoped lang="scss">
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+
+    .v-btn {
+        font-size: 20px;
+    }
+
+    img {
+        user-select: none;
+        -webkit-user-drag: none;
+        -webkit-user-select: none;
+    }
+}
+
 .lives {
     position: absolute;
     display: flex;
@@ -160,6 +176,7 @@ watch(() => props.hidden, () => {
     left: 10px;
     transition: top 450ms ease;
     z-index: 5;
+    pointer-events: none;
 
     img {
         &:nth-child(2) {
@@ -393,17 +410,6 @@ watch(() => props.hidden, () => {
     user-select: none;
     -webkit-user-drag: none;
     -moz-user-drag: none;
-}
-
-.bottom {
-    position: absolute;
-    right: 20px;
-    bottom: 20px;
-    color: #fff;
-
-    .v-btn {
-        color: #fff;
-    }
 }
 
 .disabled-helper {
