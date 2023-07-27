@@ -22,8 +22,8 @@
                 </v-tooltip>
             </div>
             <div class="score">
-                <p>Your highest score: <span class="highlight">7,500 pts</span></p>
-                <p>Your last score: <span class="highlight">4,200 pts</span></p>
+                <p>Your highest score: <span class="highlight">{{ prettifyScore(highestScore) }} pts</span></p>
+                <p>Your last score: <span class="highlight">{{ prettifyScore(lastScore) }} pts</span></p>
             </div>
             <div class="options">
                 <v-menu :close-on-content-click="false" location="bottom end" :offset="[10, 10]">
@@ -118,7 +118,8 @@ import { reactive } from "vue";
 import { prettifyScore } from "../helpers";
 
 const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings"]);
-const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number, fullscreen : boolean, settings : Settings, lives : number}>();
+const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number,
+    fullscreen : boolean, settings : Settings, lives : number, lastScore : number, highestScore : number}>();
 
 const overlayState = ref(-1);
 const settings = reactive(props.settings);

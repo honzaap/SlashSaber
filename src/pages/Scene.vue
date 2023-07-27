@@ -3,6 +3,7 @@
         <LoadingScreen :isLoading="loading"/>
         <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lives="lives"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
+            :lastScore="lastScore" :highestScore="highestScore"
             @switch="switchPage" @start="startGame" @reset="resetRun" 
             @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
         <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun"/>
@@ -36,6 +37,8 @@ const paused = ref(false);
 const died = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
+const lastScore = ref(0);
+const highestScore = ref(0);
 const lives = ref(3);
 const settings = reactive(new Settings());
 const fullscreen = ref(false);
@@ -268,6 +271,13 @@ onMounted(() => {
 
     gameState.addEventListener(EVENTS.died, () => {
         died.value = true;
+        
+        lastScore.value = gameState.score;
+        if(gameState.score > highestScore.value) {
+            highestScore.value = gameState.score;
+        }
+
+        updateSettings(settings);
         setTimeout(() => {
             gameState.haltGame();
         }, 700);
@@ -310,19 +320,29 @@ function toggleFullscreen() {
 // Update settings in GameState and save them to localStorage
 function updateSettings(newSettings : Settings) {
     gameState.updateSettings(newSettings);
+    const data = {
+        settings: gameState.settings,
+        lastScore: lastScore.value,
+        highestScore: highestScore.value,
+    };
 
-    localStorage.setItem("slash_saber_settings", JSON.stringify(gameState.settings));
+    localStorage.setItem("slash_saber_settings", JSON.stringify(data));
 }
 
 // Load settings from localStorage 
 function loadSettings() {
-    const settingsJson = localStorage.getItem("slash_saber_settings");
-    if(!settingsJson) return;
+    const dataJson = localStorage.getItem("slash_saber_settings");
+    if(!dataJson) return;
 
-    const loadedSettings = JSON.parse(settingsJson) as Settings;
-    gameState.updateSettings(loadedSettings);
+    const loadedData = JSON.parse(dataJson);
+    if(loadedData.settings) {
+        gameState.updateSettings(loadedData.settings);
 
-    settings.replace(loadedSettings);
+        settings.replace(loadedData.settings);
+    }
+
+    lastScore.value = loadedData.lastScore ?? 0;
+    highestScore.value = loadedData.highestScore ?? 0;
 }
 
 </script>

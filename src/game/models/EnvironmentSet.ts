@@ -24,13 +24,13 @@ export default class EnvironmentSet {
 
     private gameState : GameState;
 
-    public constructor(environmentSetTemplate : EnvironmentSetTemplate)  {
-        this.transition = environmentSetTemplate.transition ?? 0;
+    public constructor(template : EnvironmentSetTemplate)  {
+        this.transition = template.transition ?? 0;
         this.gameState = GameState.getInstance();
         let loadedPieces = 0;
         const textureLoader = new THREE.TextureLoader();
 
-        for(const pieceTemplate of environmentSetTemplate.assets) {
+        for(const pieceTemplate of template.assets) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
                 gltf.scene.traverse(obj => {
                     if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
@@ -46,7 +46,7 @@ export default class EnvironmentSet {
                 this.setupMovingPieces(piece);
 
                 loadedPieces++;
-                this.isFullyLoaded = loadedPieces === environmentSetTemplate.assets.length;
+                this.isFullyLoaded = loadedPieces === template.assets.length;
             });
         }
     }

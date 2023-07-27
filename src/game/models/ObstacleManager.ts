@@ -48,7 +48,6 @@ export default class ObstacleManager {
         let loadedObstacles = 0;
 
         for(const template of OBSTACLE_TEMPLTES) {
-            break;
             this.gameState.loadGLTF(`./assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
                 
@@ -120,8 +119,8 @@ export default class ObstacleManager {
             const lastPosition = this.obstacles[this.obstacles.length -1]?.getPosition() ?? new THREE.Vector3(0, 0, -8);
             let newPosition = lastPosition.z - (Math.random() * (this.maxObstacleDistance - this.minObstacleDistance) + this.minObstacleDistance);
 
-            if(this.environmentManager.transition?.isActive) {
-                const bounds = this.environmentManager.transition.getBounds();
+            if(this.environmentManager.activeTransition?.isActive) {
+                const bounds = this.environmentManager.activeTransition.getBounds();
                 const min = bounds.min.z;
                 const max = bounds.max.z + 5;
                 if(newPosition >= min && newPosition <= max) {

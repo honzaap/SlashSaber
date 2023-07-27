@@ -121,7 +121,6 @@ export default class EnvironmentManager {
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
         this.activeTransition = this.transitions[this.activeSet.transition ?? 0];
-        console.log(this.transitions);
         this.activeTransition?.activate();
     }
 
@@ -144,10 +143,10 @@ export default class EnvironmentManager {
 
     private updateSettings() {
         if(this.gameState.settings.graphicsPreset === GraphicsPreset.LOW) {
-            this.maxPointLights = 6;
+            this.maxPointLights = 8;
         }
         else {
-            this.maxPointLights = 10;
+            this.maxPointLights = 13;
         }
     }
 }
