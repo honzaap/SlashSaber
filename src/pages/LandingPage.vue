@@ -34,7 +34,7 @@
             </div>
         </main>
         <div class="leaderboard">
-            <LeaderBoard />
+            <!--LeaderBoard /-->
         </div>
         <img src="/img/background_text.png" alt="Slash Saber" class="background-text">
         <!-- Github corner -->
@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import ButtonSlash from "../components/ButtonSlash.vue";
-import LeaderBoard from "../components/LeaderBoard.vue";
+//import LeaderBoard from "../components/LeaderBoard.vue";
 const emit = defineEmits(["switch"]);
 
 const props = defineProps(["overlay"]);

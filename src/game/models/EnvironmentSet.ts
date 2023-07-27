@@ -4,35 +4,49 @@ import GameState from "./GameState";
 import * as THREE from "three";
 
 type EnvironmentSetTemplate = {
-    asset : string,
-    maxNumber : number,
-    offset : number,
-    spawnLight? : boolean,
+    assets: {
+        asset : string,
+        maxNumber : number,
+        offset : number,
+        spawnLight? : boolean,
+    }[]
+    transition?: number,
 };
 
 export default class EnvironmentSet {
 
     public isActive = false;
-    
+    public transition = 0;
+
     private isFullyLoaded = false;
     private logicHandlers : ((delta : number) => boolean)[] = [];
     private environmentPieces : EnvironmentPiece[] = [];
 
     private gameState : GameState;
 
-    public constructor(environmentSetTemplate : EnvironmentSetTemplate[])  {
+    public constructor(environmentSetTemplate : EnvironmentSetTemplate)  {
+        this.transition = environmentSetTemplate.transition ?? 0;
         this.gameState = GameState.getInstance();
         let loadedPieces = 0;
+        const textureLoader = new THREE.TextureLoader();
 
-        for(const pieceTemplate of environmentSetTemplate) {
+        for(const pieceTemplate of environmentSetTemplate.assets) {
             this.gameState.loadGLTF(`./assets/${pieceTemplate.asset}`, (gltf) => {
+                gltf.scene.traverse(obj => {
+                    if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
+                        const texture = textureLoader.load("./assets/blade_envmap.jpeg");
+                        texture.mapping = THREE.EquirectangularReflectionMapping;
+                        obj.material.envMap = texture;
+                    }
+                });
+
                 const model = gltf.scene;
                 const piece = new EnvironmentPiece(model, pieceTemplate.maxNumber, pieceTemplate.offset, pieceTemplate.spawnLight);
                 this.environmentPieces.push(piece);
                 this.setupMovingPieces(piece);
 
                 loadedPieces++;
-                this.isFullyLoaded = loadedPieces === environmentSetTemplate.length;
+                this.isFullyLoaded = loadedPieces === environmentSetTemplate.assets.length;
             });
         }
     }
@@ -142,7 +156,9 @@ class EnvironmentPiece{
             const availableLight = EnvironmentManager.getInstance().getAvailableLight();
 
             if(availableLight) {
-                newPosition.y = 2.6;
+                const pos = newInstance.children[0]?.position;
+                newPosition.y = pos?.y ? pos.y - 0.3 : 2.6;
+                newPosition.z += pos?.z ? pos.z : 0;
                 availableLight.activate(newPosition);
             }
         }
@@ -210,7 +226,7 @@ class EnvironmentPiece{
                 obj.receiveShadow = false;
                 obj.material.emissive = new THREE.Color(0xbeb979);
                 obj.material.emissiveIntensity = 0.8;
-                obj.material.opacity = 0.99;
+                obj.material.opacity = 1;
                 obj.material.depthWrite = false;
                 obj.material.transparent = false;
             }

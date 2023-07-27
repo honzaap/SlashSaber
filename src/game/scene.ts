@@ -61,16 +61,17 @@ export function resizeRenderer(renderer : THREE.WebGLRenderer) {
 // Create and configure lighting in the scene
 export function setupLighting() {
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.25);
+    //const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xe5e7ff, 1.25);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0);
     dirLight.castShadow = true;
     dirLight.shadow.bias = -0.001;
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
-    dirLight.position.set(-18, 9, -10);
-    dirLight.target.position.set(20, -5, 0);
+    //dirLight.position.set(-18, 9, -10);
+    dirLight.target.position.set(2, -15, 0);
     dirLight.shadow.camera.near = 0.1;
     dirLight.shadow.camera.far = 30;
     dirLight.shadow.camera.left = -38;

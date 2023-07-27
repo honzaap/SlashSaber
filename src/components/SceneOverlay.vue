@@ -100,7 +100,7 @@
             <SwordMenu :settings="settings" :paused="paused"/>
         </div>
         <div class="leaderboard">
-            <LeaderBoard compact="true" />
+            <!--LeaderBoard compact="true" /-->
         </div>
         <p v-if="paused" class="paused-text">Paused</p>
     </div>
@@ -109,7 +109,7 @@
 <script setup lang="ts">
 import { watch } from "vue";
 import ButtonSlash from "./ButtonSlash.vue";
-import LeaderBoard from "./LeaderBoard.vue";
+//import LeaderBoard from "./LeaderBoard.vue";
 import SwordMenu from "./SwordMenu.vue";
 import { ref } from "vue";
 import { GraphicsPreset } from "../game/enums/GraphicsPresset";

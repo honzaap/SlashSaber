@@ -1,13 +1,14 @@
 import GameState from "./GameState";
 import EnvironmentSet from "./EnvironmentSet";
-import { ENVIRONMENT_SET_TEMPLATES, EVENTS, ROOM_TRANSITION_ASSET } from "../../constants";
+import { ENVIRONMENT_SET_TEMPLATES, EVENTS, ROOM_TRANSITION_ASSETS } from "../../constants";
 import * as THREE from "three";
 import { GraphicsPreset } from "../enums/GraphicsPresset";
 import { Settings } from "./Settings";
 
 export default class EnvironmentManager {
 
-    public transition : Transition | null = null;
+    public activeTransition : Transition | null = null;
+    private transitions : Transition[] = [];
 
     private static instance : EnvironmentManager;
 
@@ -18,7 +19,7 @@ export default class EnvironmentManager {
     private nextActiveSet : EnvironmentSet;
 
     private pointLightPool : PoolLight[] = [];
-    private maxPointLights = 10; // TODO : Graphics settings
+    private maxPointLights = 13; 
 
     private lastTransitionDistance = 0;
 
@@ -44,6 +45,8 @@ export default class EnvironmentManager {
             pointLight.castShadow = false;
             this.pointLightPool.push(new PoolLight(pointLight, 5.2));
             this.gameState.sceneAdd(pointLight);
+            //const h = new THREE.PointLightHelper(pointLight);
+            //this.gameState.sceneAdd(h);
         }
 
         this.setupTransition();
@@ -77,7 +80,10 @@ export default class EnvironmentManager {
         }
         this.setupInitialSet();
         this.lastTransitionDistance = 0;
-        this.transition?.reset();
+        for(const transition of this.transitions) {
+            transition.reset();
+        }
+        //this.activeTransition?.reset();
     }
 
     private update = (delta : number) => {
@@ -92,8 +98,8 @@ export default class EnvironmentManager {
         this.nextActiveSet.update(delta);
 
         // Update and play transition animations
-        if(this.transition?.isActive) {
-            this.transition.update(delta);
+        if(this.activeTransition?.isActive) {
+            this.activeTransition.update(delta);
         }
 
         // Move lights in the light pool
@@ -105,7 +111,7 @@ export default class EnvironmentManager {
 
         if(this.gameState.distanceTravelled - this.lastTransitionDistance > 10) { // TODO : change for some variable
             this.makeTransition();
-            const end = Math.abs(this.transition?.getBounds().min.z ?? 0);
+            const end = Math.abs(this.activeTransition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;
         }
     };
@@ -114,14 +120,18 @@ export default class EnvironmentManager {
     private makeTransition() {
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
-        this.transition?.activate();
+        this.activeTransition = this.transitions[this.activeSet.transition ?? 0];
+        console.log(this.transitions);
+        this.activeTransition?.activate();
     }
 
     // Load transition model and setup animations
     private setupTransition() {
-        this.gameState.loadGLTF(`/assets/${ROOM_TRANSITION_ASSET}`, (gltf) => {
-            this.transition = new Transition(gltf.scene, gltf.animations);
-        });
+        for(const asset of ROOM_TRANSITION_ASSETS) {
+            this.gameState.loadGLTF(`/assets/${asset}`, (gltf) => {
+                this.transitions.push(new Transition(gltf.scene, gltf.animations));
+            });
+        }
     }
 
     private setupInitialSet() {
@@ -192,7 +202,7 @@ class Transition {
         this.mixer.timeScale = 0.5;
 
         for(const child of model.children) {
-            const clip = animations.find(c => c.name === child.name);
+            const clip = animations.find(c => c.name.replace(".", "") === child.name);
             if(!clip) continue;
             const animation = this.mixer.clipAction(clip);
             animation.setLoop(THREE.LoopOnce, 1);
