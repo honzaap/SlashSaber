@@ -125,33 +125,37 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     {
         assets: [
             {
-                asset: "floor_3.glb",
+                asset: "floor.glb",
                 maxNumber: 10,
                 offset: 0,
             },
             {
-                asset: "right_wall_3.glb",
+                asset: "right_wall.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "left_wall_3.glb",
+                asset: "left_wall.glb",
                 maxNumber: 7,
                 offset: -0.05,
             },
             {
-                asset: "roof_3.glb",
+                asset: "roof.glb",
                 maxNumber: 19,
                 offset: 0,
-                spawnLight: true,
             },
             {
-                asset: "wall_upper_3.glb",
+                asset: "wall_upper.glb",
                 maxNumber: 7,
                 offset: 0,
             },
+            {
+                asset: "lamp.glb",
+                maxNumber: 10,
+                offset: 7,
+                spawnLight: true,
+            },
         ],
-        transition: 1
     },
     {
         assets: [
@@ -182,6 +186,38 @@ export const ENVIRONMENT_SET_TEMPLATES = [
                 spawnLight: true,
             },
         ],
+    },
+    {
+        assets: [
+            {
+                asset: "floor_3.glb",
+                maxNumber: 10,
+                offset: 0,
+            },
+            {
+                asset: "right_wall_3.glb",
+                maxNumber: 7,
+                offset: 0,
+            },
+            {
+                asset: "left_wall_3.glb",
+                maxNumber: 7,
+                offset: 0,
+            },
+            {
+                asset: "wall_upper_3.glb",
+                maxNumber: 7,
+                offset: 0,
+            },
+            {
+                asset: "roof_3.glb",
+                maxNumber: 19,
+                offset: 0,
+                spawnLight: true,
+            },
+        ],
+        transition: 1,
+        notInitial: true,
     }
 ];
 

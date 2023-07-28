@@ -8,6 +8,12 @@
         <img :class="{hide: lives <= 1}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
         <img :class="{hide: lives <= 2}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
     </div>
+    <div class="pause-helper">
+        <p :class="{anim: hidden}">Press ESC/SPACE to pause</p>
+        <button @click="$emit('pause')" :class="{show: hidden}" class="mobile-pause">
+            <v-icon icon="mdi-menu"></v-icon>
+        </button>
+    </div>
     <div class="overlay-container" :class="{fade: overlayState === 1, hide: overlayState === 2}">
         <v-toolbar class="navbar" height="72">
             <div class="nav-brand">
@@ -117,7 +123,7 @@ import { Settings } from "../game/models/Settings";
 import { reactive } from "vue";
 import { prettifyScore } from "../helpers";
 
-const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings"]);
+const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings", "pause"]);
 const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number,
     fullscreen : boolean, settings : Settings, lives : number, lastScore : number, highestScore : number}>();
 
@@ -167,6 +173,48 @@ watch(() => props.hidden, () => {
         user-select: none;
         -webkit-user-drag: none;
         -webkit-user-select: none;
+    }
+}
+
+.pause-helper {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #fff;
+    
+    button {
+        display: none;
+        background-color: transparent;
+        border: 0;
+    }
+
+    p {
+        pointer-events: none;
+
+        &.anim {
+            animation: helper-fade 1200ms ease 3000ms forwards;
+        }
+    }
+
+    @media (max-width: 560px) {
+        button {
+            display: block;
+        }
+
+        p {
+            display: none;
+        }
+    }
+}
+
+@keyframes helper-fade {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-10px);
+        opacity: 0;
     }
 }
 

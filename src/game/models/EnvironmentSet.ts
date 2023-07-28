@@ -11,12 +11,15 @@ type EnvironmentSetTemplate = {
         spawnLight? : boolean,
     }[]
     transition?: number,
+    notInitial?: boolean,
 };
 
 export default class EnvironmentSet {
 
     public isActive = false;
     public transition = 0;
+    public notInitial = false;
+    public lastUsed = 0;
 
     private isFullyLoaded = false;
     private logicHandlers : ((delta : number) => boolean)[] = [];
@@ -26,6 +29,7 @@ export default class EnvironmentSet {
 
     public constructor(template : EnvironmentSetTemplate)  {
         this.transition = template.transition ?? 0;
+        this.notInitial = template.notInitial ?? false;
         this.gameState = GameState.getInstance();
         let loadedPieces = 0;
         const textureLoader = new THREE.TextureLoader();
@@ -220,7 +224,7 @@ class EnvironmentPiece{
                 obj.material = obj.userData.origMaterial;
                 obj.material.needsUpdate = true;
             }
-            if(obj.material?.opacity < 1) { 
+            /*if(obj.material?.opacity < 1) { 
                 // Make objects visible, but still able to pass light and godrays
                 obj.castShadow = false;
                 obj.receiveShadow = false;
@@ -229,7 +233,7 @@ class EnvironmentPiece{
                 obj.material.opacity = 1;
                 obj.material.depthWrite = false;
                 obj.material.transparent = false;
-            }
+            }*/
         }
         if (obj?.children != null) {
             for (const child of obj.children) {

@@ -22,6 +22,7 @@ export default class EnvironmentManager {
     private maxPointLights = 13; 
 
     private lastTransitionDistance = 0;
+    private nextTransitionOffset = 10;
 
     private constructor() {
         this.gameState = GameState.getInstance();
@@ -45,8 +46,6 @@ export default class EnvironmentManager {
             pointLight.castShadow = false;
             this.pointLightPool.push(new PoolLight(pointLight, 5.2));
             this.gameState.sceneAdd(pointLight);
-            //const h = new THREE.PointLightHelper(pointLight);
-            //this.gameState.sceneAdd(h);
         }
 
         this.setupTransition();
@@ -62,6 +61,8 @@ export default class EnvironmentManager {
                 this.gameState.reset();
             }
         });
+
+        this.nextTransitionOffset = Math.random() * 20 + 50;
     }
 
     public static getInstance() : EnvironmentManager {
@@ -83,7 +84,6 @@ export default class EnvironmentManager {
         for(const transition of this.transitions) {
             transition.reset();
         }
-        //this.activeTransition?.reset();
     }
 
     private update = (delta : number) => {
@@ -92,7 +92,12 @@ export default class EnvironmentManager {
             this.activeSet.isActive = false;
             this.activeSet = this.nextActiveSet;
             this.activeSet.isActive = true;
-            this.nextActiveSet = this.environmentSets.filter(set => set !== this.activeSet)[0];
+            const availableSets = this.environmentSets.filter(set => set !== this.activeSet);
+            const underUsed = availableSets.find(s => s.lastUsed >= 3);
+            this.nextActiveSet = underUsed ?? availableSets[Math.floor(Math.random() * availableSets.length)];
+            for(const set of this.environmentSets.filter(s => s !== this.nextActiveSet)) {
+                set.lastUsed++;
+            }
         }
 
         this.nextActiveSet.update(delta);
@@ -109,7 +114,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 10) { // TODO : change for some variable
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > this.nextTransitionOffset) { // TODO : change for some variable
             this.makeTransition();
             const end = Math.abs(this.activeTransition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;
@@ -120,8 +125,10 @@ export default class EnvironmentManager {
     private makeTransition() {
         this.activeSet.isActive = false;
         this.nextActiveSet.setAsNext();
+        this.nextActiveSet.lastUsed = 0;
         this.activeTransition = this.transitions[this.activeSet.transition ?? 0];
         this.activeTransition?.activate();
+        this.nextTransitionOffset = Math.random() * 20 + 50;
     }
 
     // Load transition model and setup animations
@@ -134,11 +141,17 @@ export default class EnvironmentManager {
     }
 
     private setupInitialSet() {
-        this.activeSet = this.environmentSets[0]; // TODO : choose randomly
-        this.nextActiveSet = this.environmentSets[1]; // TODO : choose randomly
-
+        const availableInitial = this.environmentSets.filter(set => !set.notInitial);
+        this.activeSet = availableInitial[Math.floor(Math.random() * availableInitial.length)];
+        const availableNext = this.environmentSets.filter(set => set !== this.activeSet);
+        this.nextActiveSet = availableNext[Math.floor(Math.random() * availableNext.length)];
+    
         this.activeSet.isActive = true;
         this.nextActiveSet.isActive = false;
+
+        for(const set of this.environmentSets) {
+            set.lastUsed = 0;
+        }
     }
 
     private updateSettings() {

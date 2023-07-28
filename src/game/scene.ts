@@ -60,7 +60,7 @@ export function resizeRenderer(renderer : THREE.WebGLRenderer) {
 
 // Create and configure lighting in the scene
 export function setupLighting() {
-    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.25);
+    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.45);
     //const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xe5e7ff, 1.25);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
@@ -78,7 +78,7 @@ export function setupLighting() {
     dirLight.shadow.camera.right = 0;
     dirLight.shadow.camera.top = 5;
     dirLight.shadow.camera.bottom = -8;
-    gameState.sceneAdd(dirLight);
+    //gameState.sceneAdd(dirLight);
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
         if(gameState.settings.graphicsPreset === GraphicsPreset.LOW) {

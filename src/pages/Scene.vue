@@ -4,7 +4,7 @@
         <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lives="lives"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
             :lastScore="lastScore" :highestScore="highestScore"
-            @switch="switchPage" @start="startGame" @reset="resetRun" 
+            @switch="switchPage" @start="startGame" @reset="resetRun" @pause="pause"
             @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
         <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun"/>
         <canvas :class="{'no-cursor' : !settings.showCursor}" ref="canvas" id="canvas"></canvas>
@@ -114,7 +114,9 @@ async function createScene() {
         setAllCulled(scene, true);
         renderer.compile(scene, camera);
 
-        gameState.dispatchEvent(EVENTS.load);
+        setTimeout(() => {
+            gameState.dispatchEvent(EVENTS.load);
+        });
     });
 }
 
@@ -231,19 +233,8 @@ onMounted(() => {
     });
 
     window.addEventListener("keyup", (e : KeyboardEvent) => {
-        if(e.key === "Escape") {
-            fullscreen.value = false;
-            if(died.value) {
-                return;
-            }
-            if(gameState.started && gameState.halted) { // Resume game from pause
-                gameState.startGame();
-                hideOverlay.value = true;
-            }
-            else if(gameState.started && !gameState.halted) { // Pause game
-                gameState.haltGame();
-                hideOverlay.value = false;
-            }
+        if(e.key === "Escape" || e.key === " " && !paused.value) {
+            pause();
         }
         else if(e.key === "F11") {
             fullscreen.value = !fullscreen.value;
@@ -283,6 +274,21 @@ onMounted(() => {
         }, 700);
     });
 });
+
+function pause() {
+    fullscreen.value = false;
+    if(died.value) {
+        return;
+    }
+    if(gameState.started && gameState.halted) { // Resume game from pause
+        gameState.startGame();
+        hideOverlay.value = true;
+    }
+    else if(gameState.started && !gameState.halted) { // Pause game
+        gameState.haltGame();
+        hideOverlay.value = false;
+    }
+}
 
 function startGame() {
     hideOverlay.value = true;
