@@ -114,7 +114,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > this.nextTransitionOffset) { // TODO : change for some variable
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 5) { //this.nextTransitionOffset
             this.makeTransition();
             const end = Math.abs(this.activeTransition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;

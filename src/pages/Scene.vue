@@ -18,7 +18,6 @@
  */
 
 import * as THREE from "three";
-import GUIManager from "../game/utils/GUIManager.ts";
 import Sword from "../game/models/Sword.ts";
 import GameState from "../game/models/GameState.ts";
 import { onMounted, ref, reactive } from "vue";
@@ -80,8 +79,6 @@ async function createScene() {
         if(Date.now() >= timeTarget){
             gameState.update();
 
-            GUIManager.updateStats();
-
             renderer.render(scene, camera);
             timeTarget += dt;
             if(Date.now() >= timeTarget){
@@ -106,6 +103,7 @@ async function createScene() {
     gameState.addEventListener(EVENTS.ready, () => {
         function setAllCulled(obj : THREE.Object3D, culled : boolean) {
             obj.frustumCulled = culled;
+            obj.visible = true;
             obj.children.forEach(child => setAllCulled(child, culled));
         }
 
@@ -114,8 +112,8 @@ async function createScene() {
         setAllCulled(scene, true);
         renderer.compile(scene, camera);
 
+        gameState.dispatchEvent(EVENTS.load);
         setTimeout(() => {
-            gameState.dispatchEvent(EVENTS.load);
         });
     });
 }

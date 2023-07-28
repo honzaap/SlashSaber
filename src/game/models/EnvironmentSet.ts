@@ -70,13 +70,34 @@ export default class EnvironmentSet {
         for(const piece of this.environmentPieces) {
             piece.initialPosition = new THREE.Vector3(0, 0, -65);
         }
+        /*
+        let loadedPieces = 0;
+        let waitTime = 0;
+        for(const piece of this.environmentPieces) {
+            for(let i = piece.activeInstances(); i < piece.maxNumber; i++) {
+                // ONI SE NECACHUJOU? ZKUSIT ONAFTERRENDRE PRO KAŽDEJ ENV PIECE
+                setTimeout(() => {
+                    console.log(waitTime);
+                    piece.activateNewInstance();
+                    if(i === piece.maxNumber -1) loadedPieces++;
+                
+                    if(loadedPieces === this.environmentPieces.length) {
+                    }
+                }, waitTime);
+                
+                waitTime += 1000;
+            }
+        }*/
         this.isActive = true;
     }
 
     public reset() {
         this.isActive = false;
         for(const piece of this.environmentPieces) {
-            piece.instancePool.map(i => i.visible = false);
+            for(const instance of piece.instancePool) {
+                instance.visible = false;
+                instance.userData.visible = false;
+            }
             piece.initialPosition = null;
             piece.initialPosition = new THREE.Vector3(0, 0, 0);
         }
@@ -102,6 +123,7 @@ export default class EnvironmentSet {
                 instance.position.z += this.gameState.movingSpeed * delta;
                 if(instance.position.z >= despawnPosition) {
                     instance.visible = false;
+                    instance.userData.visible = false;
                 }
             }
 
@@ -155,6 +177,7 @@ class EnvironmentPiece{
 
         newInstance.position.z = newPosition.z;
         newInstance.visible = true;
+        newInstance.userData.visible = true;
 
         if(this.spawnLight) {
             const availableLight = EnvironmentManager.getInstance().getAvailableLight();
@@ -169,7 +192,7 @@ class EnvironmentPiece{
     }
 
     public activeInstances() {
-        return this.instancePool.filter(i => i.visible).length;
+        return this.instancePool.filter(i => i.userData.visible).length;
     }
 
     public updateSettings() {
@@ -187,6 +210,7 @@ class EnvironmentPiece{
         for(let i = 0; i < this.maxNumber; i++) {
             const instance = this.model.clone(true);
             instance.visible = false;
+            instance.userData.visible = false;
             instance.position.set(0, 0, 7);
             this.gameState.sceneAdd(instance);
             this.instancePool.push(instance);
@@ -194,12 +218,12 @@ class EnvironmentPiece{
     }
 
     private getAvailableInstance() {
-        return this.instancePool.find(i => !i.visible);
+        return this.instancePool.find(i => !i.userData.visible);
     }
 
     private getFurthestActiveInstance() {
         let furthest = this.instancePool[0];
-        for(const instance of this.instancePool.filter(i => i.visible)) {
+        for(const instance of this.instancePool.filter(i => i.userData.visible)) {
             if(instance.position.z < furthest.position.z) {
                 furthest = instance;
             }

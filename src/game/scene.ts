@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import GUIManager from "../game/utils/GUIManager.ts";
 import * as CANNON from "cannon-es";
 import GameState from "../game/models/GameState.ts";
 import ObstacleManager from "../game/models/ObstacleManager.ts";
@@ -88,8 +87,6 @@ export function setupLighting() {
             hemiLight.intensity = 1.25;
         }
     });
-
-    GUIManager.registerLighting(hemiLight);
 }
 
 // Create and setup anything environment-related
@@ -117,8 +114,6 @@ export function setupEnvironment() {
     worldRoof.position.y = 4;
     worldRoof.matrixAutoUpdate = false;
     gameState.sceneAdd(worldRoof);
-
-    GUIManager.registerEnvironment();
 }
 
 // Adds static ground and walls to physics world
