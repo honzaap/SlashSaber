@@ -17,6 +17,7 @@ export const EVENTS = {
     died: "onAfterDeath",
     settingsChanged: "onAfterSettingsChanged",
     swordChanged: "onAfterSwordChanged",
+    addScore: "onAddScore",
 };
 
 export const SPARK_ASSET = "spark_texture.png";

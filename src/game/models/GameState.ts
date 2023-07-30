@@ -36,7 +36,7 @@ export default class GameState {
     private logicHandlers : ((delta : number) => void)[];
 
     // Dictionary with string key and list of callback functions
-    private events : { [key: string] : (() => void)[] } = {};
+    private events : { [key: string] : ((args : object | string | number | null) => void)[] } = {};
 
     private constructor() {
         this.scene = new THREE.Scene();
@@ -104,6 +104,7 @@ export default class GameState {
 
     public addScore(amount : number) {
         this.score += amount;
+        this.dispatchEvent(EVENTS.addScore, amount);
     }
 
     public sceneAdd(object : THREE.Object3D) : void {
@@ -176,16 +177,16 @@ export default class GameState {
         this.dispatchEvent(EVENTS.settingsChanged);
     }
 
-    public addEventListener(event : string, callback : (() => void)) {
+    public addEventListener(event : string, callback : ((args : object | string | number | null) => void)) {
         this.events[event] = this.events[event] ? [...this.events[event], callback] : [callback];
     }
 
-    public dispatchEvent(event : string) {
+    public dispatchEvent(event : string, args : object | string | number | null = null) {
         const callbacks = this.events[event];
         if(!callbacks) return;
 
         for(const callback of callbacks) {
-            callback();
+            callback(args);
         }
     }
 }

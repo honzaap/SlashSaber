@@ -116,6 +116,10 @@ async function createScene() {
         setTimeout(() => {
         });
     });
+
+    gameState.addEventListener(EVENTS.addScore, (e) => {
+        console.log(e);
+    });
 }
 
 // Create and cofigure camera and return it

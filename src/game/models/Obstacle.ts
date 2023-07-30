@@ -8,6 +8,9 @@ import { SliceDirection } from "../enums/SliceDirection";
 
 export class Obstacle {
     
+    public slashed = false;
+    public slicedTimes = 0;
+
     private model = new THREE.Object3D();
     private obstacleModel = new THREE.Mesh();
     private boundingBox = new THREE.Box3();
@@ -22,7 +25,6 @@ export class Obstacle {
     private readonly despawnPosition = 3;
 
     private hide = false;
-    public slashed = false;
 
     private mixer : THREE.AnimationMixer | null = null;
     private animationAction : THREE.AnimationAction | null = null;
@@ -204,7 +206,8 @@ export class Obstacle {
         this.gameState.sceneAdd(slicedPiece);
         this.model.add(this.obstacleModel);
 
-        this.gameState.addScore(5);
+        //this.gameState.addScore(5);
+        this.slicedTimes++;
 
         this.obstacleModel.position.copy(localPos);
 

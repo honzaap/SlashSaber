@@ -12,6 +12,7 @@ export default class Sword {
     private mouseDirection = new THREE.Vector2();
     private deltaI = new THREE.Vector2();   
     private prevMouse = new THREE.Vector2();
+    private speed = 0;
 
     private gameState : GameState;
     private obstacleManager : ObstacleManager;
@@ -20,6 +21,7 @@ export default class Sword {
     private boundingBox = new OBB();
     private bladeMesh = new THREE.Object3D();
     private bladeSize = new THREE.Vector3();
+    private sliceDirectionUsage = [0, 0, 0, 0, 0, 0, 0, 0];
 
     private contactPointBlade = new THREE.Object3D();
     private contactPointHilt = new THREE.Object3D();
@@ -28,6 +30,11 @@ export default class Sword {
     private trail : TrailRenderer | undefined;
 
     private sensitivity : number;
+
+    private readonly scoreBase = 5;
+    private readonly maxSpeedMultiplier = 1.4;
+    private readonly speedMultiplierStart = 7000;
+    private readonly variationMultiplierStart = 3;
 
     //private sliceSounds : HTMLMediaElement[] = [];
 
@@ -235,13 +242,28 @@ export default class Sword {
 
                 // Play sound
                 //this.sliceSounds[this.normalizeSliceDirection(sliceDirection)].play();
-                
+
                 // Use contact points as coplanar points
                 const points : THREE.Vector3[] = [collisionPoint, new THREE.Vector3(), new THREE.Vector3()];
                 this.contactPointHilt.getWorldPosition(points[1]);
                 this.contactPointBlade.getWorldPosition(points[2]);
-
+                
                 this.obstacleManager.sliceObstacle(obstacle, points, sliceDirection, sliceForce);
+                
+                // Calculate score and add it to gamestate
+                const normalized = this.normalizeSliceDirection(sliceDirection);
+                this.sliceDirectionUsage = this.sliceDirectionUsage.map((dir : number, i : number) => {
+                    return Math.max(dir + (normalized === i ? 2 : -1), 0);
+                });
+                const speedMultiplier = Math.min(Math.max(this.speed / this.speedMultiplierStart, 1), this.maxSpeedMultiplier);
+                const slicedTimesMultiplier = 1 + obstacle.slicedTimes * 0.2;
+                let variationMultiplier = 1; // Multiplier below 1 for overused slicing directions
+                if(this.sliceDirectionUsage[normalized] > this.variationMultiplierStart) {
+                    variationMultiplier = 1 / (this.sliceDirectionUsage[normalized] - this.variationMultiplierStart);
+                }
+        
+                const score = this.scoreBase * speedMultiplier * slicedTimesMultiplier * variationMultiplier;
+                this.gameState.addScore(score);
             }
         }
     };
@@ -253,13 +275,15 @@ export default class Sword {
         this.lastMouse.set(0, 0);
         this.prevMouse.set(0, 0);
         this.deltaI.set(0, 0);
+        this.sliceDirectionUsage = [0, 0, 0, 0, 0, 0, 0, 0];
+        this.speed = 0;
     }
 
-    /*private normalizeSliceDirection(sliceDirection : THREE.Vector3) {
+    private normalizeSliceDirection(sliceDirection : THREE.Vector3) {
         const normalized = new THREE.Vector2(sliceDirection.x, sliceDirection.y);
         normalized.normalize();
         return (Math.round(8 * normalized.angle() / (2 * Math.PI) + 8 ) % 8);
-    }*/
+    }
 
     private updateSwordTrail() {
         if(this.trail == null) return;
@@ -324,9 +348,9 @@ export default class Sword {
             // Update trail opacity
             if(prevMouse.x !== -1 ) {
                 const distance = Math.sqrt(Math.pow(prevMouse.x - this.gameState.mouse.x, 2) + Math.pow(prevMouse.y - this.gameState.mouse.y, 2));
-                const speed = distance / delta;
+                this.speed = distance / delta;
 
-                if(speed > speedToShowTrail && this.trail.material.uniforms.headColor.value.w < maxOpacity) {
+                if(this.speed > speedToShowTrail && this.trail.material.uniforms.headColor.value.w < maxOpacity) {
                     opacityGoingUp = true;
                 }
 
