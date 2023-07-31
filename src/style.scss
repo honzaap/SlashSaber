@@ -57,3 +57,26 @@ body {
 .v-label {
     opacity: 1;
 }
+
+.added-score {
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translate(150%, -50%);
+    font-weight: 700;
+    color: var(--primary);
+    animation: added-score-fadeout 1200ms ease forwards;
+}
+
+@keyframes added-score-fadeout {
+    0%, 20% {
+        transform: translate(150%, -50%);
+        opacity: 1;
+        color: var(--primary);
+    }
+    100% {
+        transform: translate(150%, -120%);
+        opacity: 0;
+        color: #fff;
+    }
+}

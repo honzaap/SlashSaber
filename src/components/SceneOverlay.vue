@@ -1,5 +1,5 @@
 <template>
-    <span class="current-score" :class="{show: hidden, offset: !hidden && paused, died: lives <= 0}">
+    <span ref="currScore" class="current-score" :class="{show: hidden, offset: !hidden && paused, died: lives <= 0}">
         <span class="text">Your current score: </span>
         {{ prettifyScore(currentScore) }} pts
     </span>
@@ -125,12 +125,28 @@ import { prettifyScore } from "../helpers";
 
 const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings", "pause"]);
 const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number,
-    fullscreen : boolean, settings : Settings, lives : number, lastScore : number, highestScore : number}>();
+    fullscreen : boolean, settings : Settings, lives : number, lastScore : number, highestScore : number,
+    addedScore : {value : number}}>();
 
 const overlayState = ref(-1);
+const currScore = ref(null);
 const settings = reactive(props.settings);
 
 const graphicsOptions = Object.values(GraphicsPreset);
+
+watch(() => props.addedScore, () => {
+    if(currScore.value) {
+        const score = document.createElement("span");
+        score.classList.add("added-score");
+        score.innerHTML = "+" + props.addedScore.value.toString();
+        (currScore.value as HTMLElement).appendChild(score);
+        setTimeout(() => {
+            if(currScore.value) {
+                (currScore.value as HTMLElement).removeChild(score);
+            }
+        }, 1200);
+    }
+});
 
 watch(() => props.settings, () => {
     settings.replace(props.settings);

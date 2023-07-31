@@ -3,7 +3,7 @@
         <LoadingScreen :isLoading="loading"/>
         <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lives="lives"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
-            :lastScore="lastScore" :highestScore="highestScore"
+            :lastScore="lastScore" :highestScore="highestScore" :addedScore="addedScore"
             @switch="switchPage" @start="startGame" @reset="resetRun" @pause="pause"
             @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
         <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun"/>
@@ -36,6 +36,7 @@ const paused = ref(false);
 const died = ref(false);
 const hideOverlay = ref(false);
 const currentScore = ref(0);
+const addedScore= ref({value: -1});
 const lastScore = ref(0);
 const highestScore = ref(0);
 const lives = ref(3);
@@ -113,12 +114,10 @@ async function createScene() {
         renderer.compile(scene, camera);
 
         gameState.dispatchEvent(EVENTS.load);
-        setTimeout(() => {
-        });
     });
 
     gameState.addEventListener(EVENTS.addScore, (e) => {
-        console.log(e);
+        addedScore.value = {value: parseFloat((e as number).toFixed(1))};
     });
 }
 
