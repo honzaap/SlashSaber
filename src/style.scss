@@ -69,13 +69,13 @@ body {
 }
 
 @keyframes added-score-fadeout {
-    0%, 20% {
+    0%, 10% {
         transform: translate(150%, -50%);
         opacity: 1;
         color: var(--primary);
     }
     100% {
-        transform: translate(150%, -120%);
+        transform: translate(150%, -130%);
         opacity: 0;
         color: #fff;
     }

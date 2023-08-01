@@ -31,10 +31,10 @@ export default class Sword {
 
     private sensitivity : number;
 
-    private readonly scoreBase = 5;
-    private readonly maxSpeedMultiplier = 1.4;
+    private readonly scoreBase = 10;
+    private readonly maxSpeedMultiplier = 1.55;
     private readonly speedMultiplierStart = 7000;
-    private readonly variationMultiplierStart = 3;
+    //private readonly variationMultiplierStart = 3;
 
     //private sliceSounds : HTMLMediaElement[] = [];
 
@@ -131,19 +131,23 @@ export default class Sword {
         
                     // Setup contact points
                     const cpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-                    this.contactPointBlade = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0xff00ff}));
+                    this.contactPointBlade = new THREE.Mesh(cpGeo);
                     this.contactPointBlade.position.set(0, size.y / 2, size.z * -1);
-                    this.contactPointHilt = new THREE.Mesh(cpGeo, new THREE.MeshStandardMaterial({color: 0x000000}));
+                    this.contactPointHilt = new THREE.Mesh(cpGeo);
                     this.contactPointHilt.position.set(0, size.y / 2, 0);
         
                     // Setup a point for the trail to follow
                     const tpGeo = new THREE.BoxGeometry(0.04, 0.04, 0.04);
-                    this.trailPoint = this.trailPoint ?? new THREE.Mesh(tpGeo, new THREE.MeshStandardMaterial({color: 0xffff00}));
+                    this.trailPoint = this.trailPoint ?? new THREE.Mesh(tpGeo);
                     this.trailPoint.position.set(0, size.y + 0.1, -size.z + 0.2);
-        
+                    
                     this.model.add(this.contactPointBlade);
                     this.model.add(this.contactPointHilt);
                     this.model.add(this.trailPoint);
+
+                    this.trailPoint.visible = false;
+                    this.contactPointBlade.visible = false;
+                    this.contactPointHilt.visible = false;
         
                     //this.gameState.sceneAdd(this.model);
         
@@ -153,11 +157,15 @@ export default class Sword {
                     else {
                         this.updateSwordTrail();
                     }
-        
-                    this.setTrailPointVisibility(false);
                 }
             });
         }
+
+        this.gameState.addEventListener(EVENTS.load, () => {
+            this.trailPoint.visible = false;
+            this.contactPointBlade.visible = false;
+            this.contactPointHilt.visible = false;
+        });
     }
 
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
@@ -256,13 +264,15 @@ export default class Sword {
                     return Math.max(dir + (normalized === i ? 2 : -1), 0);
                 });
                 const speedMultiplier = Math.min(Math.max(this.speed / this.speedMultiplierStart, 1), this.maxSpeedMultiplier);
-                const slicedTimesMultiplier = 1 + obstacle.slicedTimes * 0.2;
-                let variationMultiplier = 1; // Multiplier below 1 for overused slicing directions
-                if(this.sliceDirectionUsage[normalized] > this.variationMultiplierStart) {
-                    variationMultiplier = 1 / (this.sliceDirectionUsage[normalized] - this.variationMultiplierStart);
-                }
+                const slicedTimesMultiplier = 1 + obstacle.slicedTimes * 0.3;
+
+                // It doesn't really work too well... 
+                //let variationMultiplier = 1; // Multiplier below 1 for overused slicing directions
+                //if(this.sliceDirectionUsage[normalized] > this.variationMultiplierStart) {
+                //    variationMultiplier = 1 / (this.sliceDirectionUsage[normalized] - this.variationMultiplierStart);
+                //}
         
-                const score = this.scoreBase * speedMultiplier * slicedTimesMultiplier * variationMultiplier;
+                const score = this.scoreBase * speedMultiplier * slicedTimesMultiplier;// * variationMultiplier;
                 this.gameState.addScore(score);
             }
         }
@@ -370,14 +380,5 @@ export default class Sword {
         };
 
         this.gameState.addLogicHandler(updateTrail);
-    }
-
-    public setContactPointVisibility(visible : boolean) {
-        this.contactPointBlade.visible = visible;
-        this.contactPointHilt.visible = visible;
-    }
-
-    public setTrailPointVisibility(visible : boolean) {
-        this.trailPoint.visible = visible;
     }
 }
