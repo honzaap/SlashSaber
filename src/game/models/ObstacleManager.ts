@@ -121,7 +121,7 @@ export default class ObstacleManager {
 
             if(this.environmentManager.activeTransition?.isActive) {
                 const bounds = this.environmentManager.activeTransition.getBounds();
-                const min = bounds.min.z;
+                const min = bounds.min.z - 2;
                 const max = bounds.max.z + 5;
                 if(newPosition >= min && newPosition <= max) {
                     newPosition = min - this.minObstacleDistance;
@@ -221,7 +221,7 @@ export default class ObstacleManager {
     }
 
     private initParticles() {
-        const map = new THREE.TextureLoader().load(`./assets/${SPARK_ASSET}`);
+        const map = this.gameState.loadTexture(`./assets/${SPARK_ASSET}`);
         const material = new THREE.SpriteMaterial({
             map,
             color: 0xff0000,

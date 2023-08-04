@@ -1,12 +1,12 @@
 <template>
-    <span ref="currScore" class="current-score" :class="{show: hidden, offset: !hidden && paused, died: lives <= 0}">
+    <span ref="currScore" class="current-score" :class="{show: hidden, offset: !hidden && paused, died: lifes <= 0}">
         <span class="text">Your current score: </span>
         {{ prettifyScore(currentScore) }} pts
     </span>
-    <div class="lives" :class="{show: hidden, died: lives <= 0}">
-        <img :class="{hide: lives <= 0}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
-        <img :class="{hide: lives <= 1}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
-        <img :class="{hide: lives <= 2}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+    <div class="lifes" :class="{show: hidden, died: lifes <= 0}">
+        <img :class="{hide: lifes <= 0}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+        <img :class="{hide: lifes <= 1}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
+        <img :class="{hide: lifes <= 2}" src="/icons/bamboo_stick.svg" alt="Bamboo stick">
     </div>
     <div class="pause-helper">
         <p :class="{anim: hidden}">Press ESC/SPACE to pause</p>
@@ -102,8 +102,12 @@
             <ButtonSlash :text="paused ? 'Resume Game' : 'Start Slashing'" @click="$emit('start')"/>
             <ButtonSlash v-if="paused" :alt="true" text="Reset Run" @click="$emit('reset')"/>
         </div>
-        <div class="your-sword">
+        <div class="your-sword" :class="{hide: !swordMenuOpen}">
             <SwordMenu :settings="settings" :paused="paused"/>
+            <button class="btn-open" @click="swordMenuOpen = !swordMenuOpen">
+                <v-icon icon="mdi-chevron-right" v-if="!swordMenuOpen" />
+                <v-icon icon="mdi-chevron-left" v-else/>
+            </button>
         </div>
         <div class="leaderboard">
             <!--LeaderBoard compact="true" /-->
@@ -125,11 +129,12 @@ import { prettifyScore } from "../helpers";
 
 const emit = defineEmits(["switch", "start", "reset", "toggleFullscreen", "updateSettings", "pause"]);
 const props = defineProps<{hidden : boolean, paused : boolean, currentScore : number,
-    fullscreen : boolean, settings : Settings, lives : number, lastScore : number, highestScore : number,
+    fullscreen : boolean, settings : Settings, lifes : number, lastScore : number, highestScore : number,
     addedScore : {value : number}}>();
 
 const overlayState = ref(-1);
 const currScore = ref(null);
+const swordMenuOpen = ref(window.innerWidth > 1200);
 const settings = reactive(props.settings);
 
 const graphicsOptions = Object.values(GraphicsPreset);
@@ -170,6 +175,12 @@ watch(() => props.hidden, () => {
     }
     else {
         overlayState.value = 0;
+    }
+});
+
+window.addEventListener("resize", () => {
+    if(!swordMenuOpen.value) {
+        swordMenuOpen.value = window.innerWidth > 1200;
     }
 });
 
@@ -234,7 +245,7 @@ watch(() => props.hidden, () => {
     }
 }
 
-.lives {
+.lifes {
     position: absolute;
     display: flex;
     top: -65px;
@@ -249,7 +260,7 @@ watch(() => props.hidden, () => {
         }
 
         &.hide {
-            animation: lives-hide 750ms ease forwards;
+            animation: lifes-hide 750ms ease forwards;
         }
     }
 
@@ -262,7 +273,7 @@ watch(() => props.hidden, () => {
     }
 }
 
-@keyframes lives-hide {
+@keyframes lifes-hide {
     0% {
         filter: saturate(1) hue-rotate(0);
         transform: scale(1);
@@ -326,6 +337,23 @@ watch(() => props.hidden, () => {
     }
 }
 
+@media (max-width: 768px) {
+    .current-score {
+        &.offset {
+            top: 150px;
+        }
+    }
+}
+
+@media (max-width: 560px) {
+    .current-score {
+        &.offset {
+            left: 20px;
+            transform: none;
+        }
+    }
+}
+
 .overlay-container {
     position: absolute;
     left: 0;
@@ -351,6 +379,7 @@ watch(() => props.hidden, () => {
     padding: 20px 26px;
     background-color: transparent;
     color: #fff;
+    overflow: visible;
 
     .btn-logo {
         img {
@@ -382,6 +411,27 @@ watch(() => props.hidden, () => {
     }
 }
 
+@media (max-width: 768px) {
+    .navbar {
+        .score {
+            top: 75px;
+        }
+    }
+}
+
+@media (max-width: 560px) {
+    .navbar {
+        .options {
+            flex-direction: column;
+        }
+
+        .score {
+            left: 0;
+            transform: none;
+        }
+    }
+}
+
 .buttons {
     display: flex;
     position: absolute;
@@ -392,11 +442,47 @@ watch(() => props.hidden, () => {
     transform: translateX(-50%);
 }
 
+@media (max-width: 1400px) {
+    .buttons {
+        top: 60%;
+    }
+}
+
 .your-sword {
     position: absolute;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
+    transition: transform 400ms ease;
+
+    .btn-open {
+        position: absolute;
+        right: -145px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: var(--primary);
+        transition: right 400ms ease;
+        display: none;
+    }
+
+    &.hide {
+        transform: translate(calc(-100% - 120px), -50%);
+
+        .btn-open {
+            right: -155px;
+        }
+    }
+}
+
+@media (max-width: 1200px) {
+    .your-sword {
+        .btn-open {
+            display: block;
+        }
+    }
 }
 
 .leaderboard {
@@ -475,6 +561,13 @@ watch(() => props.hidden, () => {
     user-select: none;
     -webkit-user-drag: none;
     -moz-user-drag: none;
+    pointer-events: none;
+}
+
+@media (max-width: 560px) {
+    .paused-text {
+        font-size: 25vw;
+    }
 }
 
 .disabled-helper {

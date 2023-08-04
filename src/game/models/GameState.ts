@@ -17,13 +17,14 @@ export default class GameState {
     public score = 0;
     public halted = false; // The render process and clock stopped completely
     public started = false;
-    public lives = 3;
+    public lifes = 3;
     public settings = new Settings();
 
     private static instance : GameState;
     private scene : THREE.Scene;
     private world : CANNON.World;
     private loader : GLTFLoader;
+    private textureLoader : THREE.TextureLoader;
 
     private clock = new THREE.Clock();
 
@@ -41,6 +42,7 @@ export default class GameState {
     private constructor() {
         this.scene = new THREE.Scene();
         this.world = new CANNON.World();
+        this.textureLoader = new THREE.TextureLoader();
         this.world.gravity.set(0, -9.82, 0);
         this.logicHandlers = [];
         let loaded = false;
@@ -86,16 +88,16 @@ export default class GameState {
         this.started = false;
         this.halted = false;
         this.mouse.set(-1, -1);
-        this.lives = 3;
+        this.lifes = 3;
         this.score = 0;
         ObstacleManager.getInstance().reset();
         EnvironmentManager.getInstance().reset();
     }
 
     public gotHit() {
-        this.lives--;
+        this.lifes--;
         this.dispatchEvent(EVENTS.hit);
-        if(this.lives <= 0) {
+        if(this.lifes <= 0) {
             this.moving = false;
             this.movingSpeed = 0;
             this.dispatchEvent(EVENTS.died);
@@ -151,6 +153,10 @@ export default class GameState {
 
     public loadGLTF(path : string, callback : (model : GLTF) => void) {
         this.loader.load(path, callback);
+    }
+
+    public loadTexture(path : string) {
+        return this.textureLoader.load(path);
     }
 
     public updateSettings(settings : Settings) {

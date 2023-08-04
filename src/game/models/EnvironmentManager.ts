@@ -114,7 +114,7 @@ export default class EnvironmentManager {
             }
         }
 
-        if(this.gameState.distanceTravelled - this.lastTransitionDistance > 5) { //this.nextTransitionOffset
+        if(this.gameState.distanceTravelled - this.lastTransitionDistance > this.nextTransitionOffset) {
             this.makeTransition();
             const end = Math.abs(this.activeTransition?.getBounds().min.z ?? 0);
             this.lastTransitionDistance = this.gameState.distanceTravelled + end;
@@ -246,7 +246,7 @@ class Transition {
     // Makes transition visible and resets animations
     public activate() {
         this.isActive = true;
-        this.model.position.z = -65; // TODO : calculate/constant
+        this.model.position.z = -65;
         this.model.visible = true;
         for(const animation of this.animations) {
             animation.action.stop();
@@ -261,13 +261,13 @@ class Transition {
         for(const animation of this.animations) {
             const position = new THREE.Vector3();
             animation.model.getWorldPosition(position);
-            if(position.z >= -5) { // TODO : calculate/constant
+            if(position.z >= -5) {
                 animation.isActive = true;
                 animation.action.play();
             }
         }
 
-        if(this.model.position.z >= 20) { // TODO : calculate
+        if(this.model.position.z >= 20) {
             this.isActive = false;
             this.model.visible = false;
         }

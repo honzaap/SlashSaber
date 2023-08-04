@@ -127,6 +127,12 @@ function mouseEnter() {
     }
 }
 
+@media (max-width: 768px) {
+    .btn-slash {
+        padding: 16px 24px;
+    }
+}
+
 @keyframes btn-slash {
     0% {
         width: 2px;

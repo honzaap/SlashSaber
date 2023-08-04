@@ -85,7 +85,7 @@ export class Obstacle {
         const bb = this.obstacleModel.geometry.boundingBox;
         this.boundingBox.copy(bb ?? new THREE.Box3()).applyMatrix4(this.obstacleModel.matrixWorld);
 
-        if(this.hide) { // TODO : make prettier
+        if(this.hide) {
             if(this.placement === ObstaclePlacement.RIGHT) {
                 this.model.position.x += 0.02;
             }

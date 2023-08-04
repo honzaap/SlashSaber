@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lives="lives"
+        <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lifes="lifes"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
             :lastScore="lastScore" :highestScore="highestScore" :addedScore="addedScore"
             @switch="switchPage" @start="startGame" @reset="resetRun" @pause="pause"
@@ -39,21 +39,23 @@ const currentScore = ref(0);
 const addedScore= ref({value: -1});
 const lastScore = ref(0);
 const highestScore = ref(0);
-const lives = ref(3);
+const lifes = ref(3);
 const settings = reactive(new Settings());
 const fullscreen = ref(false);
 const hitAnim = ref(false);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
+let renderer : THREE.WebGLRenderer;
 let camera : THREE.PerspectiveCamera;
+let scene : THREE.Scene;
 
 async function createScene() {
     if(canvas.value == null) return;
 
     // Create scene
     camera = createCamera();
-    const renderer = createRenderer(camera, canvas.value as HTMLCanvasElement);
+    renderer = createRenderer(camera, canvas.value as HTMLCanvasElement);
 
     setupLighting();
 
@@ -70,7 +72,7 @@ async function createScene() {
     let dt = gameState.settings.lockFps ? 1000 / 60 : 1000 / 144;
     let timeTarget = 0;
 
-    const scene = gameState.getScene();
+    scene = gameState.getScene();
 
     // Animation loop
     function animate() {
@@ -94,6 +96,7 @@ async function createScene() {
         resizeRenderer(renderer);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        renderer.render(scene, camera);
     };
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
@@ -190,7 +193,7 @@ function createControls(camera : THREE.Camera) {
     gameState.addEventListener(EVENTS.hit, () => {
         shaking = true;
         hitAnim.value = true;
-        lives.value--;
+        lifes.value--;
         setTimeout(() => {
             hitAnim.value = false;
         }, 400);
@@ -231,6 +234,9 @@ onMounted(() => {
             }
             hideOverlay.value = false;
         }
+
+        renderer.render(scene, camera);
+        console.log("render?");
     });
 
     window.addEventListener("keyup", (e : KeyboardEvent) => {
@@ -304,7 +310,7 @@ function resetRun() {
     gameState.reset();
     sword.reset();
     camera.lookAt(0, 0.5, -5);
-    lives.value = 3;
+    lifes.value = 3;
     paused.value = false;
     died.value = false;
     hideOverlay.value = false;

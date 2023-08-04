@@ -23,11 +23,9 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
 
     renderer.render(gameState.getScene(), camera);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // TODO : keep at basic if not necessary
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    //renderer.toneMapping = THREE.LinearToneMapping;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
-    //renderer.toneMappingExposure = 1.16;
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
 

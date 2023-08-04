@@ -2,11 +2,14 @@ import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
 import { Rarity } from "./game/enums/Rarity";
 import { SliceDirection } from "./game/enums/SliceDirection";
 
-export const GUI_ENABLED = false;
-
-export const BLOOM_LAYER = 2;
-
 export const ROOM_TRANSITION_ASSETS = ["room_transition.glb", "room_transition_2.glb"];
+
+export const SPARK_ASSET = "spark_texture.png";
+
+// Do not ask me under any circumstances why is this image the envmap for the blade
+export const ENVMAP_ASSET = "./assets/blade_envmap.jpeg";
+
+
 
 export const EVENTS = {
     load: "onAfterLoad",
@@ -19,8 +22,6 @@ export const EVENTS = {
     swordChanged: "onAfterSwordChanged",
     addScore: "onAddScore",
 };
-
-export const SPARK_ASSET = "spark_texture.png";
 
 export const OBSTACLE_TEMPLTES = [
     {
@@ -126,32 +127,32 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     {
         assets: [
             {
-                asset: "floor.glb",
+                asset: "set_1_floor.glb",
                 maxNumber: 10,
                 offset: 0,
             },
             {
-                asset: "right_wall.glb",
+                asset: "set_1_wall_R.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "left_wall.glb",
+                asset: "set_1_wall_L.glb",
                 maxNumber: 7,
                 offset: -0.05,
             },
             {
-                asset: "roof.glb",
+                asset: "set_1_roof.glb",
                 maxNumber: 19,
                 offset: 0,
             },
             {
-                asset: "wall_upper.glb",
+                asset: "set_1_wall_U.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "lamp.glb",
+                asset: "set_1_lamp.glb",
                 maxNumber: 10,
                 offset: 7,
                 spawnLight: true,
@@ -161,27 +162,27 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     {
         assets: [
             {
-                asset: "floor_2.glb",
+                asset: "set_2_floor.glb",
                 maxNumber: 10,
                 offset: 0,
             },
             {
-                asset: "right_wall_2.glb",
+                asset: "set_2_wall_R.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "left_wall_2.glb",
+                asset: "set_2_wall_L.glb",
                 maxNumber: 7,
                 offset: -0.05,
             },
             {
-                asset: "roof_2.glb",
+                asset: "set_2_roof.glb",
                 maxNumber: 19,
                 offset: 0,
             },
             {
-                asset: "lamp_2.glb",
+                asset: "set_2_lamp.glb",
                 maxNumber: 10,
                 offset: 7,
                 spawnLight: true,
@@ -191,27 +192,27 @@ export const ENVIRONMENT_SET_TEMPLATES = [
     {
         assets: [
             {
-                asset: "floor_3.glb",
+                asset: "set_3_floor.glb",
                 maxNumber: 10,
                 offset: 0,
             },
             {
-                asset: "right_wall_3.glb",
+                asset: "set_3_wall_R.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "left_wall_3.glb",
+                asset: "set_3_wall_L.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "wall_upper_3.glb",
+                asset: "set_3_wall_U.glb",
                 maxNumber: 7,
                 offset: 0,
             },
             {
-                asset: "roof_3.glb",
+                asset: "set_3_roof.glb",
                 maxNumber: 19,
                 offset: 0,
                 spawnLight: true,
@@ -282,22 +283,3 @@ export const SWORD_PRESETS = [
         color2: "#08d18e",
     },*/
 ];
-
-// Shaders
-
-export const MIX_VERTEX_SHADER = `
-varying vec2 vUv;
-void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-}
-`;
-
-export const MIX_FRAGMENT_SHADER = `
-uniform sampler2D baseTexture;
-uniform sampler2D bloomTexture;
-varying vec2 vUv;
-void main() {
-    gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
-}
-`;

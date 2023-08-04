@@ -3,7 +3,7 @@ import { OBB } from "three/examples/jsm/math/OBB.js";
 import TrailRenderer from "../libs/TrailRenderer.ts";
 import GameState from "./GameState.ts";
 import ObstacleManager from "./ObstacleManager.ts";
-import { EVENTS, SWORD_PRESETS } from "../../constants.ts";
+import { ENVMAP_ASSET, EVENTS, SWORD_PRESETS } from "../../constants.ts";
 
 export default class Sword {
 
@@ -78,7 +78,6 @@ export default class Sword {
 
     public loadModel() {
         console.log("load new sword model");
-        const textureLoader = new THREE.TextureLoader(); // TODO : loader in GS
 
         // Clear model
         while (this.model.children.length > 0) {
@@ -94,6 +93,15 @@ export default class Sword {
             ... hideGuard ? [] : [{ name: "guard", value: this.gameState.settings.guardModel }],
             { name: "hilt", value: this.gameState.settings.hiltModel },
         ];
+
+        // Check if components are valid
+        for(const component of components) {
+            const preset = SWORD_PRESETS.find(p => p.name.toLowerCase() === component.value.toLocaleLowerCase());
+            if(!preset) {
+                component.value = "Default";
+            }
+        }
+
         let loadedComponents = 0;
 
         for(const component of components) {
@@ -111,8 +119,7 @@ export default class Sword {
                     }
                     
                     if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
-                        // Do not ask me under any circumstances why is this image the envmap for the blade
-                        const texture = textureLoader.load("./assets/blade_envmap.jpeg");
+                        const texture = this.gameState.loadTexture(ENVMAP_ASSET);
                         texture.mapping = THREE.EquirectangularReflectionMapping;
                         obj.material.envMap = texture;
                     }

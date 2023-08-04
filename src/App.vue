@@ -8,7 +8,10 @@ import Scene from "./pages/Scene.vue";
 import { ref } from "vue";
 import LandingPage from "./pages/LandingPage.vue";
 
-const screen = ref("scene");
+// Load last page from localStorage
+const lastScreen = localStorage.getItem("lastScreen") ?? "landingPage";
+
+const screen = ref(lastScreen);
 const overlayLP = ref(false);
 
 function switchPage(page : string) {
@@ -19,6 +22,8 @@ function switchPage(page : string) {
         screen.value = page;
         overlayLP.value = false;
     }
+
+    localStorage.setItem("lastScreen", page);
 }
 
 </script>

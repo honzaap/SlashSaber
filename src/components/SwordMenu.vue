@@ -239,17 +239,37 @@ h2 {
     }
 
     &::after {
-            content: "";
-            display: block;
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(transparent 85%, #fff 97%);
-            z-index: 4;
-            pointer-events: none;
-        }
+        content: "";
+        display: block;
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(transparent 85%, #fff 97%);
+        z-index: 4;
+        pointer-events: none;
+    }
+}
+
+@media (max-width: 1400px) {
+    .sword-menu { 
+        .items-list {
+            padding-left: 0;
+            padding-right: 0;
+            gap: 10px;
+        } 
+    }
+}
+
+@media (max-width: 1200px) {
+    .sword-menu { 
+        .items-list {
+            .sword-item {
+                flex-basis: 40%;
+            }
+        } 
+    }
 }
 
 .selected-items {
