@@ -129,6 +129,15 @@ export default class EnvironmentManager {
         this.activeTransition = this.transitions[this.activeSet.transition ?? 0];
         this.activeTransition?.activate();
         this.nextTransitionOffset = Math.random() * 20 + 50;
+
+        // Delete Lights in proximity of transition
+        const bounds = this.activeTransition.getBounds();
+        for(const light of this.pointLightPool) {
+            const pos = light.getPosition();
+            if(pos.z <= bounds.max.z + 1.5 && pos.z >= bounds.min.z - 1.5) {
+                light.deactivate();
+            }
+        }
     }
 
     // Load transition model and setup animations
@@ -192,6 +201,10 @@ class PoolLight {
         if(this.light.position.z >= 10) {
             this.deactivate();
         }
+    }
+
+    public getPosition() {
+        return this.light.position;
     }
 }
 

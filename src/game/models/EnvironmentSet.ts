@@ -179,12 +179,20 @@ class EnvironmentPiece{
         newInstance.userData.visible = true;
 
         if(this.spawnLight) {
-            const availableLight = EnvironmentManager.getInstance().getAvailableLight();
+            const environmentManager = EnvironmentManager.getInstance();
+            const availableLight = environmentManager.getAvailableLight();
 
             if(availableLight) {
                 const pos = newInstance.children[0]?.position;
                 newPosition.y = pos?.y ? pos.y - 0.3 : 2.6;
-                newPosition.z += pos?.z ? pos.z : 0;
+                newPosition.z += pos?.z ?? 0;
+
+                // Don't spawn light in the middle of transition
+                const bounds = environmentManager.activeTransition?.getBounds();
+                if(bounds && newPosition.z <= bounds.max.z + 1.5 && newPosition.z >= bounds.min.z - 1.5) {
+                    return;
+                }
+
                 availableLight.activate(newPosition);
             }
         }
