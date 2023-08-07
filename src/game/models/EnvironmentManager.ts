@@ -24,9 +24,14 @@ export default class EnvironmentManager {
     private lastTransitionDistance = 0;
     private nextTransitionOffset = 10;
 
+    private transitionOffsetVariance = 20;
+    private transitionOffsetMin = 40;
+
     private constructor() {
         this.gameState = GameState.getInstance();
         let prevSettings = {...this.gameState.settings} as Settings;
+        this.transitionOffsetVariance = this.gameState.settings.rushMode ? 20 : 40;
+        this.transitionOffsetMin = this.gameState.settings.rushMode ? 50 : 65;
 
         for(const template of ENVIRONMENT_SET_TEMPLATES) {
             const environmentSet = new EnvironmentSet(template);
@@ -60,9 +65,12 @@ export default class EnvironmentManager {
 
                 this.gameState.reset();
             }
+
+            this.transitionOffsetVariance = this.gameState.settings.rushMode ? 20 : 40;
+            this.transitionOffsetMin = this.gameState.settings.rushMode ? 50 : 65;
         });
 
-        this.nextTransitionOffset = Math.random() * 20 + 50;
+        this.nextTransitionOffset = Math.random() * this.transitionOffsetVariance + this.transitionOffsetMin;
     }
 
     public static getInstance() : EnvironmentManager {
@@ -128,7 +136,7 @@ export default class EnvironmentManager {
         this.nextActiveSet.lastUsed = 0;
         this.activeTransition = this.transitions[this.activeSet.transition ?? 0];
         this.activeTransition?.activate();
-        this.nextTransitionOffset = Math.random() * 20 + 50;
+        this.nextTransitionOffset = Math.random() * this.transitionOffsetVariance + this.transitionOffsetMin;
 
         // Delete Lights in proximity of transition
         const bounds = this.activeTransition.getBounds();
@@ -220,6 +228,8 @@ class Transition {
     private bounds = new THREE.Box3();
     private size = new THREE.Vector3();
 
+    private readonly baseBounds = new THREE.Box3(new THREE.Vector3(-Infinity, -Infinity, -Infinity), new THREE.Vector3(-Infinity, -Infinity, -Infinity));
+
     constructor(model : THREE.Object3D, animations : THREE.AnimationClip[]) {
         this.gameState = GameState.getInstance();
 
@@ -248,6 +258,10 @@ class Transition {
     }
 
     public getBounds() {
+        if(!this.isActive) {
+            return this.baseBounds;
+        }
+
         this.bounds.setFromObject(this.model);
         return this.bounds;
     }

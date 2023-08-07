@@ -31,6 +31,7 @@ export default class Sword {
 
     private sensitivity : number;
 
+    private scoreMultiplier = 1.0;
     private readonly scoreBase = 10;
     private readonly maxSpeedMultiplier = 1.55;
     private readonly speedMultiplierStart = 7000;
@@ -47,9 +48,11 @@ export default class Sword {
         this.model.up = new THREE.Vector3(0, 0, 1);
         this.gameState.sceneAdd(this.model);
         this.gameState.addLogicHandler(this.handleCollisions);
+        this.scoreMultiplier = this.gameState.settings.rushMode ? 1.25 : 0.75;
 
         this.gameState.addEventListener(EVENTS.settingsChanged, () => {
             this.sensitivity = this.gameState.settings.sensitivity;
+            this.scoreMultiplier = this.gameState.settings.rushMode ? 1.25 : 0.75;
         });
 
         this.gameState.addEventListener(EVENTS.swordChanged, () => {
@@ -279,7 +282,7 @@ export default class Sword {
                 //    variationMultiplier = 1 / (this.sliceDirectionUsage[normalized] - this.variationMultiplierStart);
                 //}
         
-                const score = this.scoreBase * speedMultiplier * slicedTimesMultiplier;// * variationMultiplier;
+                const score = this.scoreBase * speedMultiplier * slicedTimesMultiplier * this.scoreMultiplier;// * variationMultiplier;
                 this.gameState.addScore(score);
             }
         }

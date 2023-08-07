@@ -3,7 +3,7 @@ import { Obstacle, SlicedPiece } from "./Obstacle";
 import GameState from "./GameState";
 import EnvironmentManager from "./EnvironmentManager";
 import { ObstaclePlacement } from "../enums/ObstaclePlacement";
-import { OBSTACLE_TEMPLTES, SPARK_ASSET } from "../../constants";
+import { EVENTS, OBSTACLE_TEMPLTES, SPARK_ASSET } from "../../constants";
 import { SliceDirection } from "../enums/SliceDirection";
 import { Rarity } from "../enums/Rarity";
 import ParticleSystem, { Alpha, Body, Color, Emitter, Gravity, Life, Mass, Position, RadialVelocity, RandomDrift, Rate, Scale, Span, SphereZone, SpriteRenderer, Vector3D, ease } from "three-nebula";
@@ -30,8 +30,8 @@ export default class ObstacleManager {
     private obstacleTemplates : ObstacleTemplate[] = []; 
 
     private readonly maxObstacles = 17;
-    private readonly minObstacleDistance = 2.3;
-    private readonly maxObstacleDistance = 2.80;
+    private minObstacleDistance = 2.3;
+    private maxObstacleDistance = 2.80;
     private readonly rarities : string[] = [];
     private lastPlacement = ObstaclePlacement.LEFT;
 
@@ -67,8 +67,11 @@ export default class ObstacleManager {
         for(const key of Object.keys(Rarity).filter(k => Number.isNaN(parseFloat(k)))) {
             this.rarities.push(key);
         }
+
+        this.gameState.addEventListener(EVENTS.settingsChanged, this.settingsChanged);
         
         this.initParticles();
+        this.settingsChanged();
     }
 
     public static getInstance() {
@@ -266,4 +269,15 @@ export default class ObstacleManager {
 
         this.lastPlacementUsage[this.lastPlacement] = 0;
     }
+
+    private settingsChanged = () => {
+        if(this.gameState.settings.rushMode) {
+            this.minObstacleDistance = 2.3;
+            this.maxObstacleDistance = 2.80;
+        }
+        else {
+            this.minObstacleDistance = 3.5;
+            this.maxObstacleDistance = 4.0;
+        }
+    };
 }

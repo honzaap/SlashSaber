@@ -9,8 +9,6 @@ export const SPARK_ASSET = "spark_texture.png";
 // Do not ask me under any circumstances why is this image the envmap for the blade
 export const ENVMAP_ASSET = "./assets/blade_envmap.jpeg";
 
-
-
 export const EVENTS = {
     load: "onAfterLoad",
     ready: "onAfterReady",

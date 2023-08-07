@@ -98,9 +98,15 @@ async function createScene() {
         camera.updateProjectionMatrix();
         renderer.render(scene, camera);
     };
+    
+    let prevRush = gameState.settings.rushMode;
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
         dt = gameState.settings.lockFps ? 1000 / 60 : 1;
+        if(gameState.settings.rushMode !== prevRush) {
+            prevRush = gameState.settings.rushMode;
+            resetRun();
+        }
     });
 
     // Cache every object in the scene by forcibly rendering it

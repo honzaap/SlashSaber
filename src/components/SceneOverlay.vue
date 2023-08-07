@@ -56,6 +56,11 @@
                             ></v-slider>
                             <span class="sensitivity-value">{{  settings.sensitivity }}</span>
                         </div>
+                        <div class="form-group mb-0">
+                            <label for="rushMode">Rush mode</label>
+                            <input v-model="settings.rushMode" id="rushMode" class="checkbox" type="checkbox">
+                        </div>
+                        <small>Speeds up the game but results in a higher score gain.</small>
                         <div class="form-group">
                             <div style="flex-grow: 1;">
                                 <v-select
@@ -224,12 +229,14 @@ window.addEventListener("resize", () => {
     }
 
     @media (max-width: 560px) {
-        button {
-            display: block;
-        }
-
         p {
             display: none;
+        }
+    }
+    
+    @media (hover: none) {
+        button {
+            display: block;
         }
     }
 }
@@ -505,12 +512,19 @@ window.addEventListener("resize", () => {
         font-size: 20px;
     }
 
+    small {
+        margin-bottom: 10px;
+        padding: 0 40px 0 10px;
+        font-weight: 300;
+    }
+
     .form-group {
         display: flex;
         width: 100%;
         justify-content: space-between;
         padding: 0 10px;
         margin: 20px 0;
+        flex-wrap: wrap;
 
         label {
             display: flex;
@@ -543,6 +557,10 @@ window.addEventListener("resize", () => {
             &:target {
                 transform: sclae(0.9);
             }
+        }
+
+        &.mb-0 {
+            margin-bottom: 0;
         }
     }
 }

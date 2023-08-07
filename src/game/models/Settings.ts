@@ -11,6 +11,7 @@ export class Settings {
     public bladeModel = "Default";
     public guardModel = "Default";
     public hiltModel = "Default";
+    public rushMode = false;
 
     public replace(settings : Settings) {
         this.name = settings.name;
@@ -23,5 +24,6 @@ export class Settings {
         this.bladeModel = settings.bladeModel;
         this.guardModel = settings.guardModel;
         this.hiltModel = settings.hiltModel;
+        this.rushMode = settings.rushMode;
     }
 }
