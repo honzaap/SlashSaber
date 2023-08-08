@@ -84,15 +84,15 @@ export const OBSTACLE_TEMPLTES = [
         rarity: Rarity.RARE,
     },
     {
-        asset: "bamboo_protectedT_left_3.glb",
+        asset: "bamboo_protectedB_left_3.glb",
         placement: ObstaclePlacement.LEFT,
-        sliceDirection: SliceDirection.TOP,
+        sliceDirection: SliceDirection.BOTTOM,
         rarity: Rarity.UNCOMMON,
     },
     {
-        asset: "bamboo_protectedT_right_3.glb",
+        asset: "bamboo_protectedB_right_3.glb",
         placement: ObstaclePlacement.RIGHT,
-        sliceDirection: SliceDirection.TOP,
+        sliceDirection: SliceDirection.BOTTOM,
         rarity: Rarity.UNCOMMON,
     },
     {

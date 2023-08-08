@@ -34,6 +34,7 @@ export default class ObstacleManager {
     private maxObstacleDistance = 2.80;
     private readonly rarities : string[] = [];
     private lastPlacement = ObstaclePlacement.LEFT;
+    private lastSliceDirection = SliceDirection.ANY;
 
     // How long was a given obstacle placement NOT used
     private lastPlacementUsage : { [placement: string]: number } = { };
@@ -242,21 +243,27 @@ export default class ObstacleManager {
 
     // Get new obstacle template to spawn
     private getNewTemplate() : ObstacleTemplate {
-        let filtered = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
+        let filteredSelection = this.obstacleTemplates.filter(t => t.placement !== this.lastPlacement);
         const random = Math.random();
         
+        // Filter the array with random rarity
         for(const key of this.rarities) {
             const rarity = Rarity[key as keyof typeof Rarity]; // I Fucking hate TypeScript
             if(random <= rarity) {
-                const rarityFiltered = filtered.filter(t => t.rarity === rarity);
-                if(rarityFiltered.length > 0) filtered = rarityFiltered;
+                const rarityFiltered = filteredSelection.filter(t => t.rarity === rarity);
+                if(rarityFiltered.length > 0) filteredSelection = rarityFiltered;
             }
         }
+
+        filteredSelection = filteredSelection.filter(t => 
+            t.sliceDirection === SliceDirection.ANY || t.sliceDirection !== this.lastSliceDirection 
+        );
         
         // Make sure that every placement is frequently used
-        const underUsed = filtered.find(t => this.lastPlacementUsage[t.placement] >= 5);
-        const result = underUsed ?? filtered[Math.floor(Math.random() * filtered.length)];
+        const underusedPlacement = filteredSelection.find(t => this.lastPlacementUsage[t.placement] >= 5);
+        const result = underusedPlacement ?? filteredSelection[Math.floor(Math.random() * filteredSelection.length)];
         this.lastPlacement = result.placement;
+        this.lastSliceDirection = result.sliceDirection ?? SliceDirection.ANY;
         this.updateLastPlacements();
 
         return result;
