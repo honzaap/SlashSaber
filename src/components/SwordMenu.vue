@@ -280,7 +280,7 @@ h2 {
     transform: translateX(100%);
     padding-left: 16px;
     flex-direction: column;
-    gap: 10px;
+    gap: 1.1vw;
 
     .item {
         display: flex;

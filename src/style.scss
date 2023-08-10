@@ -10,7 +10,7 @@
 }
 
 html {
-    overflow-y: auto;
+    overflow-y: auto !important;
 }
 
 body {
@@ -36,6 +36,10 @@ body {
     -webkit-user-select: none;    
     -moz-user-select: none;
     user-select: none;
+}
+
+.v-slide-group__next, .v-slide-group__prev {
+    display: none !important;
 }
 
 .v-toolbar__content {
@@ -78,5 +82,296 @@ body {
         transform: translate(150%, -130%);
         opacity: 0;
         color: #fff;
+    }
+}
+
+///////
+
+@mixin no-drag {
+    -webkit-user-drag: none;
+    user-drag: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;    
+    user-select: none;
+}
+
+.page {
+    &.overlay {
+        position: absolute;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--dark);
+        transform: translateY(-100%);
+        animation: overlay-down 300ms ease forwards;
+    }
+
+    &.hide.overlay {
+        transform: translateY(0);
+        animation: overlay-up 300ms ease forwards;
+    }
+
+    &.hide:not(.overlay) {
+        display: none;
+    }
+
+
+
+    @keyframes overlay-down {
+        0% {
+            transform: translateY(-100%);
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes overlay-up {
+        0% {
+            transform: translateY(0);
+        }
+        100% {
+            transform: translateY(-100%);
+        }
+    }
+
+    .navbar {
+        padding: 20px 30px;
+        .nav-logo {
+            display: block;
+            height: 180px;
+            @include no-drag;
+        }
+
+        @media (max-width: 768px) {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            .nav-logo {
+                height: 130px;
+            }
+        }
+    }
+
+    h1 {
+        font-family: "Bree serif";
+        font-size: 64px;
+        letter-spacing: 10px;
+        font-weight: 400;
+        @include no-drag;
+
+        @media (max-width: 570px) {
+            font-size: 42px;
+            letter-spacing: 5px;
+        }
+    }
+
+    .motto {
+        font-size: 24px;
+        color: var(--primary);
+        @include no-drag;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: -40px;    
+        text-align: center;
+
+        @media (max-width: 768px) {
+            margin-top: 0;
+        }
+    }
+
+    .btn-container {
+        margin-top: 80px;
+    }
+
+    .how-play {
+        margin-top: 100px;
+
+        h2 {
+            font-size: 24px;
+        }
+
+        .list {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            padding: 0 15px;
+
+            .item {
+                max-width: 150px;
+
+                .ico {
+                    background-color: #000;
+                    width: 150px;
+                    height: 150px;
+                    padding: 10px;
+                    border-radius: 50%;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    margin-bottom: 16px;
+                    @include no-drag;
+                }
+            }
+        }
+    }
+
+    .leaderboard {
+        position: absolute;
+        right: 30px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
+.github-corner:hover .octo-arm {
+    animation:octocat-wave 560ms ease-in-out
+}
+
+@keyframes octocat-wave {
+    0%, 100% {
+        transform:rotate(0);
+    }
+    20%, 60% {
+        transform: rotate(-25deg);
+    } 
+    40%, 80% {
+    transform:rotate(10deg);
+    }
+}
+
+@media (max-width:500px) {
+    .github-corner:hover .octo-arm {
+        animation: none; 
+    } 
+    .github-corner .octo-arm { 
+        animation: octocat-wave 560ms ease-in-out
+    }
+}
+
+
+.btn-slash {
+    position: relative;
+    padding: 24px 60px;
+    background-color: transparent;
+    border: 0;
+    outline: none;
+    color: #000;
+    font-weight: 500;
+    font-family: "Kanit";
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 300ms ease 250ms, transform 120ms ease;
+    box-shadow: inset 0 0 0 4px #fff;
+    min-width: 280px;
+
+    &.click {
+        transform: scale(0.95);
+    }
+
+    .bg {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+    }
+
+    .bg::before, .bg::after {
+        content: "";
+        position: absolute;
+        display: block;
+        left: 0;
+        width: 100%;
+        background-color: #fff;
+        transition: all 300ms ease;
+        transition-delay: 200ms;
+    }
+
+    .bg::before {
+        top: 0;
+        bottom: 50%;
+    }
+
+    .bg::after {
+        top: 50%;
+        bottom: 0;
+    }
+
+    &.alt {
+        color: #aaa;
+        box-shadow: inset 0 0 0 3px #aaa;
+        transition: background-color 150ms ease-out;
+
+        .bg::before,  .bg::after {
+            display: none;
+        }
+
+        &:hover {
+            background-color: rgba(#fff, 0.1);
+        }
+    }
+
+    &:hover {
+        color: #fff;
+
+        .bg::before {
+            bottom: 100%;
+        }
+
+        .bg::after {
+            top: 100%;
+        }
+    }
+
+    .slash {
+        position: absolute;
+        left: -30px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2px;
+        height: 2px;
+        background-color: #e0e0e0;
+        border-radius: 50px;
+        box-shadow: 0 0 3px 0 #000;
+        opacity: 0;
+
+        &.anim {
+            opacity: 1;
+            animation: btn-slash 400ms ease forwards;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .btn-slash {
+        padding: 16px 24px;
+    }
+}
+
+@keyframes btn-slash {
+    0% {
+        width: 2px;
+    }
+    50% {
+        width: calc(100% + 60px);
+        left: -30px;
+    }
+    100% {
+        width: 0px;
+        left: calc(100% + 30px);
     }
 }

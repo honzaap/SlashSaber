@@ -1,5 +1,5 @@
 <template>
-    <div class="container">
+    <div class="container-scene">
         <LoadingScreen :isLoading="loading"/>
         <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lifes="lifes"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
@@ -27,6 +27,7 @@ import SceneOverlay from "../components/SceneOverlay.vue";
 import GameOverScreen from "../components/GameOverScreen.vue";
 import { Settings } from "../game/models/Settings";
 import { EVENTS } from "../constants";
+import { inject } from "vue";
 
 const emit = defineEmits(["switch"]);
 
@@ -49,6 +50,8 @@ let sword : Sword;
 let renderer : THREE.WebGLRenderer;
 let camera : THREE.PerspectiveCamera;
 let scene : THREE.Scene;
+
+const switchCallback : () => void = inject("switchPage") as () => void;
 
 async function createScene() {
     if(canvas.value == null) return;
@@ -309,7 +312,9 @@ function startGame() {
 }
 
 function switchPage() {
+    console.log("scene switch");
     emit("switch", "landingPage");
+    switchCallback();
 }
 
 function resetRun() {
@@ -367,7 +372,7 @@ function loadSettings() {
 </script>
 
 <style scoped lang="scss">
-.container {
+.container-scene {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
