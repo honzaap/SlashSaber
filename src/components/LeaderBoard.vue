@@ -1,114 +1,93 @@
 <template>
     <h2 :class="{compact: props.compact}">Top slashers</h2>
+    <span v-if="loading" class="loader"></span>
     <div class="leaderboard" :class="{compact: props.compact}">
-        <div v-for="(item, i) in values" class="leaderboard-item"
+        <div v-for="(item, i) in items" class="leaderboard-item"
          :class="{ first: i === 0 && !props.compact, second: i === 1 && !props.compact, third: i === 2 && !props.compact}">
             <span class="number">{{ i+1 }}.</span>
-            <span class="name">{{ item.name }}</span>
+            <span class="name">{{ item.username }}</span>
             <span class="score">{{ prettifyScore(item.score) }} pts</span>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { Ref } from "vue";
+import { onMounted } from "vue";
 import { ref } from "vue";
+import { fetchLeaderBoard } from "../api";
+import { prettifyScore } from "../helpers";
+import { Settings } from "../game/models/Settings";
+import { submitRun } from "../api";
 
 const props = defineProps(["compact"]);
 
-// Placeholder values
-const placeholder = [
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
-    },
-    {
-        name: "aigafafsd",
-        score: 72000
+type LeaderBoardItem = { username : string, score : number };
+
+const items : Ref<LeaderBoardItem[]> = ref([]);
+const loading = ref(true);
+
+onMounted(async () => {
+    const leaderBoard : LeaderBoardItem[] = await fetchLeaderBoard();
+    if(leaderBoard.length === 0) return;
+
+    items.value = leaderBoard;
+    loading.value = false;
+
+    // Fetch new leaderboard every few minutes
+    setInterval(async () => {
+        console.log("Fetch new leaderboard");
+        const newLeaderBoard : LeaderBoardItem[] = await fetchLeaderBoard();
+        if(newLeaderBoard.length === 0) return;
+
+        items.value = newLeaderBoard;
+    }, (props.compact ? 3 : 6) * 60 * 1000);
+});
+
+
+function submitNewRun(settings : Settings, score : number) {
+    const existingRecord = items.value.find(i => i.username === settings.username);
+    if(existingRecord && existingRecord.score < score) {
+        existingRecord.score = score;
     }
-];
+    else if(!existingRecord) {
+        items.value.push({ username: settings.username, score });
+    }
 
-
-const values = ref(placeholder);
-
-function prettifyScore(score : number) {
-    return score.toLocaleString("en-US");
+    items.value.sort((a, b) => b.score - a.score);
+    items.value.splice(20);
+    
+    submitRun(settings, score);
 }
+
+defineExpose({
+    submitNewRun,
+});
 
 </script>
 
 <style lang="scss" scoped>
+
+.loader {
+    display: block;
+    margin: 20px auto;
+    width: 36px;
+    height: 36px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    transform-origin: center center;
+    animation: loader 1000ms linear infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 50%, 69% 66%, 56% 100%, 0 100%);
+}
+
+@keyframes loader {
+    0% {
+        transform: rotateZ(0deg);
+    }
+    100% {
+        transform: rotateZ(360deg);
+    }
+}
 
 .leaderboard {
     h2 {

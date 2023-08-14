@@ -40,7 +40,7 @@
                         <p class="title">Settings</p>
                         <div class="form-group">
                             <v-text-field
-                                v-model="settings.name"
+                                v-model="settings.username"
                                 label="Username"
                                 hide-details="auto"
                                 color="rgb(182, 227, 196)"
@@ -115,7 +115,7 @@
             </button>
         </div>
         <div class="leaderboard">
-            <!--LeaderBoard compact="true" /-->
+            <LeaderBoard compact="true" ref="leaderBoard"/>
         </div>
         <p v-if="paused" class="paused-text">Paused</p>
     </div>
@@ -124,7 +124,7 @@
 <script setup lang="ts">
 import { watch } from "vue";
 import ButtonSlash from "./ButtonSlash.vue";
-//import LeaderBoard from "./LeaderBoard.vue";
+import LeaderBoard from "./LeaderBoard.vue";
 import SwordMenu from "./SwordMenu.vue";
 import { ref } from "vue";
 import { GraphicsPreset } from "../game/enums/GraphicsPresset";
@@ -141,6 +141,7 @@ const overlayState = ref(-1);
 const currScore = ref(null);
 const swordMenuOpen = ref(window.innerWidth > 1200);
 const settings = reactive(props.settings);
+const leaderBoard = ref();
 
 const graphicsOptions = Object.values(GraphicsPreset);
 
@@ -187,6 +188,14 @@ window.addEventListener("resize", () => {
     if(!swordMenuOpen.value) {
         swordMenuOpen.value = window.innerWidth > 1200;
     }
+});
+
+function submitRun(settings : Settings, score : number) {
+    leaderBoard.value?.submitNewRun(settings, score);
+}
+
+defineExpose({
+    submitRun
 });
 
 </script>

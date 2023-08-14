@@ -1,7 +1,7 @@
 <template>
     <div class="container-scene">
         <LoadingScreen :isLoading="loading"/>
-        <SceneOverlay :fullscreen="fullscreen" :settings="settings" :lifes="lifes"
+        <SceneOverlay ref="sceneOverlay" :fullscreen="fullscreen" :settings="settings" :lifes="lifes"
             :currentScore="currentScore" :hidden="hideOverlay" :paused="paused"
             :lastScore="lastScore" :highestScore="highestScore" :addedScore="addedScore"
             @switch="switchPage" @start="startGame" @reset="resetRun" @pause="pause"
@@ -32,6 +32,7 @@ import { inject } from "vue";
 const emit = defineEmits(["switch"]);
 
 const canvas = ref(null);
+const sceneOverlay = ref();
 const loading = ref(true);
 const paused = ref(false);
 const died = ref(false);
@@ -44,6 +45,7 @@ const lifes = ref(3);
 const settings = reactive(new Settings());
 const fullscreen = ref(false);
 const hitAnim = ref(false);
+const waitingForUsename = ref(false);
 
 const gameState = GameState.getInstance();
 let sword : Sword;
@@ -278,13 +280,21 @@ onMounted(() => {
 
     gameState.addEventListener(EVENTS.died, () => {
         died.value = true;
-        
+
         lastScore.value = gameState.score;
         if(gameState.score > highestScore.value) {
             highestScore.value = gameState.score;
         }
 
         updateSettings(settings);
+
+        if(settings.username) {
+            submitRun();
+        }
+        else {
+            waitingForUsename.value = true;
+        }
+
         setTimeout(() => {
             gameState.haltGame();
         }, 700);
@@ -318,6 +328,11 @@ function switchPage() {
 }
 
 function resetRun() {
+    if(waitingForUsename.value) {
+        submitRun();
+        waitingForUsename.value = false;
+    }
+
     gameState.reset();
     sword.reset();
     camera.lookAt(0, 0.5, -5);
@@ -367,6 +382,10 @@ function loadSettings() {
 
     lastScore.value = loadedData.lastScore ?? 0;
     highestScore.value = loadedData.highestScore ?? 0;
+}
+
+function submitRun() {
+    sceneOverlay.value?.submitRun(settings, lastScore.value);
 }
 
 </script>

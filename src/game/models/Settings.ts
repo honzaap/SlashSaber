@@ -1,7 +1,7 @@
 import { GraphicsPreset } from "../enums/GraphicsPresset";
 
 export class Settings {
-    public name = "";
+    public username = "";
     public showCursor = false;
     public muteSound = false;
     public lockFps = true;
@@ -14,7 +14,7 @@ export class Settings {
     public rushMode = false;
 
     public replace(settings : Settings) {
-        this.name = settings.name;
+        this.username = settings.username;
         this.showCursor = settings.showCursor;
         this.muteSound = settings.muteSound;
         this.lockFps = settings.lockFps;

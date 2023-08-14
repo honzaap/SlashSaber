@@ -23,6 +23,12 @@ async function loadVue() {
         components,
         directives,
     });
+
+    // Load landing page LeaderBoard 
+    const LeaderBoard = vue.defineAsyncComponent(() =>
+        import("./components/LeaderBoard.vue")
+    );
+    vue.createApp(LeaderBoard).mount("#leaderBoard");
 }
 
 startBtn?.addEventListener("click", async function() {
