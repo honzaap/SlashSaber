@@ -51,7 +51,7 @@
                                 v-model="settings.sensitivity" label="Sensitivity"
                                 color="#70A480" track-color="#fff"
                                 step="0.1"
-                                min="1.0" max="2.0"
+                                min="0.5" max="2.0"
                                 style="margin: 0; margin-right: 20px;"
                             ></v-slider>
                             <span class="sensitivity-value">{{  settings.sensitivity }}</span>
@@ -73,22 +73,8 @@
                                 <span v-if="paused" class="disabled-helper">Disabled while in-game</span>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="shadows">Enable shadows</label>
-                            <input v-model="settings.enableShadows" id="shadows" class="checkbox" type="checkbox">
-                        </div>
-                        <div class="form-group">
-                            <label for="shadows">Lock FPS to 60</label>
-                            <input v-model="settings.lockFps" id="shadows" class="checkbox" type="checkbox">
-                        </div>
                     </div>
                 </v-menu>
-                <v-tooltip :text="settings.muteSound ? 'Enable volume' : 'Disable volume'" location="top">
-                    <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" density="comfortable" @click="settings.muteSound = !settings.muteSound"
-                        :icon="settings.muteSound ? 'mdi-volume-off' : 'mdi-volume-high'" />
-                    </template>
-                </v-tooltip>
                 <v-tooltip :text="fullscreen ? 'Minimize' : 'Go fullscreen'" location="top">
                     <template v-slot:activator="{ props }">
                         <v-btn @click="$emit('toggleFullscreen')" v-bind="props" density="comfortable" 
@@ -224,27 +210,24 @@ defineExpose({
     color: #fff;
     
     button {
-        display: none;
         background-color: transparent;
         border: 0;
     }
 
     p {
         pointer-events: none;
+        display: none;
 
         &.anim {
             animation: helper-fade 1200ms ease 3000ms forwards;
         }
     }
 
-    @media (max-width: 560px) {
-        p {
+    @media (hover: hover) {
+        button {
             display: none;
         }
-    }
-    
-    @media (hover: none) {
-        button {
+        p {
             display: block;
         }
     }

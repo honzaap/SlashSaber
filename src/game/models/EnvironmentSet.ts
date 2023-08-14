@@ -69,24 +69,6 @@ export default class EnvironmentSet {
         for(const piece of this.environmentPieces) {
             piece.initialPosition = new THREE.Vector3(0, 0, -65);
         }
-        /*
-        let loadedPieces = 0;
-        let waitTime = 0;
-        for(const piece of this.environmentPieces) {
-            for(let i = piece.activeInstances(); i < piece.maxNumber; i++) {
-                // ONI SE NECACHUJOU? ZKUSIT ONAFTERRENDRE PRO KAŽDEJ ENV PIECE
-                setTimeout(() => {
-                    console.log(waitTime);
-                    piece.activateNewInstance();
-                    if(i === piece.maxNumber -1) loadedPieces++;
-                
-                    if(loadedPieces === this.environmentPieces.length) {
-                    }
-                }, waitTime);
-                
-                waitTime += 1000;
-            }
-        }*/
         this.isActive = true;
     }
 
@@ -247,7 +229,7 @@ class EnvironmentPiece{
             if(this.gameState.settings.graphicsPreset === GraphicsPreset.LOW && obj.userData.hasLowMaterial !== true) {
                 obj.userData.origMaterial = obj.material;
                 obj.userData.hasLowMaterial = true;
-                obj.material = new THREE.MeshLambertMaterial({ color: obj.material.color, opacity: obj.material.opacity, reflectivity: 1.0 });
+                obj.material = new THREE.MeshLambertMaterial({ map: obj.material.map, color: obj.material.color, opacity: obj.material.opacity, reflectivity: 1.0 });
                 obj.material.needsUpdate = true;
             }
             else if(this.gameState.settings.graphicsPreset === GraphicsPreset.HIGH && obj.userData.hasLowMaterial) {
@@ -255,16 +237,6 @@ class EnvironmentPiece{
                 obj.material = obj.userData.origMaterial;
                 obj.material.needsUpdate = true;
             }
-            /*if(obj.material?.opacity < 1) { 
-                // Make objects visible, but still able to pass light and godrays
-                obj.castShadow = false;
-                obj.receiveShadow = false;
-                obj.material.emissive = new THREE.Color(0xbeb979);
-                obj.material.emissiveIntensity = 0.8;
-                obj.material.opacity = 1;
-                obj.material.depthWrite = false;
-                obj.material.transparent = false;
-            }*/
         }
         if (obj?.children != null) {
             for (const child of obj.children) {

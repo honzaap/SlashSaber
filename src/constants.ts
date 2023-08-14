@@ -2,6 +2,8 @@ import { ObstaclePlacement } from "./game/enums/ObstaclePlacement";
 import { Rarity } from "./game/enums/Rarity";
 import { SliceDirection } from "./game/enums/SliceDirection";
 
+export const GUI_ENABLED = false;
+
 export const ROOM_TRANSITION_ASSETS = ["room_transition.glb", "room_transition_2.glb"];
 
 export const SPARK_ASSET = "spark_texture.png";
@@ -119,6 +121,11 @@ export const OBSTACLE_TEMPLTES = [
         sliceDirection : SliceDirection.RIGHT,
         rarity: Rarity.RARE,
     },
+    // Obstacles that have not been yet fully completed
+    // {
+    //     asset: "makiwara_mid_7.glb",
+    //     placement: ObstaclePlacement.BOTTOM,
+    // },
 ];
 
 export const ENVIRONMENT_SET_TEMPLATES = [
@@ -268,16 +275,5 @@ export const SWORD_PRESETS = [
         name: "Insect",
         color1: "#E99B97",
         color2: "#8D60D5",
-    },/*
-    {
-        name: "Serpent",
-        color1: "#2BA086",
-        color2: "#F5E061",
     },
-   
-    {
-        name: "Demon",
-        color1: "#b04fff",
-        color2: "#08d18e",
-    },*/
 ];

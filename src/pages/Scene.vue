@@ -26,8 +26,9 @@ import LoadingScreen from "../components/LoadingScreen.vue";
 import SceneOverlay from "../components/SceneOverlay.vue";
 import GameOverScreen from "../components/GameOverScreen.vue";
 import { Settings } from "../game/models/Settings";
-import { EVENTS } from "../constants";
+import { EVENTS, GUI_ENABLED } from "../constants";
 import { inject } from "vue";
+import Stats from "three/examples/jsm/libs/stats.module.js";
 
 const emit = defineEmits(["switch"]);
 
@@ -52,6 +53,11 @@ let sword : Sword;
 let renderer : THREE.WebGLRenderer;
 let camera : THREE.PerspectiveCamera;
 let scene : THREE.Scene;
+let stats : Stats | null = null;
+if(GUI_ENABLED) {
+    stats = new Stats();
+    document.body.appendChild(stats.dom);
+}
 
 const switchCallback : () => void = inject("switchPage") as () => void;
 
@@ -74,7 +80,7 @@ async function createScene() {
 
     setupObstacles();
 
-    let dt = gameState.settings.lockFps ? 1000 / 60 : 1000 / 144;
+    const dt = 1000 / 144;
     let timeTarget = 0;
 
     scene = gameState.getScene();
@@ -88,6 +94,8 @@ async function createScene() {
             gameState.update();
 
             renderer.render(scene, camera);
+            stats?.update();
+
             timeTarget += dt;
             if(Date.now() >= timeTarget){
                 timeTarget = Date.now();
@@ -107,7 +115,6 @@ async function createScene() {
     let prevRush = gameState.settings.rushMode;
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
-        dt = gameState.settings.lockFps ? 1000 / 60 : 1;
         if(gameState.settings.rushMode !== prevRush) {
             prevRush = gameState.settings.rushMode;
             resetRun();

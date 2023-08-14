@@ -37,8 +37,6 @@ export default class Sword {
     private readonly speedMultiplierStart = 7000;
     //private readonly variationMultiplierStart = 3;
 
-    //private sliceSounds : HTMLMediaElement[] = [];
-
     // Create sword model, bounding box and helper
     constructor() {
         this.gameState = GameState.getInstance();
@@ -59,23 +57,6 @@ export default class Sword {
             this.loadModel();
         });
         
-        for(let i = 0; i < 8; i++) {
-            /*const context = new AudioContext();
-            const audio = new Audio("/sounds/slice8.mp3");
-            audio.volume = 0.6;
-            const source = context.createMediaElementSource(audio);
-            const filter = context.createBiquadFilter();
-            filter.connect(context.destination);
-            source.connect(context.destination);
-            source.connect(filter);
-            filter.frequency.value = 4000 + (i + 1) * 750;
-            audio.playbackRate = 0.94 + 0.02 * i;
-            this.sliceSounds.push(audio);
-            setTimeout(() => { // Todo : context in GS, resume on gamestart
-                context.resume();
-            }, 3900);*/
-        }
-
         this.loadModel();
     }
 
@@ -181,12 +162,13 @@ export default class Sword {
     // Take mouse event as input and handle sword controls - position, rotatio, bounding box etc
     public move(e : MouseEvent | TouchEvent) {
         this.prevMouse.copy(this.mouse);
-
+        let isTouch = false;
         if(e instanceof MouseEvent) {
             this.mouse.x = (e.offsetX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(e.offsetY / window.innerHeight) * 2 + 1;
         }
         else if(e instanceof TouchEvent) {
+            isTouch = true;
             const touch = e.targetTouches[0];
             this.mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
@@ -202,10 +184,12 @@ export default class Sword {
         let alpha = THREE.MathUtils.radToDeg(beta);
         if(this.mouseDirection.y >= 0) alpha = -180 - THREE.MathUtils.radToDeg(beta);
 
+        const touchFactorX = isTouch ? 1.5 : 1;
+        const touchFactorY = isTouch ? 3 : 1;
         this.model.position.x = 0;
         this.model.position.y = 0.7;
-        this.model.rotation.x = THREE.MathUtils.degToRad((this.lastMouse.y - this.deltaI.y * this.sensitivity) * -70);
-        this.model.rotation.y = THREE.MathUtils.degToRad((this.lastMouse.x - this.deltaI.x * this.sensitivity) * 90);
+        this.model.rotation.x = THREE.MathUtils.degToRad((this.lastMouse.y - this.deltaI.y * this.sensitivity * touchFactorY) * -70);
+        this.model.rotation.y = THREE.MathUtils.degToRad((this.lastMouse.x - this.deltaI.x * this.sensitivity * touchFactorX) * 90);
         this.model.rotation.z = THREE.MathUtils.degToRad(alpha); 
 
         this.lastMouse.set(this.lastMouse.x - this.deltaI.x * this.sensitivity, this.lastMouse.y - this.deltaI.y * this.sensitivity);
@@ -242,9 +226,6 @@ export default class Sword {
                 if(!obstacle.canSlice(sliceDirection)) {
                     const sparkPosition = obstacle.getCenter();
                     this.obstacleManager.playParticles(sparkPosition, sliceDirection);
-                    //const test = new Audio("/sounds/metal_hit.wav");
-                    //test.volume = 0.7;
-                    //test.play();
                     if(!obstacle.slashed) {
                         this.gameState.gotHit();
                     }
@@ -257,9 +238,6 @@ export default class Sword {
                     
                     return;
                 }
-
-                // Play sound
-                //this.sliceSounds[this.normalizeSliceDirection(sliceDirection)].play();
 
                 // Use contact points as coplanar points
                 const points : THREE.Vector3[] = [collisionPoint, new THREE.Vector3(), new THREE.Vector3()];

@@ -160,10 +160,7 @@ export default class GameState {
     }
 
     public updateSettings(settings : Settings) {
-        this.settings.enableShadows = settings.enableShadows ?? true;
         this.settings.graphicsPreset = settings.graphicsPreset ?? GraphicsPreset.HIGH;
-        this.settings.lockFps = settings.lockFps ?? false;
-        this.settings.muteSound = settings.muteSound ?? false;
         this.settings.username = settings.username;
         this.settings.sensitivity = settings.sensitivity ?? 1;
         this.settings.showCursor = settings.showCursor ?? false;

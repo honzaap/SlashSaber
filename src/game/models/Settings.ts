@@ -3,10 +3,7 @@ import { GraphicsPreset } from "../enums/GraphicsPresset";
 export class Settings {
     public username = "";
     public showCursor = false;
-    public muteSound = false;
-    public lockFps = true;
     public graphicsPreset = GraphicsPreset.HIGH;
-    public enableShadows = true;
     public sensitivity = 1.0;
     public bladeModel = "Default";
     public guardModel = "Default";
@@ -16,10 +13,7 @@ export class Settings {
     public replace(settings : Settings) {
         this.username = settings.username;
         this.showCursor = settings.showCursor;
-        this.muteSound = settings.muteSound;
-        this.lockFps = settings.lockFps;
         this.graphicsPreset = settings.graphicsPreset;
-        this.enableShadows = settings.enableShadows;
         this.sensitivity = settings.sensitivity;
         this.bladeModel = settings.bladeModel;
         this.guardModel = settings.guardModel;

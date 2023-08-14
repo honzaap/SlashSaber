@@ -22,29 +22,11 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     resizeRenderer(renderer);
 
     renderer.render(gameState.getScene(), camera);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
-
-    const updateShadows = () => {
-        renderer.shadowMap.enabled = gameState.settings.enableShadows;
-        gameState.sceneTraverse(obj => {
-            if(obj instanceof THREE.DirectionalLight || obj instanceof THREE.PointLight) {
-                obj.shadow.map?.dispose();
-                //obj.shadow.map = null;
-                obj.shadow.needsUpdate = true;
-            }
-            else if(obj instanceof THREE.Mesh && obj.material) {
-                obj.material.needsUpdate = true;
-            }
-        });
-    };
-
-    gameState.addEventListener(EVENTS.settingsChanged, updateShadows);
-    gameState.addEventListener(EVENTS.load, updateShadows);
 
     return renderer;
 }
@@ -57,32 +39,17 @@ export function resizeRenderer(renderer : THREE.WebGLRenderer) {
 
 // Create and configure lighting in the scene
 export function setupLighting() {
-    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.45);
+    const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.55);
     //const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xe5e7ff, 1.25);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0);
-    dirLight.castShadow = true;
-    dirLight.shadow.bias = -0.001;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    //dirLight.position.set(-18, 9, -10);
-    dirLight.target.position.set(2, -15, 0);
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 30;
-    dirLight.shadow.camera.left = -38;
-    dirLight.shadow.camera.right = 0;
-    dirLight.shadow.camera.top = 5;
-    dirLight.shadow.camera.bottom = -8;
-    //gameState.sceneAdd(dirLight);
 
     gameState.addEventListener(EVENTS.settingsChanged, () => {
         if(gameState.settings.graphicsPreset === GraphicsPreset.LOW) {
             hemiLight.intensity = 2.25;
         }
         else {
-            hemiLight.intensity = 1.25;
+            hemiLight.intensity = 1.55;
         }
     });
 }
