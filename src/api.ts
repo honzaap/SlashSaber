@@ -20,7 +20,7 @@ export async function submitRun(settings : Settings, score : number) {
     await fetch(AWS_URL, {
         method: "POST",
         body: JSON.stringify({
-            username: settings.username, 
+            username: settings.username.substring(0, 16), 
             score,
             settings,
         }),

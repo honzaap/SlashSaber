@@ -232,6 +232,16 @@ body {
         right: 30px;
         top: 50%;
         transform: translateY(-50%);
+
+        @media (max-width: 1200px) {
+            position: unset;
+            transform: none;
+            display: flex;
+            padding: 40px 0 20px;
+            gap: 10px;
+            align-items: center;
+            flex-direction: column;
+        }
     }
 }
 

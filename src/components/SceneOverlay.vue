@@ -44,6 +44,7 @@
                                 label="Username"
                                 hide-details="auto"
                                 color="rgb(182, 227, 196)"
+                                maxLength="16"
                                 ></v-text-field>
                         </div>
                         <div class="form-group">
@@ -456,7 +457,7 @@ defineExpose({
 
     .btn-open {
         position: absolute;
-        right: -145px;
+        right: -65px;
         top: 50%;
         transform: translateY(-50%);
         width: 48px;
@@ -484,11 +485,41 @@ defineExpose({
     }
 }
 
+@media (max-width: 1000px) {
+    .your-sword {
+        background-color: #fff;
+        color: #000;
+        left: 0;
+        top: 0;
+        height: 100%;
+        transform: none;
+
+        &.hide {
+            transform: translate(calc(-100% - 120px), 0);
+
+            .btn-open {
+                right: -175px;
+            }
+        }
+    }
+}
+
 .leaderboard {
     position: absolute;
     right: 30px;
     top: 40%;
     transform: translateY(-50%);
+
+    @media (max-width: 1000px) {
+        right: 0;
+        top: unset;
+        bottom: 5px;
+        transform: none;
+    }
+
+    @media (max-width: 768px) {
+        display: none;
+    }
 }
 
 .menu-options {

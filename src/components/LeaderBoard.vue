@@ -154,6 +154,10 @@ defineExpose({
                 text-align: end;
                 padding-right: 8px;
             }
+
+            @media (max-width: 1400px) {
+                font-size: 16px;
+            }
         }
 
         &.first {
@@ -196,14 +200,49 @@ defineExpose({
         }
     }
 
-    @media (max-width: 1300px) {
-        position: unset;
-        transform: none;
-        margin-top: 30px;
-        padding: 0 10px 50px;
+    &:not(.compact) {
+        @media (max-width: 1400px) {
+            .leaderboard-item {
+                .name {
+                    width: 150px;
+                }
 
-        .leaderboard-item {
-            justify-content: center;
+                .score {
+                    width: 100px;
+                }
+            }
+        }
+    }
+
+    @media (max-width: 1300px) {
+        &.compact {
+            position: unset;
+            transform: none;
+            padding: 0 10px 50px;
+
+            .leaderboard-item {
+                justify-content: center;
+            }
+        }
+    }
+
+    @media (max-width: 1000px) {
+        &.compact {
+            .leaderboard-item {
+                font-size: 14px;
+
+                .number {
+                    width: 25px;
+                }
+
+                .name {
+                    width: 130px;
+                }
+
+                .score {
+                    width: 85px;
+                }
+            }
         }
     }
 }

@@ -118,6 +118,11 @@ h2 {
     font-weight: 400;
     letter-spacing: 3px;
     margin-bottom: 6px;
+
+    @media (max-width: 1000px) {
+        padding: 10px;
+        font-size: 20px;
+    }
 }
 
 .menu-container {
@@ -128,6 +133,10 @@ h2 {
     max-width: 460px;
     position: relative;
     width: 30vw;
+
+    @media (max-width: 768px) {
+        width: 75vw;
+    }
 
     .v-tabs {
         position: relative;
@@ -252,12 +261,13 @@ h2 {
     }
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1500px) {
     .sword-menu { 
         .items-list {
             padding-left: 0;
             padding-right: 0;
             gap: 10px;
+            max-height: 40vh;
         } 
     }
 }
@@ -271,6 +281,15 @@ h2 {
         } 
     }
 }
+
+@media (max-width: 1000px) {
+    .sword-menu { 
+        .items-list {
+            max-height: 70vh;
+        } 
+    }
+}
+
 
 .selected-items {
     display: flex;
@@ -301,6 +320,17 @@ h2 {
             -webkit-user-drag: none;
             -webkit-user-select: none;
         }
+    }
+
+    @media (max-width: 1500px) {
+        .item {
+            width: 50px;
+            height: 50px;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        display: none;
     }
 }
 

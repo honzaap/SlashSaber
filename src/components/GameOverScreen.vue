@@ -48,6 +48,15 @@ setTimeout(() => {
     backdrop-filter: blur(6px);
     background-color: rgba(#000, 0.6);
     animation: fade-in 500ms ease forwards;
+
+    @media (max-width: 768px) {
+        gap: 5px;
+        
+        p {
+            margin-bottom: 5px;
+        }
+    }
+
 }
 
 @keyframes fade-in {
