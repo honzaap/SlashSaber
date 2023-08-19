@@ -249,7 +249,6 @@ class Transition {
 
         this.gameState.sceneAdd(this.model);
         this.gameState.addEventListener(EVENTS.load, () => {
-            console.log("invisible");
             this.model.visible = false;
         });
 

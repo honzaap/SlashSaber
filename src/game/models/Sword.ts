@@ -61,8 +61,6 @@ export default class Sword {
     }
 
     public loadModel() {
-        console.log("load new sword model");
-
         // Clear model
         while (this.model.children.length > 0) {
             const object = this.model.children.pop();

@@ -1,8 +1,7 @@
-//import Scene from "./pages/Scene.vue";
-
 const startBtn = document.getElementById("startBtn");
 const page = document.getElementById("main");
 let isOverlay = false;
+let vueLoaded = false;
 
 let vue : typeof import("vue");
 let Scene : any;
@@ -29,10 +28,13 @@ async function loadVue() {
         import("./components/LeaderBoard.vue")
     );
     vue.createApp(LeaderBoard).mount("#leaderBoard");
+    
+    vueLoaded = true;
 }
 
-startBtn?.addEventListener("click", async function() {
-    if(!page) return;
+async function loadScene() {
+    if(!page || !vueLoaded) return;
+
     if(!isOverlay) {
         isOverlay = true;
 
@@ -45,7 +47,9 @@ startBtn?.addEventListener("click", async function() {
     }
     
     page.classList.add("hide");
-});
+}
+
+startBtn?.addEventListener("click", loadScene);
 
 import "./style.scss";
 loadVue();

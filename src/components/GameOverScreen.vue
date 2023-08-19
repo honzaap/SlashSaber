@@ -2,6 +2,14 @@
     <div class="go-overlay" :class="{show: died}">
         <h2>Game Over</h2>
         <p class="score">Your score: <span class="highlight">{{ prettifyScore(score)}}</span></p>
+        <div class="username-container" v-if="noUsername">
+            <p>To include your score in the leaderboard, enter your username:</p>
+            <v-text-field
+                v-model="settings.username"
+                hide-details="auto"
+                color="rgb(182, 227, 196)"
+                ></v-text-field>
+        </div>
         <ButtonSlash :disable="disable" text="Try Again" @click="$emit('reset')"/>
     </div>
 </template>
@@ -11,10 +19,11 @@ import ButtonSlash from "./ButtonSlash.vue";
 import { prettifyScore } from "../helpers";
 import { ref } from "vue";
 
-defineProps(["died", "score"]);
+const props = defineProps(["died", "score", "settings"]);
 defineEmits(["reset"]);
 
 const disable = ref(true);
+const noUsername = ref(!props.settings.username);
 
 setTimeout(() => {
     disable.value = false;

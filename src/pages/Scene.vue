@@ -6,7 +6,7 @@
             :lastScore="lastScore" :highestScore="highestScore" :addedScore="addedScore"
             @switch="switchPage" @start="startGame" @reset="resetRun" @pause="pause"
             @toggleFullscreen="toggleFullscreen" @updateSettings="updateSettings"/>
-        <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun"/>
+        <GameOverScreen v-if="died" :died="died" :score="currentScore" @reset="resetRun" :settings="settings"/>
         <canvas :class="{'no-cursor' : !settings.showCursor}" ref="canvas" id="canvas"></canvas>
         <div :class="{anim: hitAnim}" class="hit-marker"></div>
     </div>
@@ -254,7 +254,6 @@ onMounted(() => {
         }
 
         renderer.render(scene, camera);
-        console.log("render?");
     });
 
     window.addEventListener("keyup", (e : KeyboardEvent) => {
@@ -329,7 +328,6 @@ function startGame() {
 }
 
 function switchPage() {
-    console.log("scene switch");
     emit("switch", "landingPage");
     switchCallback();
 }

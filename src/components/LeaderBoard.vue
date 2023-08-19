@@ -36,7 +36,6 @@ onMounted(async () => {
 
     // Fetch new leaderboard every few minutes
     setInterval(async () => {
-        console.log("Fetch new leaderboard");
         const newLeaderBoard : LeaderBoardItem[] = await fetchLeaderBoard();
         if(newLeaderBoard.length === 0) return;
 
