@@ -24,7 +24,7 @@ export function createRenderer(camera : THREE.Camera, canvas : HTMLCanvasElement
     renderer.render(gameState.getScene(), camera);
     renderer.shadowMap.enabled = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.useLegacyLights = false;
     renderer.setClearColor(0x000000);
 
@@ -40,7 +40,6 @@ export function resizeRenderer(renderer : THREE.WebGLRenderer) {
 // Create and configure lighting in the scene
 export function setupLighting() {
     const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xd2b156, 1.55);
-    //const hemiLight = new THREE.HemisphereLight(0xe5e7ff, 0xe5e7ff, 1.25);
     hemiLight.position.set(0, 10, 0);
     gameState.sceneAdd(hemiLight);
 
