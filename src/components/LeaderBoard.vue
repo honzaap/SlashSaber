@@ -49,7 +49,7 @@ function submitNewRun(settings : Settings, score : number) {
     if(existingRecord && existingRecord.score < score) {
         existingRecord.score = score;
     }
-    else if(!existingRecord) {
+    else if(!existingRecord && settings.username) {
         items.value.push({ username: settings.username, score });
     }
 
