@@ -151,7 +151,7 @@ export default class EnvironmentManager {
     // Load transition model and setup animations
     private setupTransition() {
         for(const asset of ROOM_TRANSITION_ASSETS) {
-            this.gameState.loadGLTF(`/assets/${asset}`, (gltf) => {
+            this.gameState.loadGLTF(`/3d_assets/${asset}`, (gltf) => {
                 this.transitions.push(new Transition(gltf.scene, gltf.animations));
             });
         }

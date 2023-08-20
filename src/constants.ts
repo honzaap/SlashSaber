@@ -9,7 +9,7 @@ export const ROOM_TRANSITION_ASSETS = ["room_transition.glb", "room_transition_2
 export const SPARK_ASSET = "spark_texture.png";
 
 // Do not ask me under any circumstances why is this image the envmap for the blade
-export const ENVMAP_ASSET = "./assets/blade_envmap.jpeg";
+export const ENVMAP_ASSET = "/3d_assets/blade_envmap.jpeg";
 
 export const EVENTS = {
     load: "onAfterLoad",

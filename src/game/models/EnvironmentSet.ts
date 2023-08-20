@@ -34,10 +34,10 @@ export default class EnvironmentSet {
         let loadedPieces = 0;
 
         for(const pieceTemplate of template.assets) {
-            this.gameState.loadGLTF(`./assets/environments/${pieceTemplate.asset}`, (gltf) => {
+            this.gameState.loadGLTF(`/3d_assets/environments/${pieceTemplate.asset}`, (gltf) => {
                 gltf.scene.traverse(obj => {
                     if(obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.material.roughness <= 0.4) {
-                        const texture = this.gameState.loadTexture("./assets/blade_envmap.jpeg");
+                        const texture = this.gameState.loadTexture("/3d_assets/blade_envmap.jpeg");
                         texture.mapping = THREE.EquirectangularReflectionMapping;
                         obj.material.envMap = texture;
                     }
