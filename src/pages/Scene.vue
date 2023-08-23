@@ -29,6 +29,7 @@ import { Settings } from "../game/models/Settings";
 import { EVENTS, GUI_ENABLED } from "../constants";
 import { inject } from "vue";
 import Stats from "three/examples/jsm/libs/stats.module.js";
+import ObstacleManager from "../game/models/ObstacleManager";
 
 const emit = defineEmits(["switch"]);
 
@@ -134,6 +135,8 @@ async function createScene() {
         setAllCulled(scene, true);
         renderer.compile(scene, camera);
 
+        // Create obstacles just to slice them right away, this caches the the operation so it's not choppy
+        ObstacleManager.getInstance().cacheObstacleSlicing();
         gameState.dispatchEvent(EVENTS.load);
     });
 

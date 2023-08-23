@@ -224,6 +224,20 @@ export default class ObstacleManager {
         this.particleSystem.addEmitter(emitter).emit(this.particleHooks);
     }
 
+    public cacheObstacleSlicing() {
+        for(const template of this.obstacleTemplates) {
+            const newInstance = template.model.clone(true);
+            newInstance.position.z = -15;
+            const obstacle = new Obstacle(newInstance, template.placement, SliceDirection.ANY, template.animation);
+            this.obstacles.push(obstacle);
+            this.gameState.sceneAdd(newInstance);
+            const coplanarPoints = [new THREE.Vector3(-1, 0, -15), new THREE.Vector3(-1, 0, -17), new THREE.Vector3(1, 2, -16)];
+            this.sliceObstacle(obstacle, coplanarPoints, new THREE.Vector3(1, 1, 1), 50);
+            obstacle.remove();
+            this.obstacles.splice(this.obstacles.findIndex(o => o === obstacle), 1);
+        }
+    }
+
     private initParticles() {
         const map = this.gameState.loadTexture(`/3d_assets/${SPARK_ASSET}`);
         const material = new THREE.SpriteMaterial({
