@@ -297,8 +297,8 @@ export default class ObstacleManager {
             this.maxObstacleDistance = 2.80;
         }
         else {
-            this.minObstacleDistance = 3.5;
-            this.maxObstacleDistance = 4.0;
+            this.minObstacleDistance = 3.9;
+            this.maxObstacleDistance = 4.3;
         }
     };
 }
