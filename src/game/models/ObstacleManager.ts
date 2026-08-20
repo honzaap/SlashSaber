@@ -49,7 +49,7 @@ export default class ObstacleManager {
         let loadedObstacles = 0;
 
         for(const template of OBSTACLE_TEMPLTES) {
-            this.gameState.loadGLTF(`/3d_assets/obstacles/${template.asset}`, (gltf) => {
+            this.gameState.loadGLTF(`${import.meta.env.BASE_URL}3d_assets/obstacles/${template.asset}`, (gltf) => {
                 const model = gltf.scene.children[0];
                 
                 this.obstacleTemplates.push({...template, sliceDirection: template.sliceDirection ?? SliceDirection.ANY,
@@ -239,7 +239,7 @@ export default class ObstacleManager {
     }
 
     private initParticles() {
-        const map = this.gameState.loadTexture(`/3d_assets/${SPARK_ASSET}`);
+        const map = this.gameState.loadTexture(`${import.meta.env.BASE_URL}3d_assets/${SPARK_ASSET}`);
         const material = new THREE.SpriteMaterial({
             map,
             color: 0xff0000,

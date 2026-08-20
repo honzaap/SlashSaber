@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-    <a href="https://slashsaber.com">
+    <a href="https://honzaap.github.io/SlashSaber/">
         <b>Try it out!</b>
     </a>
 </p>

@@ -87,7 +87,7 @@ export default class Sword {
         let loadedComponents = 0;
 
         for(const component of components) {
-            this.gameState.loadGLTF(`/3d_assets/swords/${component.name}_${component.value.toLowerCase()}.glb`, (gltf) => {
+            this.gameState.loadGLTF(`${import.meta.env.BASE_URL}3d_assets/swords/${component.name}_${component.value.toLowerCase()}.glb`, (gltf) => {
                 gltf.scene.traverse((obj : THREE.Object3D) => {
                     if(obj.name === "Blade") {
                         // Get blade mesh and size

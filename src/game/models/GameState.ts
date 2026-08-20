@@ -57,7 +57,7 @@ export default class GameState {
         this.loader = new GLTFLoader(loadingManager);
 
         const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath("/libs/draco/");
+        dracoLoader.setDecoderPath(`${import.meta.env.BASE_URL}libs/draco/`);
         this.loader.setDRACOLoader(dracoLoader);
     }
 

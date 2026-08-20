@@ -16,7 +16,7 @@
                             <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
-                                    <img :src="`/swords/set_${set.name.toLowerCase()}.png`" :alt="set.name">
+                                    <img :src="`${BASE_URL}swords/set_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -26,7 +26,7 @@
                             <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
-                                    <img :src="`/swords/blade_${set.name.toLowerCase()}.png`" :alt="set.name">
+                                    <img :src="`${BASE_URL}swords/blade_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -36,7 +36,7 @@
                             <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
-                                    <img :src="`/swords/guard_${set.name.toLowerCase()}.png`" :alt="set.name">
+                                    <img :src="`${BASE_URL}swords/guard_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -46,7 +46,7 @@
                             <v-item :value="set.name" v-for="set in SWORD_PRESETS" v-slot="{ selectedClass, toggle }" selected-class="item-selected">
                                 <v-card class="sword-item" :class="selectedClass" @click="toggle">
                                     <span class="title">{{ set.name }}</span>
-                                    <img :src="`/swords/hilt_${set.name.toLowerCase()}.png`" :alt="set.name">
+                                    <img :src="`${BASE_URL}swords/hilt_${set.name.toLowerCase()}.png`" :alt="set.name">
                                 </v-card>
                             </v-item>
                         </v-item-group>
@@ -56,13 +56,13 @@
         </v-card>
         <div class="selected-items">
             <div class="item">
-                <img :src="`/swords/blade_${settings.bladeModel.toLowerCase()}.png`" alt="Blade" />
+                <img :src="`${BASE_URL}swords/blade_${settings.bladeModel.toLowerCase()}.png`" alt="Blade" />
             </div>
             <div class="item">
-                <img :src="`/swords/guard_${settings.guardModel.toLowerCase()}.png`" alt="Guard" />
+                <img :src="`${BASE_URL}swords/guard_${settings.guardModel.toLowerCase()}.png`" alt="Guard" />
             </div>
             <div class="item">
-                <img :src="`/swords/hilt_${settings.hiltModel.toLowerCase()}.png`" alt="Hilt" />
+                <img :src="`${BASE_URL}swords/hilt_${settings.hiltModel.toLowerCase()}.png`" alt="Hilt" />
             </div>
         </div>
     </div>
@@ -100,6 +100,8 @@ const updateSet = (e : string) => {
     settings.guardModel = e;
     settings.hiltModel = e;
 };
+
+const BASE_URL = import.meta.env.BASE_URL;
 
 </script>
 
